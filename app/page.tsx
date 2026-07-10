@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- This pixel-art interface uses local sprite sheets and transparent assets. */
 "use client";
 
 import {
@@ -29,6 +30,7 @@ type View = "home" | "library" | "chat" | "travel" | "journal";
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
 type RecordTab = "travel" | "reading" | "items";
 type ChatMessage = { id: number; role: "turtle" | "user"; text: string };
+type ActiveTravel = { destinationId: string; startedAt: number; endsAt: number };
 type ReadingRecord = {
   id: number;
   title: string;
@@ -38,6 +40,7 @@ type ReadingRecord = {
 };
 type TravelRecord = {
   id: number;
+  destinationId?: string;
   destination: string;
   date: string;
   reward: string;
@@ -56,6 +59,7 @@ type GameState = {
   readingRecords: ReadingRecord[];
   travelRecords: TravelRecord[];
   chatMessages: ChatMessage[];
+  activeTravel: ActiveTravel | null;
 };
 
 type Book = {
@@ -77,6 +81,9 @@ type Destination = {
   reward: string;
   photo: string;
   knowledge?: string;
+  locationArt: string;
+  knowledgeTitle: string;
+  knowledgeFacts: string[];
   position: string;
 };
 
@@ -99,6 +106,7 @@ const initialState: GameState = {
       text: "你回来啦！今天学到了什么新东西？我想听你讲讲。",
     },
   ],
+  activeTravel: null,
 };
 
 const books: Book[] = [
@@ -180,8 +188,11 @@ const destinations: Destination[] = [
     note: "去找会发光的贝壳",
     duration: "8秒",
     reward: "潮汐知识卡",
-    photo: `${ASSET}/travel/photos/photo_beach.png`,
-    knowledge: `${ASSET}/travel/knowledge_cards/knowledge_tide.png`,
+    photo: `${ASSET}/optimized/travel/photos/photo_beach.webp`,
+    knowledge: `${ASSET}/optimized/travel/knowledge_cards/knowledge_tide.webp`,
+    locationArt: `${ASSET}/legacy/travel/location_beach.png`,
+    knowledgeTitle: "潮汐的小秘密",
+    knowledgeFacts: ["海水会有规律地涨落。", "月球引力是形成潮汐的重要原因。"],
     position: "destination-beach",
   },
   {
@@ -190,8 +201,11 @@ const destinations: Destination[] = [
     note: "听一听大树的年轮故事",
     duration: "8秒",
     reward: "树木年轮卡",
-    photo: `${ASSET}/travel/photos/photo_forest.png`,
-    knowledge: `${ASSET}/travel/knowledge_cards/knowledge_tree_ring.png`,
+    photo: `${ASSET}/optimized/travel/photos/photo_forest.webp`,
+    knowledge: `${ASSET}/optimized/travel/knowledge_cards/knowledge_tree_ring.webp`,
+    locationArt: `${ASSET}/legacy/travel/location_forest.png`,
+    knowledgeTitle: "大树的时间圈",
+    knowledgeFacts: ["年轮记录着树木一年的生长。", "科学家会从年轮了解过去的气候。"],
     position: "destination-forest",
   },
   {
@@ -200,23 +214,30 @@ const destinations: Destination[] = [
     note: "寻找巨大的远古脚印",
     duration: "8秒",
     reward: "恐龙知识卡",
-    photo: `${ASSET}/travel/photos/photo_museum.png`,
-    knowledge: `${ASSET}/travel/knowledge_cards/knowledge_dinosaur.png`,
+    photo: `${ASSET}/optimized/travel/photos/photo_museum.webp`,
+    knowledge: `${ASSET}/optimized/travel/knowledge_cards/knowledge_dinosaur.webp`,
+    locationArt: `${ASSET}/legacy/travel/location_museum.png`,
+    knowledgeTitle: "脚印里的远古线索",
+    knowledgeFacts: ["恐龙脚印也能成为化石。", "大小、深浅和间距能帮助科学家推测恐龙怎样行动。"],
     position: "destination-museum",
   },
   {
     id: "space",
-    name: "星空观测站",
-    note: "抬头认识夏夜星座",
+    name: "太空站",
+    note: "从太空看一看蓝色地球",
     duration: "8秒",
-    reward: "星星纪念章",
-    photo: `${ASSET}/travel/photos/photo_observatory_placeholder.png`,
+    reward: "太空站知识卡",
+    photo: `${ASSET}/legacy/travel/location_space.png`,
+    locationArt: `${ASSET}/legacy/travel/location_space.png`,
+    knowledgeTitle: "绕着地球旅行",
+    knowledgeFacts: ["空间站像一座绕地球飞行的实验室。", "在微重力环境里，航天员和物品会呈现漂浮状态。"],
     position: "destination-space",
   },
 ];
 
 const hidePlaces = ["water", "tree", "behind", "lotus"] as const;
 type HidePlace = (typeof hidePlaces)[number];
+type HomeSpot = "center" | "pond-edge" | "tree-shade" | "cave-door";
 
 const hideLabels: Record<HidePlace, string> = {
   water: "水波里",
@@ -236,7 +257,7 @@ function formatDate() {
   }).format(new Date());
 }
 
-function getReply(input: string, name: string) {
+function getLocalReply(input: string, name: string) {
   if (/数学|算|题|乘法|加法/.test(input)) {
     return `数学像一条要慢慢走的小路。你愿意挑一道题，把解题的第一步讲给${name}听吗？`;
   }
@@ -253,6 +274,40 @@ function getReply(input: string, name: string) {
     return "我也跟着开心起来啦！把这件开心的事记在今天的小手账里吧。";
   }
   return "我认真听到了！你能再告诉我，这件事让你学到或发现了什么吗？";
+}
+
+async function askCompanion(payload: Record<string, string>) {
+  const response = await fetch("/api/companion", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error("companion unavailable");
+  const data = (await response.json()) as { reply?: string };
+  if (!data.reply) throw new Error("empty companion reply");
+  return data.reply;
+}
+
+function destinationForRecord(record: TravelRecord) {
+  return destinations.find(
+    (destination) =>
+      destination.id === record.destinationId ||
+      destination.name === record.destination ||
+      destination.knowledge === record.knowledge,
+  );
+}
+
+function KnowledgeArt({ destination }: { destination: Destination }) {
+  if (destination.knowledge) {
+    return <img src={destination.knowledge} alt={`${destination.knowledgeTitle}知识卡`} />;
+  }
+  return (
+    <div className="space-knowledge-art">
+      <img src={destination.locationArt} alt="太空站" />
+      <span>太空发现</span>
+      <strong>{destination.knowledgeTitle}</strong>
+    </div>
+  );
 }
 
 function StatusPill({
@@ -283,11 +338,13 @@ function StatusPill({
 
 function NavButton({
   active,
+  disabled,
   label,
   onClick,
   children,
 }: {
   active: boolean;
+  disabled?: boolean;
   label: string;
   onClick: () => void;
   children: React.ReactNode;
@@ -298,6 +355,7 @@ function NavButton({
       onClick={onClick}
       aria-label={label}
       aria-current={active ? "page" : undefined}
+      disabled={disabled}
       type="button"
     >
       {children}
@@ -312,8 +370,9 @@ export default function HomePage() {
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
   const [actionProgress, setActionProgress] = useState(0);
-  const [turtleSprite, setTurtleSprite] = useState("turtle_idle_front.png");
-  const [toast, setToast] = useState("小乌龟在等你一起玩");
+  const [turtleSprite, setTurtleSprite] = useState<string | null>(null);
+  const [homeSpot, setHomeSpot] = useState<HomeSpot>("center");
+  const [toast, setToast] = useState("");
   const [fruitPicker, setFruitPicker] = useState(false);
   const [hideTarget, setHideTarget] = useState<HidePlace | null>(null);
   const [hideTries, setHideTries] = useState(0);
@@ -324,13 +383,16 @@ export default function HomePage() {
   const [questionOpen, setQuestionOpen] = useState(false);
   const [questionAnswered, setQuestionAnswered] = useState(false);
   const [readingAnswer, setReadingAnswer] = useState("");
+  const [readingFeedback, setReadingFeedback] = useState("");
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
+  const [chatThinking, setChatThinking] = useState(false);
+  const [companionLoading, setCompanionLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<Destination>(destinations[0]);
-  const [traveling, setTraveling] = useState<Destination | null>(null);
   const [travelProgress, setTravelProgress] = useState(0);
   const [travelReward, setTravelReward] = useState<Destination | null>(null);
+  const [knowledgeOpen, setKnowledgeOpen] = useState<Destination | null>(null);
   const [recordTab, setRecordTab] = useState<RecordTab>("travel");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -339,6 +401,22 @@ export default function HomePage() {
     [game.hunger, game.cleanliness, game.boredom],
   );
 
+  const traveling = useMemo(
+    () => destinations.find((destination) => destination.id === game.activeTravel?.destinationId) ?? null,
+    [game.activeTravel],
+  );
+
+  const ambientSprite = useMemo(() => {
+    if (game.hunger > 72) return "turtle_hungry.png";
+    if (game.cleanliness < 38) return "turtle_dirty.png";
+    if (game.boredom > 70) return "turtle_bored_sitting.png";
+    if (mood < 55) return "turtle_low_mood.png";
+    if (homeSpot === "pond-edge") return "turtle_idle_standing.png";
+    if (homeSpot === "tree-shade") return "turtle_thinking.png";
+    if (homeSpot === "cave-door") return "turtle_waving.png";
+    return "turtle_idle_front.png";
+  }, [game.boredom, game.cleanliness, game.hunger, homeSpot, mood]);
+
   const showToast = useCallback((message: string) => {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -346,24 +424,27 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("guigu-v1-state");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as GameState;
-        const hours = Math.min(24, Math.max(0, (Date.now() - (parsed.lastSeen || Date.now())) / 3_600_000));
-        setGame({
-          ...initialState,
-          ...parsed,
-          hunger: clamp(parsed.hunger + hours * 3),
-          cleanliness: clamp(parsed.cleanliness - hours),
-          boredom: clamp(parsed.boredom + hours * 2),
-          lastSeen: Date.now(),
-        });
-      } catch {
-        setGame(initialState);
+    const frame = window.requestAnimationFrame(() => {
+      const saved = window.localStorage.getItem("guigu-v1-state");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as Partial<GameState>;
+          const hours = Math.min(24, Math.max(0, (Date.now() - (parsed.lastSeen || Date.now())) / 3_600_000));
+          setGame({
+            ...initialState,
+            ...parsed,
+            hunger: clamp((parsed.hunger ?? initialState.hunger) + hours * 3),
+            cleanliness: clamp((parsed.cleanliness ?? initialState.cleanliness) - hours),
+            boredom: clamp((parsed.boredom ?? initialState.boredom) + hours * 2),
+            lastSeen: Date.now(),
+          });
+        } catch {
+          setGame(initialState);
+        }
       }
-    }
-    setHydrated(true);
+      setHydrated(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -381,17 +462,59 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (busy || hideTarget || traveling) return;
-    if (game.hunger > 72) setTurtleSprite("turtle_hungry.png");
-    else if (game.cleanliness < 38) setTurtleSprite("turtle_dirty.png");
-    else if (game.boredom > 70) setTurtleSprite("turtle_bored_sitting.png");
-    else if (mood < 55) setTurtleSprite("turtle_low_mood.png");
-    else setTurtleSprite("turtle_idle_front.png");
-  }, [busy, game.hunger, game.cleanliness, game.boredom, hideTarget, mood, traveling]);
+    if (view !== "home" || busy || hideTarget || traveling) return;
+    const spots: HomeSpot[] = ["center", "pond-edge", "tree-shade", "cave-door"];
+    const interval = window.setInterval(() => {
+      setHomeSpot((current) => {
+        const choices = spots.filter((spot) => spot !== current);
+        return choices[Math.floor(Math.random() * choices.length)];
+      });
+    }, 14_000);
+    return () => window.clearInterval(interval);
+  }, [busy, hideTarget, traveling, view]);
 
   const patchGame = useCallback((patch: Partial<GameState>) => {
     setGame((current) => ({ ...current, ...patch }));
   }, []);
+
+  useEffect(() => {
+    const active = game.activeTravel;
+    if (!hydrated || !active || !traveling) return;
+    const interval = window.setInterval(() => {
+      const now = Date.now();
+      const duration = Math.max(1, active.endsAt - active.startedAt);
+      const progress = Math.min(100, ((now - active.startedAt) / duration) * 100);
+      setTravelProgress(progress);
+      if (progress < 100) return;
+
+      window.clearInterval(interval);
+      const record: TravelRecord = {
+        id: now,
+        destinationId: traveling.id,
+        destination: traveling.name,
+        date: formatDate(),
+        reward: traveling.reward,
+        photo: traveling.photo,
+        knowledge: traveling.knowledge,
+      };
+      setGame((current) => {
+        if (current.activeTravel?.startedAt !== active.startedAt) return current;
+        return {
+          ...current,
+          activeTravel: null,
+          boredom: clamp(current.boredom - 18),
+          hunger: clamp(current.hunger + 6),
+          stars: current.stars + 4,
+          fruits: current.fruits + 1,
+          travelRecords: [record, ...current.travelRecords],
+        };
+      });
+      setTravelProgress(0);
+      setTravelReward(traveling);
+      showToast(`${game.name}带着新发现回来啦！`);
+    }, 100);
+    return () => window.clearInterval(interval);
+  }, [game.activeTravel, game.name, hydrated, showToast, traveling]);
 
   const runTimedAction = useCallback(
     (
@@ -440,7 +563,7 @@ export default function HomePage() {
         }));
         setTurtleSprite("turtle_satisfied.png");
         showToast(`${game.name}吃下${fruit}，肚子满足啦`);
-        window.setTimeout(() => setTurtleSprite("turtle_idle_front.png"), 1800);
+        window.setTimeout(() => setTurtleSprite(null), 1800);
       },
       `${game.name}正在大口吃果子…`,
     );
@@ -455,7 +578,7 @@ export default function HomePage() {
         patchGame({ cleanliness: 100 });
         setTurtleSprite("turtle_clean_sparkle.png");
         showToast("游泳完成，龟壳亮晶晶！");
-        window.setTimeout(() => setTurtleSprite("turtle_idle_front.png"), 2000);
+        window.setTimeout(() => setTurtleSprite(null), 2000);
       },
       `${game.name}扑通一声跳进池塘`,
     );
@@ -474,7 +597,7 @@ export default function HomePage() {
         }));
         setTurtleSprite("turtle_waving.png");
         showToast(`${game.name}睡醒啦，精神满满`);
-        window.setTimeout(() => setTurtleSprite("turtle_idle_front.png"), 1800);
+        window.setTimeout(() => setTurtleSprite(null), 1800);
       },
       "嘘，做一个香香的梦吧",
     );
@@ -500,7 +623,7 @@ export default function HomePage() {
         stars: current.stars + 2,
       }));
       showToast(`找到啦！原来藏在${hideLabels[place]}`);
-      window.setTimeout(() => setTurtleSprite("turtle_idle_front.png"), 2200);
+      window.setTimeout(() => setTurtleSprite(null), 2200);
     } else {
       setHideTries((tries) => tries + 1);
       showToast(`这里没有，再找找看${hideTries >= 1 ? "，注意小小的动静" : ""}`);
@@ -519,6 +642,7 @@ export default function HomePage() {
     setSelectedBook(book);
     setBookPage(0);
     setReadingAnswer("");
+    setReadingFeedback("");
     setQuestionAnswered(false);
     setQuestionOpen(false);
   };
@@ -535,20 +659,38 @@ export default function HomePage() {
     }
   };
 
-  const submitReadingAnswer = () => {
+  const submitReadingAnswer = async () => {
     if (!readingAnswer.trim()) {
       showToast("先把你的想法告诉龟龟吧");
       return;
     }
+    setCompanionLoading(true);
+    let feedback: string;
+    try {
+      feedback = await askCompanion({
+        mode: "reading",
+        title: selectedBook.title,
+        excerpt: selectedBook.pages[0].body,
+        question: selectedBook.question,
+        answer: readingAnswer.trim().slice(0, 500),
+      });
+    } catch {
+      feedback = "我听见你是这样想的。你还可以回到故事里找一句话，看看它能不能支持你的发现。";
+    }
+    setReadingFeedback(feedback);
     setQuestionAnswered(true);
-    setQuestionOpen(false);
-    setBookPage(1);
     setGame((current) => ({
       ...current,
       boredom: clamp(current.boredom - 8),
       stars: current.stars + 1,
     }));
-    showToast("你讲得很清楚，我听懂啦！");
+    setCompanionLoading(false);
+  };
+
+  const continueAfterAnswer = () => {
+    setQuestionOpen(false);
+    setBookPage(1);
+    showToast("龟龟记住你的想法啦");
   };
 
   const finishReading = () => {
@@ -594,88 +736,79 @@ export default function HomePage() {
     recognition.start();
   };
 
-  const sendChat = () => {
+  const sendChat = async () => {
     const message = chatInput.trim();
-    if (!message) return;
+    if (!message || chatThinking) return;
     const userMessage: ChatMessage = { id: Date.now(), role: "user", text: message };
-    const turtleMessage: ChatMessage = {
-      id: Date.now() + 1,
-      role: "turtle",
-      text: getReply(message, game.name),
-    };
     setGame((current) => ({
       ...current,
       boredom: clamp(current.boredom - 5),
-      chatMessages: [...current.chatMessages, userMessage, turtleMessage].slice(-16),
+      chatMessages: [...current.chatMessages, userMessage].slice(-16),
     }));
     setChatInput("");
+    setChatThinking(true);
+    let reply: string;
+    try {
+      reply = await askCompanion({ mode: "chat", message: message.slice(0, 500) });
+    } catch {
+      reply = getLocalReply(message, game.name);
+    }
+    const turtleMessage: ChatMessage = { id: Date.now() + 1, role: "turtle", text: reply };
+    setGame((current) => ({
+      ...current,
+      chatMessages: [...current.chatMessages, turtleMessage].slice(-16),
+    }));
+    setChatThinking(false);
   };
 
   const startTravel = () => {
     if (traveling || busy) return;
-    setTraveling(selectedDestination);
-    setTravelProgress(0);
     showToast(`${game.name}背好行囊，出发去${selectedDestination.name}`);
-    const started = Date.now();
-    const interval = window.setInterval(() => {
-      const progress = Math.min(100, ((Date.now() - started) / 8000) * 100);
-      setTravelProgress(progress);
-      if (progress >= 100) {
-        window.clearInterval(interval);
-        const record: TravelRecord = {
-          id: Date.now(),
-          destination: selectedDestination.name,
-          date: formatDate(),
-          reward: selectedDestination.reward,
-          photo: selectedDestination.photo,
-          knowledge: selectedDestination.knowledge,
-        };
-        setGame((current) => ({
-          ...current,
-          boredom: clamp(current.boredom - 18),
-          hunger: clamp(current.hunger + 6),
-          stars: current.stars + 4,
-          fruits: current.fruits + 1,
-          travelRecords: [record, ...current.travelRecords],
-        }));
-        setTraveling(null);
-        setTravelProgress(0);
-        setTravelReward(selectedDestination);
-        showToast(`${game.name}带着新发现回来啦！`);
-      }
-    }, 100);
+    const startedAt = Date.now();
+    patchGame({
+      activeTravel: {
+        destinationId: selectedDestination.id,
+        startedAt,
+        endsAt: startedAt + 8_000,
+      },
+    });
   };
 
   const resetReading = () => {
     setSummaryOpen(false);
     setQuestionAnswered(false);
     setReadingAnswer("");
+    setReadingFeedback("");
     setBookPage(0);
   };
 
-  const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : "";
+  const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
+  const navigationLocked = !!busy || !!hideTarget || !!traveling;
 
   return (
     <main className={`app view-${view}`}>
       <header className="topbar">
-        <button
-          className="pet-name"
-          type="button"
-          onClick={() => {
-            setDraftName(game.name);
-            setEditingName(true);
-          }}
-          title="修改名字"
-        >
-          <span className="avatar-dot">
-            <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
-          </span>
-          <span>
-            <small>我的伙伴</small>
-            <strong>{game.name}</strong>
-          </span>
-          <Edit3 size={15} aria-hidden="true" />
-        </button>
+        <div className="identity-cluster">
+          <img className="brand-logo" src={`${ASSET}/legacy/brand/guigu_logo.png`} alt="龟龟伴读" />
+          <button
+            className="pet-name"
+            type="button"
+            onClick={() => {
+              setDraftName(game.name);
+              setEditingName(true);
+            }}
+            title="修改名字"
+          >
+            <span className="avatar-dot">
+              <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+            </span>
+            <span>
+              <small>我的伙伴</small>
+              <strong>{game.name}</strong>
+            </span>
+            <Edit3 size={15} aria-hidden="true" />
+          </button>
+        </div>
 
         <section className="status-row" aria-label="龟龟状态">
           <StatusPill
@@ -722,6 +855,7 @@ export default function HomePage() {
               onClick={() => (hideTarget ? guessHidePlace("water") : startSwim())}
               aria-label={hideTarget ? "找找水里" : "去池塘游泳"}
               title={hideTarget ? "找找水里" : "去池塘游泳"}
+              disabled={!!busy}
             >
               <Waves />
             </button>
@@ -731,33 +865,23 @@ export default function HomePage() {
               onClick={() => (hideTarget ? guessHidePlace("tree") : setFruitPicker(true))}
               aria-label={hideTarget ? "找找树梢" : "摘果子"}
               title={hideTarget ? "找找树梢" : "摘果子"}
+              disabled={!!busy}
             >
               <Apple />
             </button>
-            <button
-              className="world-hotspot trunk-hotspot"
-              type="button"
-              onClick={() => hideTarget && guessHidePlace("behind")}
-              aria-label="找找树干后面"
-              title="找找树干后面"
-            >
-              <Search />
-            </button>
-            <button
-              className="world-hotspot lotus-hotspot"
-              type="button"
-              onClick={() => hideTarget && guessHidePlace("lotus")}
-              aria-label="找找荷叶下面"
-              title="找找荷叶下面"
-            >
-              <Search />
-            </button>
+            {hideTarget && (
+              <>
+                <button className="world-hotspot trunk-hotspot" type="button" onClick={() => guessHidePlace("behind")} aria-label="找找树干后面" title="找找树干后面"><Search /></button>
+                <button className="world-hotspot lotus-hotspot" type="button" onClick={() => guessHidePlace("lotus")} aria-label="找找荷叶下面" title="找找荷叶下面"><Search /></button>
+              </>
+            )}
             <button
               className="world-hotspot cave-hotspot"
               type="button"
               onClick={startSleep}
               aria-label="回小窝睡觉"
               title="回小窝睡觉"
+              disabled={!!busy || !!hideTarget}
             >
               <Moon />
             </button>
@@ -793,7 +917,7 @@ export default function HomePage() {
                 </div>
                 <img
                   className="turtle-sprite"
-                  src={`${ASSET}/characters/turtle/${turtleSprite}`}
+                  src={`${ASSET}/characters/turtle/${turtleSprite ?? ambientSprite}`}
                   alt={`${game.name}正在${busy === "swimming" ? "游泳" : busy === "sleeping" ? "睡觉" : "等你"}`}
                 />
               </div>
@@ -907,14 +1031,22 @@ export default function HomePage() {
                     <p>{message.text}</p>
                   </div>
                 ))}
+                {chatThinking && (
+                  <div className="message turtle thinking-message">
+                    <img src={`${ASSET}/characters/turtle/turtle_thinking.png`} alt="" />
+                    <p><span /><span /><span /></p>
+                  </div>
+                )}
               </div>
               <div className="chat-composer">
                 <input
                   value={chatInput}
                   onChange={(event) => setChatInput(event.target.value)}
-                  onKeyDown={(event) => event.key === "Enter" && sendChat()}
+                  onKeyDown={(event) => event.key === "Enter" && void sendChat()}
                   placeholder="今天发生了什么？"
                   aria-label="输入想对龟龟说的话"
+                  maxLength={500}
+                  disabled={chatThinking}
                 />
                 <button
                   className={`icon-button ${listening ? "listening" : ""}`}
@@ -925,7 +1057,7 @@ export default function HomePage() {
                 >
                   {listening ? <MicOff /> : <Mic />}
                 </button>
-                <button className="send-button" type="button" onClick={sendChat} aria-label="发送">
+                <button className="send-button" type="button" onClick={() => void sendChat()} aria-label="发送" disabled={chatThinking || !chatInput.trim()}>
                   <Send />
                 </button>
               </div>
@@ -948,13 +1080,13 @@ export default function HomePage() {
                 onClick={() => setSelectedDestination(destination)}
                 aria-label={`选择${destination.name}`}
               >
-                <MapPinned />
+                <img src={destination.locationArt} alt="" />
                 <span>{destination.name}</span>
               </button>
             ))}
 
             <aside className="travel-card">
-              <img src={selectedDestination.photo} alt={`${selectedDestination.name}旅行照片`} />
+              <img className="destination-art" src={selectedDestination.locationArt} alt={`${selectedDestination.name}地点插画`} />
               <div>
                 <small>本次目的地</small>
                 <h2>{selectedDestination.name}</h2>
@@ -964,7 +1096,7 @@ export default function HomePage() {
                   <div><dt>可能带回</dt><dd>{selectedDestination.reward}</dd></div>
                 </dl>
                 <button type="button" onClick={startTravel} disabled={!!traveling}>
-                  <Compass /> {traveling ? "旅行中…" : "背好行囊出发"}
+                  <Compass /> {traveling ? "旅行中…" : "使用旅行票出发"}
                 </button>
               </div>
             </aside>
@@ -1000,16 +1132,24 @@ export default function HomePage() {
             <div className="journal-content">
               {recordTab === "travel" && (
                 <div className="record-grid">
-                  {game.travelRecords.length ? game.travelRecords.map((record) => (
-                    <article className="travel-record" key={record.id}>
-                      <img src={record.photo} alt={`${record.destination}照片`} />
-                      <div>
-                        <small>{record.date}</small>
-                        <h2>{record.destination}</h2>
-                        <p>带回了：{record.reward}</p>
-                      </div>
-                    </article>
-                  )) : <EmptyRecord type="travel" onAction={() => setView("travel")} />}
+                  {game.travelRecords.length ? game.travelRecords.map((record) => {
+                    const destination = destinationForRecord(record);
+                    return (
+                      <article className="travel-record" key={record.id}>
+                        <img src={record.photo} alt={`${record.destination}照片`} />
+                        <div>
+                          <small>{record.date}</small>
+                          <h2>{record.destination}</h2>
+                          <p>带回了：{record.reward}</p>
+                          {destination && (
+                            <button className="knowledge-link" type="button" onClick={() => setKnowledgeOpen(destination)}>
+                              <img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 查看知识卡
+                            </button>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  }) : <EmptyRecord type="travel" onAction={() => setView("travel")} />}
                 </div>
               )}
 
@@ -1033,9 +1173,15 @@ export default function HomePage() {
                 <div className="inventory-grid">
                   <article><div className="item-art"><img src={`${ASSET}/objects/fruit_basket.png`} alt="果篮" /></div><strong>野外果子</strong><span>× {game.fruits}</span></article>
                   <article><div className="item-art star-item"><Star /></div><strong>成长星星</strong><span>× {game.stars}</span></article>
-                  {game.travelRecords.map((record) => (
-                    <article key={record.id}><div className="item-art"><img src={record.photo} alt="" /></div><strong>{record.reward}</strong><span>来自{record.destination}</span></article>
-                  ))}
+                  {game.travelRecords.map((record) => {
+                    const destination = destinationForRecord(record);
+                    return destination ? (
+                      <button className="inventory-card" type="button" key={record.id} onClick={() => setKnowledgeOpen(destination)}>
+                        <div className="item-art"><KnowledgeArt destination={destination} /></div>
+                        <strong>{record.reward}</strong><span>来自{record.destination}</span>
+                      </button>
+                    ) : null;
+                  })}
                 </div>
               )}
             </div>
@@ -1044,11 +1190,11 @@ export default function HomePage() {
       </section>
 
       <nav className="bottom-nav" aria-label="主要功能">
-        <NavButton active={view === "home"} label="家园" onClick={() => setView("home")}><Home /></NavButton>
-        <NavButton active={view === "library"} label="读书" onClick={() => setView("library")}><BookOpen /></NavButton>
-        <NavButton active={view === "chat"} label="聊天" onClick={() => setView("chat")}><MessageCircle /></NavButton>
-        <NavButton active={view === "travel"} label="旅行" onClick={() => setView("travel")}><Compass /></NavButton>
-        <NavButton active={view === "journal"} label="手账" onClick={() => setView("journal")}><Backpack /></NavButton>
+        <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" onClick={() => setView("home")}><Home /></NavButton>
+        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" onClick={() => setView("library")}><BookOpen /></NavButton>
+        <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" onClick={() => setView("chat")}><MessageCircle /></NavButton>
+        <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" onClick={() => setView("travel")}><Compass /></NavButton>
+        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" onClick={() => setView("journal")}><Backpack /></NavButton>
       </nav>
 
       {toast && <div className="toast" role="status"><Sparkles /> {toast}</div>}
@@ -1088,14 +1234,25 @@ export default function HomePage() {
         <div className="modal-backdrop" role="presentation">
           <section className="modal question-modal" role="dialog" aria-modal="true" aria-labelledby="question-title">
             <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="提问的龟龟" />
-            <span className="modal-kicker">龟龟有点没读懂</span>
-            <h2 id="question-title">{selectedBook.question}</h2>
-            <p>没有标准答案，把你的想法讲清楚就很棒。</p>
-            <textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得…" aria-label="回答龟龟的问题" />
-            <div className="modal-actions">
-              <button className="voice-button" type="button" onClick={() => beginVoiceInput("reading")}><Volume2 /> {listening ? "正在听…" : "用语音回答"}</button>
-              <button className="primary-button" type="button" onClick={submitReadingAnswer}><Send /> 讲给龟龟听</button>
-            </div>
+            {readingFeedback ? (
+              <>
+                <span className="modal-kicker">龟龟认真听完了</span>
+                <h2 id="question-title">这是我的新发现</h2>
+                <div className="reading-feedback"><Sparkles /> <p>{readingFeedback}</p></div>
+                <button className="primary-button full-button" type="button" onClick={continueAfterAnswer}><BookOpen /> 带着发现继续读</button>
+              </>
+            ) : (
+              <>
+                <span className="modal-kicker">龟龟有点没读懂</span>
+                <h2 id="question-title">{selectedBook.question}</h2>
+                <p>没有标准答案，把你的想法讲清楚就很棒。</p>
+                <textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得…" aria-label="回答龟龟的问题" maxLength={500} disabled={companionLoading} />
+                <div className="modal-actions">
+                  <button className="voice-button" type="button" onClick={() => beginVoiceInput("reading")} disabled={companionLoading}><Volume2 /> {listening ? "正在听…" : "用语音回答"}</button>
+                  <button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在想…" : "讲给龟龟听"}</button>
+                </div>
+              </>
+            )}
           </section>
         </div>
       )}
@@ -1126,9 +1283,27 @@ export default function HomePage() {
             <h2 id="reward-title">从{travelReward.name}带回了新发现</h2>
             <div className="reward-preview">
               <img src={travelReward.photo} alt={`${travelReward.name}照片`} />
-              <div><small>本次收获</small><strong>{travelReward.reward}</strong><span>还有 1 个野外果子</span></div>
+              <div>
+                <small>本次收获</small><strong>{travelReward.reward}</strong><span>还有 1 个野外果子</span>
+                <button className="knowledge-link" type="button" onClick={() => setKnowledgeOpen(travelReward)}><img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 先看看知识卡</button>
+              </div>
             </div>
             <button className="primary-button full-button" type="button" onClick={() => { setTravelReward(null); setView("journal"); setRecordTab("travel"); }}><Backpack /> 放进旅行手账</button>
+          </section>
+        </div>
+      )}
+
+      {knowledgeOpen && (
+        <div className="modal-backdrop knowledge-backdrop" role="presentation" onMouseDown={() => setKnowledgeOpen(null)}>
+          <section className="modal knowledge-modal" role="dialog" aria-modal="true" aria-labelledby="knowledge-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" onClick={() => setKnowledgeOpen(null)} aria-label="关闭"><X /></button>
+            <div className="knowledge-visual"><KnowledgeArt destination={knowledgeOpen} /></div>
+            <div className="knowledge-copy">
+              <span className="modal-kicker">{knowledgeOpen.name} · 旅行知识卡</span>
+              <h2 id="knowledge-title">{knowledgeOpen.knowledgeTitle}</h2>
+              {knowledgeOpen.knowledgeFacts.map((fact) => <p key={fact}><Star /> {fact}</p>)}
+              <div className="turtle-note"><Sparkles /> 下次向别人讲一讲，你会记得更牢。</div>
+            </div>
           </section>
         </div>
       )}

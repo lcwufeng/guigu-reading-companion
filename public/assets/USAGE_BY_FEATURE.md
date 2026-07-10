@@ -1,8 +1,10 @@
-# 龟龟伴读 V1 美术资产使用对照
+# 龟龟伴读 V1.1 美术资产使用对照
+
+页面优先加载 `optimized/` 下的 WebP；同名 PNG 作为原始美术源文件保留。顶部品牌使用 `legacy/brand/guigu_logo.png`。
 
 ## 主场景
 
-- 背景：`backgrounds/main_home.png`
+- 背景：`optimized/backgrounds/main_home.webp`
 - 默认乌龟：`characters/turtle/turtle_idle_front.png` 或 `characters/turtle/turtle_idle_standing.png`
 - 打招呼/聊天入口：`characters/turtle/turtle_waving.png`
 - 状态栏图标：
@@ -41,7 +43,7 @@
 
 ## 读书陪伴
 
-- 背景：`backgrounds/reading_room.png`
+- 背景：`optimized/backgrounds/reading_room.webp`
 - 书籍封面：
   - `books/book_forest_story.png`
   - `books/book_ocean_note.png`
@@ -62,18 +64,25 @@
 
 ## 外出旅行
 
-- 旅行地图：`backgrounds/travel_map.png`
+- 旅行地图：`optimized/backgrounds/travel_map.webp`
+- 地图地点图：
+  - `legacy/travel/location_beach.png`
+  - `legacy/travel/location_forest.png`
+  - `legacy/travel/location_museum.png`
+  - `legacy/travel/location_space.png`
 - 出发动作：`characters/turtle/turtle_travel_start.png`
 - 返回动作：`characters/turtle/turtle_travel_return.png`
 - 旅行照片：
-  - `travel/photos/photo_beach.png`
-  - `travel/photos/photo_forest.png`
-  - `travel/photos/photo_museum.png`
-  - `travel/photos/photo_observatory_placeholder.png`
+  - `optimized/travel/photos/photo_beach.webp`
+  - `optimized/travel/photos/photo_forest.webp`
+  - `optimized/travel/photos/photo_museum.webp`
+  - `legacy/travel/location_space.png`（太空站 V1.1 正式地点图）
 - 知识卡：
-  - `travel/knowledge_cards/knowledge_tide.png`
-  - `travel/knowledge_cards/knowledge_tree_ring.png`
-  - `travel/knowledge_cards/knowledge_dinosaur.png`
+  - `optimized/travel/knowledge_cards/knowledge_tide.webp`
+  - `optimized/travel/knowledge_cards/knowledge_tree_ring.webp`
+  - `optimized/travel/knowledge_cards/knowledge_dinosaur.webp`
+  - 太空站知识卡由页面使用地点插画和结构化知识文本生成。
+- 知识卡入口图标：`legacy/icons/knowledge_card.png`
 - 奖励弹窗：`ui/reward_popup_frame.png`
 
 ## 睡觉
@@ -81,8 +90,8 @@
 - 睡觉动作：`characters/turtle/turtle_sleeping.png`
 - 建议放置位置：主场景山洞/小窝附近。
 
-## 后续需要正式补绘
+## 后续精修方向
 
-- 第四个旅行地点的正式照片和知识卡，目前 `photo_observatory_placeholder.png` 是占位图。
+- 太空站功能和内容已经完整，可继续补绘独立旅行照片和同系列整图知识卡以提升收藏质感。
 - 如果要做更强交互，主场景中的果树、池塘、山洞、小桌子建议从背景里分层拆出。
 - 如果要做动画，建议让美术按同一画布尺寸补关键帧，而不是只用当前静态图缩放。

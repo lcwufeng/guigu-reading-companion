@@ -30,10 +30,11 @@ test("server-renders the Guigui reading companion", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
 
-test("keeps the V1 product loops and required art assets", async () => {
-  const [page, layout, packageJson] = await Promise.all([
+test("keeps the V1.1 product loops, safeguards, and required art assets", async () => {
+  const [page, layout, companionRoute, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/companion/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
@@ -45,22 +46,40 @@ test("keeps the V1 product loops and required art assets", async () => {
     "龟龟书房",
     "今日悄悄话",
     "龟龟旅行地图",
+    "查看知识卡",
   ]) {
     assert.match(page, new RegExp(feature));
   }
 
+  for (const destination of ["星沙海湾", "森语树屋", "恐龙博物馆", "太空站"]) {
+    assert.match(page, new RegExp(destination));
+  }
+
   assert.match(page, /guigu-v1-state/);
+  assert.match(page, /activeTravel/);
   assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus"\]/);
   assert.match(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
+  assert.match(layout, /width: "device-width"/);
+  assert.match(companionRoute, /store: false/);
+  assert.match(companionRoute, /function localReply/);
+  assert.match(companionRoute, /OPENAI_COMPANION_MODEL/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 
   for (const path of [
-    "../public/assets/backgrounds/main_home.png",
-    "../public/assets/backgrounds/reading_room.png",
-    "../public/assets/backgrounds/travel_map.png",
+    "../public/assets/optimized/backgrounds/main_home.webp",
+    "../public/assets/optimized/backgrounds/reading_room.webp",
+    "../public/assets/optimized/backgrounds/travel_map.webp",
     "../public/assets/characters/turtle/turtle_idle_front.png",
     "../public/assets/icons/status/status_mood.png",
+    "../public/assets/legacy/brand/guigu_logo.png",
+    "../public/assets/legacy/travel/location_beach.png",
+    "../public/assets/legacy/travel/location_forest.png",
+    "../public/assets/legacy/travel/location_museum.png",
+    "../public/assets/legacy/travel/location_space.png",
+    "../public/assets/optimized/travel/knowledge_cards/knowledge_tide.webp",
+    "../public/assets/optimized/travel/knowledge_cards/knowledge_tree_ring.webp",
+    "../public/assets/optimized/travel/knowledge_cards/knowledge_dinosaur.webp",
   ]) {
     await access(new URL(path, import.meta.url));
   }

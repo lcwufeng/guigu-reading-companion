@@ -1,10 +1,12 @@
-# 龟龟伴读 V1 美术资产包
+# 龟龟伴读 V1.1 美术资产包
 
 生成日期：2026年7月10日
 
 ## 使用说明
 
-- `backgrounds/`：整张场景背景，可直接用于页面底图。
+- `backgrounds/`：原始场景大图，保留为美术源文件。
+- `optimized/`：运行时加载的 WebP 背景、旅行照片和知识卡。
+- `legacy/`：从旧版项目确认复用的品牌、地点和收藏图标。
 - `characters/turtle/`：透明底乌龟角色动作图，适合跟随状态或交互切换。
 - `icons/status/`：状态图标，对应饥饿值、干净值、心情值、无聊指数。
 - `objects/`：果子、树、荷叶、水波等交互物件或隐藏点。
@@ -68,14 +70,29 @@
 | `travel/knowledge_cards/knowledge_tide.png` | Tide knowledge card | 1122x1402 | Copied from existing project artwork. |
 | `travel/knowledge_cards/knowledge_tree_ring.png` | Tree-ring knowledge card | 1122x1402 | Copied from existing project artwork. |
 | `travel/knowledge_cards/knowledge_dinosaur.png` | Dinosaur knowledge card | 1122x1402 | Copied from existing project artwork. |
-| `travel/photos/photo_observatory_placeholder.png` | Observatory placeholder photo | 420x540 | Generated placeholder for the fourth destination. |
 | `ui/speech_bubble_question.png` | ? | 360x220 | Generated UI frame placeholder. |
 | `ui/reward_popup_frame.png` | 奖励 | 360x220 | Generated UI frame placeholder. |
 | `ui/reading_summary_card.png` | 阅读总结 | 360x220 | Generated UI frame placeholder. |
 
-## 仍建议后续精修
+## V1.1 复用与运行时资产
 
-- 第四个旅行地点目前使用地图裁切生成占位卡，后续可补一张正式旅行照片和知识卡。
+| 文件 | 用途 | 说明 |
+|---|---|---|
+| `legacy/brand/guigu_logo.png` | 顶栏品牌标识 | 复用旧版龟龟伴读像素标题。 |
+| `legacy/travel/location_beach.png` | 星沙海湾地点图 | 地图点位与旅行详情共用。 |
+| `legacy/travel/location_forest.png` | 森语树屋地点图 | 地图点位与旅行详情共用。 |
+| `legacy/travel/location_museum.png` | 恐龙博物馆地点图 | 地图点位与旅行详情共用。 |
+| `legacy/travel/location_space.png` | 太空站地点图 | 同时作为 V1.1 太空站旅行图；知识卡由页面排版生成。 |
+| `legacy/icons/knowledge_card.png` | 知识卡入口 | 用于奖励、手账和库存入口。 |
+| `optimized/backgrounds/*.webp` | 场景背景 | 与原始 PNG 同画面，供运行时加载。 |
+| `optimized/travel/photos/*.webp` | 旅行照片 | 海湾、森林、博物馆三张正式照片。 |
+| `optimized/travel/knowledge_cards/*.webp` | 旅行知识卡 | 潮汐、年轮、恐龙三张正式知识卡。 |
+
+运行时核心大图约从 25 MB 降至 2.9 MB；原始 PNG 不参与页面加载。
+
+## 后续精修方向
+
+- 太空站当前使用旧版正式地点插画与页面生成知识卡，后续可再补独立旅行照片和同系列整图知识卡。
 - 状态图标已经可用，但如果要完全贴合乌龟像素风，可再找美术统一重绘。
 - 角色动作来自参考图裁切，开发时建议以脚底中心或身体中心作为锚点统一定位。
 - 主场景背景是整张图，若后续要做更强交互，果树、池塘、山洞、荷叶最好拆成分层图。
