@@ -1,0 +1,1159 @@
+"use client";
+
+import {
+  Apple,
+  Backpack,
+  BookOpen,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  Edit3,
+  Home,
+  MapPinned,
+  MessageCircle,
+  Mic,
+  MicOff,
+  Moon,
+  Search,
+  Send,
+  Sparkles,
+  Star,
+  Volume2,
+  Waves,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+type View = "home" | "library" | "chat" | "travel" | "journal";
+type BusyAction = "feeding" | "swimming" | "sleeping" | null;
+type RecordTab = "travel" | "reading" | "items";
+type ChatMessage = { id: number; role: "turtle" | "user"; text: string };
+type ReadingRecord = {
+  id: number;
+  title: string;
+  date: string;
+  answer: string;
+  summary: string;
+};
+type TravelRecord = {
+  id: number;
+  destination: string;
+  date: string;
+  reward: string;
+  photo: string;
+  knowledge?: string;
+};
+
+type GameState = {
+  name: string;
+  hunger: number;
+  cleanliness: number;
+  boredom: number;
+  fruits: number;
+  stars: number;
+  lastSeen: number;
+  readingRecords: ReadingRecord[];
+  travelRecords: TravelRecord[];
+  chatMessages: ChatMessage[];
+};
+
+type Book = {
+  id: string;
+  title: string;
+  category: string;
+  cover: string;
+  pages: { heading: string; body: string }[];
+  question: string;
+  summary: string;
+  knowledge: string;
+};
+
+type Destination = {
+  id: string;
+  name: string;
+  note: string;
+  duration: string;
+  reward: string;
+  photo: string;
+  knowledge?: string;
+  position: string;
+};
+
+const ASSET = "/assets";
+
+const initialState: GameState = {
+  name: "小乌龟",
+  hunger: 30,
+  cleanliness: 80,
+  boredom: 25,
+  fruits: 5,
+  stars: 12,
+  lastSeen: Date.now(),
+  readingRecords: [],
+  travelRecords: [],
+  chatMessages: [
+    {
+      id: 1,
+      role: "turtle",
+      text: "你回来啦！今天学到了什么新东西？我想听你讲讲。",
+    },
+  ],
+};
+
+const books: Book[] = [
+  {
+    id: "forest",
+    title: "会唱歌的森林",
+    category: "童话 · 3分钟",
+    cover: `${ASSET}/books/book_forest_story.png`,
+    pages: [
+      {
+        heading: "清晨的声音",
+        body: "清晨，小松鼠米米被一阵轻轻的歌声叫醒。风吹过树叶，沙沙地响；小溪绕过石头，叮咚地唱。米米背上小布包，决定去找一找森林里最好听的声音。",
+      },
+      {
+        heading: "每个人的歌",
+        body: "啄木鸟敲出清脆的鼓点，黄鹂唱出亮亮的高音，就连慢吞吞的蜗牛，也用触角轻轻敲着露珠。米米忽然发现，森林不是只有一种歌声，每一种声音都很重要。",
+      },
+      {
+        heading: "合唱开始啦",
+        body: "傍晚，米米邀请大家来到老橡树下。风声、溪水声和动物们的声音合在一起，变成了一首从没听过的歌。米米明白了：认真听见别人，大家才能唱出最美的歌。",
+      },
+    ],
+    question: "米米为什么觉得每一种声音都很重要呀？",
+    summary: "米米寻找森林中最好听的声音，最后发现大家各不相同的声音合在一起才最动听。",
+    knowledge: "认真倾听，能让我们发现每个人独特的优点。",
+  },
+  {
+    id: "ocean",
+    title: "潮汐的小秘密",
+    category: "科普 · 4分钟",
+    cover: `${ASSET}/books/book_ocean_note.png`,
+    pages: [
+      {
+        heading: "海水去哪儿了",
+        body: "早晨，沙滩上的海水离岸边很远；到了下午，海水又慢慢靠近。海水有规律地涨起来、落下去，这种现象叫作潮汐。涨潮时海面升高，退潮时海面降低。",
+      },
+      {
+        heading: "月亮在帮忙",
+        body: "月球虽然离我们很远，却会用引力轻轻拉着地球上的海水。太阳也会产生影响。当地球、月球和太阳的位置变化时，潮水的高低也会跟着变化。",
+      },
+      {
+        heading: "海边的时钟",
+        body: "渔民会查看潮汐时间，决定什么时候出海；小螃蟹也会趁退潮寻找食物。潮汐像海边的一座大时钟，提醒着许多生命安排一天的活动。",
+      },
+    ],
+    question: "潮汐为什么像海边的一座大时钟呢？",
+    summary: "海水会规律地涨落，月球和太阳的引力会影响潮汐，海边的人和动物也会按潮汐安排活动。",
+    knowledge: "月球的引力是形成潮汐的重要原因。",
+  },
+  {
+    id: "dino",
+    title: "恐龙脚印侦探",
+    category: "探索 · 4分钟",
+    cover: `${ASSET}/books/book_dino_knowledge.png`,
+    pages: [
+      {
+        heading: "石头里的脚印",
+        body: "小小在博物馆看到一块奇怪的石头，上面留着三个长长的脚趾印。讲解员说，这是恐龙脚印化石。很久以前，恐龙踩过湿软的泥地，脚印被泥沙慢慢盖住。",
+      },
+      {
+        heading: "脚印会说话",
+        body: "科学家会测量脚印的大小、深浅和前后距离。脚印又大又深，说明恐龙可能很重；两排脚印靠得很近，说明它可能正慢慢走；距离变大时，它也许跑了起来。",
+      },
+      {
+        heading: "看不见的故事",
+        body: "我们没有见过真正的恐龙，但化石留下了线索。科学家把许多小线索放在一起，就能猜想恐龙怎样走路、在哪里生活。发现问题、寻找证据，就是科学侦探的工作。",
+      },
+    ],
+    question: "科学家能从恐龙脚印里知道哪些事情？",
+    summary: "恐龙脚印变成化石后保留了许多线索，科学家通过测量和比较，推测恐龙的体重与行动方式。",
+    knowledge: "化石是研究古代生命的重要证据。",
+  },
+];
+
+const destinations: Destination[] = [
+  {
+    id: "beach",
+    name: "星沙海湾",
+    note: "去找会发光的贝壳",
+    duration: "8秒",
+    reward: "潮汐知识卡",
+    photo: `${ASSET}/travel/photos/photo_beach.png`,
+    knowledge: `${ASSET}/travel/knowledge_cards/knowledge_tide.png`,
+    position: "destination-beach",
+  },
+  {
+    id: "forest",
+    name: "森语树屋",
+    note: "听一听大树的年轮故事",
+    duration: "8秒",
+    reward: "树木年轮卡",
+    photo: `${ASSET}/travel/photos/photo_forest.png`,
+    knowledge: `${ASSET}/travel/knowledge_cards/knowledge_tree_ring.png`,
+    position: "destination-forest",
+  },
+  {
+    id: "museum",
+    name: "恐龙博物馆",
+    note: "寻找巨大的远古脚印",
+    duration: "8秒",
+    reward: "恐龙知识卡",
+    photo: `${ASSET}/travel/photos/photo_museum.png`,
+    knowledge: `${ASSET}/travel/knowledge_cards/knowledge_dinosaur.png`,
+    position: "destination-museum",
+  },
+  {
+    id: "space",
+    name: "星空观测站",
+    note: "抬头认识夏夜星座",
+    duration: "8秒",
+    reward: "星星纪念章",
+    photo: `${ASSET}/travel/photos/photo_observatory_placeholder.png`,
+    position: "destination-space",
+  },
+];
+
+const hidePlaces = ["water", "tree", "behind", "lotus"] as const;
+type HidePlace = (typeof hidePlaces)[number];
+
+const hideLabels: Record<HidePlace, string> = {
+  water: "水波里",
+  tree: "树梢上",
+  behind: "树干后",
+  lotus: "荷叶下",
+};
+
+function clamp(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function formatDate() {
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "long",
+    day: "numeric",
+  }).format(new Date());
+}
+
+function getReply(input: string, name: string) {
+  if (/数学|算|题|乘法|加法/.test(input)) {
+    return `数学像一条要慢慢走的小路。你愿意挑一道题，把解题的第一步讲给${name}听吗？`;
+  }
+  if (/书|读|故事|阅读/.test(input)) {
+    return "听起来很有意思！故事里哪一个人或哪一件事，让你印象最深？";
+  }
+  if (/朋友|同学|玩|游戏/.test(input)) {
+    return "和朋友一起的时光真开心。你们今天有没有互相帮忙，或者一起发现什么新鲜事？";
+  }
+  if (/难|不会|不懂|失败/.test(input)) {
+    return "没关系，我们可以慢一点。先说说你已经知道的部分，剩下的我陪你一起想。";
+  }
+  if (/开心|高兴|喜欢/.test(input)) {
+    return "我也跟着开心起来啦！把这件开心的事记在今天的小手账里吧。";
+  }
+  return "我认真听到了！你能再告诉我，这件事让你学到或发现了什么吗？";
+}
+
+function StatusPill({
+  icon,
+  label,
+  value,
+  reverse,
+}: {
+  icon: string;
+  label: string;
+  value: number;
+  reverse?: boolean;
+}) {
+  const displayValue = reverse ? 100 - value : value;
+  return (
+    <div className="status-pill" aria-label={`${label} ${displayValue}`}>
+      <img src={icon} alt="" />
+      <div className="status-copy">
+        <span>{label}</span>
+        <div className="status-track">
+          <i style={{ width: `${displayValue}%` }} />
+        </div>
+      </div>
+      <strong>{displayValue}</strong>
+    </div>
+  );
+}
+
+function NavButton({
+  active,
+  label,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      className={`nav-button ${active ? "active" : ""}`}
+      onClick={onClick}
+      aria-label={label}
+      aria-current={active ? "page" : undefined}
+      type="button"
+    >
+      {children}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+export default function HomePage() {
+  const [view, setView] = useState<View>("home");
+  const [game, setGame] = useState<GameState>(initialState);
+  const [hydrated, setHydrated] = useState(false);
+  const [busy, setBusy] = useState<BusyAction>(null);
+  const [actionProgress, setActionProgress] = useState(0);
+  const [turtleSprite, setTurtleSprite] = useState("turtle_idle_front.png");
+  const [toast, setToast] = useState("小乌龟在等你一起玩");
+  const [fruitPicker, setFruitPicker] = useState(false);
+  const [hideTarget, setHideTarget] = useState<HidePlace | null>(null);
+  const [hideTries, setHideTries] = useState(0);
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [selectedBook, setSelectedBook] = useState<Book>(books[0]);
+  const [bookPage, setBookPage] = useState(0);
+  const [questionOpen, setQuestionOpen] = useState(false);
+  const [questionAnswered, setQuestionAnswered] = useState(false);
+  const [readingAnswer, setReadingAnswer] = useState("");
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [listening, setListening] = useState(false);
+  const [selectedDestination, setSelectedDestination] = useState<Destination>(destinations[0]);
+  const [traveling, setTraveling] = useState<Destination | null>(null);
+  const [travelProgress, setTravelProgress] = useState(0);
+  const [travelReward, setTravelReward] = useState<Destination | null>(null);
+  const [recordTab, setRecordTab] = useState<RecordTab>("travel");
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const mood = useMemo(
+    () => clamp(0.35 * (100 - game.hunger) + 0.3 * game.cleanliness + 0.35 * (100 - game.boredom)),
+    [game.hunger, game.cleanliness, game.boredom],
+  );
+
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), 3600);
+  }, []);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("guigu-v1-state");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as GameState;
+        const hours = Math.min(24, Math.max(0, (Date.now() - (parsed.lastSeen || Date.now())) / 3_600_000));
+        setGame({
+          ...initialState,
+          ...parsed,
+          hunger: clamp(parsed.hunger + hours * 3),
+          cleanliness: clamp(parsed.cleanliness - hours),
+          boredom: clamp(parsed.boredom + hours * 2),
+          lastSeen: Date.now(),
+        });
+      } catch {
+        setGame(initialState);
+      }
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    window.localStorage.setItem(
+      "guigu-v1-state",
+      JSON.stringify({ ...game, lastSeen: Date.now() }),
+    );
+  }, [game, hydrated]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (busy || hideTarget || traveling) return;
+    if (game.hunger > 72) setTurtleSprite("turtle_hungry.png");
+    else if (game.cleanliness < 38) setTurtleSprite("turtle_dirty.png");
+    else if (game.boredom > 70) setTurtleSprite("turtle_bored_sitting.png");
+    else if (mood < 55) setTurtleSprite("turtle_low_mood.png");
+    else setTurtleSprite("turtle_idle_front.png");
+  }, [busy, game.hunger, game.cleanliness, game.boredom, hideTarget, mood, traveling]);
+
+  const patchGame = useCallback((patch: Partial<GameState>) => {
+    setGame((current) => ({ ...current, ...patch }));
+  }, []);
+
+  const runTimedAction = useCallback(
+    (
+      action: Exclude<BusyAction, null>,
+      duration: number,
+      sprite: string,
+      onDone: () => void,
+      startMessage: string,
+    ) => {
+      if (busy || hideTarget || traveling) return;
+      setBusy(action);
+      setTurtleSprite(sprite);
+      setActionProgress(0);
+      showToast(startMessage);
+      const started = Date.now();
+      const interval = window.setInterval(() => {
+        const progress = Math.min(100, ((Date.now() - started) / duration) * 100);
+        setActionProgress(progress);
+        if (progress >= 100) {
+          window.clearInterval(interval);
+          setBusy(null);
+          setActionProgress(0);
+          onDone();
+        }
+      }, 100);
+    },
+    [busy, hideTarget, showToast, traveling],
+  );
+
+  const feedFruit = (fruit: string) => {
+    if (game.fruits < 1) {
+      showToast("果篮空啦，读书或旅行可以带回新果子");
+      return;
+    }
+    setFruitPicker(false);
+    runTimedAction(
+      "feeding",
+      1800,
+      "turtle_eating_fruit.png",
+      () => {
+        setGame((current) => ({
+          ...current,
+          hunger: clamp(current.hunger - 22),
+          boredom: clamp(current.boredom - 3),
+          fruits: current.fruits - 1,
+        }));
+        setTurtleSprite("turtle_satisfied.png");
+        showToast(`${game.name}吃下${fruit}，肚子满足啦`);
+        window.setTimeout(() => setTurtleSprite("turtle_idle_front.png"), 1800);
+      },
+      `${game.name}正在大口吃果子…`,
+    );
+  };
+
+  const startSwim = () => {
+    runTimedAction(
+      "swimming",
+      5200,
+      "turtle_swimming.png",
+      () => {
+        patchGame({ cleanliness: 100 });
+        setTurtleSprite("turtle_clean_sparkle.png");
+        showToast("游泳完成，龟壳亮晶晶！");
+        window.setTimeout(() => setTurtleSprite("turtle_idle_front.png"), 2000);
+      },
+      `${game.name}扑通一声跳进池塘`,
+    );
+  };
+
+  const startSleep = () => {
+    runTimedAction(
+      "sleeping",
+      5000,
+      "turtle_sleeping.png",
+      () => {
+        setGame((current) => ({
+          ...current,
+          boredom: clamp(current.boredom - 6),
+          hunger: clamp(current.hunger + 3),
+        }));
+        setTurtleSprite("turtle_waving.png");
+        showToast(`${game.name}睡醒啦，精神满满`);
+        window.setTimeout(() => setTurtleSprite("turtle_idle_front.png"), 1800);
+      },
+      "嘘，做一个香香的梦吧",
+    );
+  };
+
+  const startHideAndSeek = () => {
+    if (busy || traveling) return;
+    const target = hidePlaces[Math.floor(Math.random() * hidePlaces.length)];
+    setHideTarget(target);
+    setHideTries(0);
+    showToast(`${game.name}藏好啦！留心看看会动的地方`);
+  };
+
+  const guessHidePlace = (place: HidePlace) => {
+    if (!hideTarget) return;
+    if (place === hideTarget) {
+      setHideTarget(null);
+      setHideTries(0);
+      setTurtleSprite("turtle_excited.png");
+      setGame((current) => ({
+        ...current,
+        boredom: clamp(current.boredom - 24),
+        stars: current.stars + 2,
+      }));
+      showToast(`找到啦！原来藏在${hideLabels[place]}`);
+      window.setTimeout(() => setTurtleSprite("turtle_idle_front.png"), 2200);
+    } else {
+      setHideTries((tries) => tries + 1);
+      showToast(`这里没有，再找找看${hideTries >= 1 ? "，注意小小的动静" : ""}`);
+    }
+  };
+
+  const saveName = () => {
+    const cleaned = draftName.trim().slice(0, 8);
+    if (!cleaned) return;
+    patchGame({ name: cleaned });
+    setEditingName(false);
+    showToast(`以后就叫我“${cleaned}”啦`);
+  };
+
+  const chooseBook = (book: Book) => {
+    setSelectedBook(book);
+    setBookPage(0);
+    setReadingAnswer("");
+    setQuestionAnswered(false);
+    setQuestionOpen(false);
+  };
+
+  const nextBookPage = () => {
+    if (bookPage === 0 && !questionAnswered) {
+      setQuestionOpen(true);
+      return;
+    }
+    if (bookPage < selectedBook.pages.length - 1) {
+      setBookPage((page) => page + 1);
+    } else {
+      finishReading();
+    }
+  };
+
+  const submitReadingAnswer = () => {
+    if (!readingAnswer.trim()) {
+      showToast("先把你的想法告诉龟龟吧");
+      return;
+    }
+    setQuestionAnswered(true);
+    setQuestionOpen(false);
+    setBookPage(1);
+    setGame((current) => ({
+      ...current,
+      boredom: clamp(current.boredom - 8),
+      stars: current.stars + 1,
+    }));
+    showToast("你讲得很清楚，我听懂啦！");
+  };
+
+  const finishReading = () => {
+    const record: ReadingRecord = {
+      id: Date.now(),
+      title: selectedBook.title,
+      date: formatDate(),
+      answer: readingAnswer || "今天认真读完了整篇故事。",
+      summary: selectedBook.summary,
+    };
+    setGame((current) => ({
+      ...current,
+      boredom: clamp(current.boredom - 12),
+      stars: current.stars + 3,
+      fruits: current.fruits + 1,
+      readingRecords: [record, ...current.readingRecords.filter((item) => item.title !== record.title)],
+    }));
+    setSummaryOpen(true);
+  };
+
+  const beginVoiceInput = (target: "chat" | "reading") => {
+    const SpeechRecognition =
+      (window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike }).SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionLike }).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showToast("当前浏览器暂不支持语音输入，可以用文字告诉龟龟");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "zh-CN";
+    recognition.interimResults = false;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      showToast("没有听清楚，再试一次或改用文字吧");
+    };
+    recognition.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      if (target === "chat") setChatInput(text);
+      else setReadingAnswer(text);
+    };
+    recognition.start();
+  };
+
+  const sendChat = () => {
+    const message = chatInput.trim();
+    if (!message) return;
+    const userMessage: ChatMessage = { id: Date.now(), role: "user", text: message };
+    const turtleMessage: ChatMessage = {
+      id: Date.now() + 1,
+      role: "turtle",
+      text: getReply(message, game.name),
+    };
+    setGame((current) => ({
+      ...current,
+      boredom: clamp(current.boredom - 5),
+      chatMessages: [...current.chatMessages, userMessage, turtleMessage].slice(-16),
+    }));
+    setChatInput("");
+  };
+
+  const startTravel = () => {
+    if (traveling || busy) return;
+    setTraveling(selectedDestination);
+    setTravelProgress(0);
+    showToast(`${game.name}背好行囊，出发去${selectedDestination.name}`);
+    const started = Date.now();
+    const interval = window.setInterval(() => {
+      const progress = Math.min(100, ((Date.now() - started) / 8000) * 100);
+      setTravelProgress(progress);
+      if (progress >= 100) {
+        window.clearInterval(interval);
+        const record: TravelRecord = {
+          id: Date.now(),
+          destination: selectedDestination.name,
+          date: formatDate(),
+          reward: selectedDestination.reward,
+          photo: selectedDestination.photo,
+          knowledge: selectedDestination.knowledge,
+        };
+        setGame((current) => ({
+          ...current,
+          boredom: clamp(current.boredom - 18),
+          hunger: clamp(current.hunger + 6),
+          stars: current.stars + 4,
+          fruits: current.fruits + 1,
+          travelRecords: [record, ...current.travelRecords],
+        }));
+        setTraveling(null);
+        setTravelProgress(0);
+        setTravelReward(selectedDestination);
+        showToast(`${game.name}带着新发现回来啦！`);
+      }
+    }, 100);
+  };
+
+  const resetReading = () => {
+    setSummaryOpen(false);
+    setQuestionAnswered(false);
+    setReadingAnswer("");
+    setBookPage(0);
+  };
+
+  const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : "";
+
+  return (
+    <main className={`app view-${view}`}>
+      <header className="topbar">
+        <button
+          className="pet-name"
+          type="button"
+          onClick={() => {
+            setDraftName(game.name);
+            setEditingName(true);
+          }}
+          title="修改名字"
+        >
+          <span className="avatar-dot">
+            <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+          </span>
+          <span>
+            <small>我的伙伴</small>
+            <strong>{game.name}</strong>
+          </span>
+          <Edit3 size={15} aria-hidden="true" />
+        </button>
+
+        <section className="status-row" aria-label="龟龟状态">
+          <StatusPill
+            icon={`${ASSET}/icons/status/status_hunger.png`}
+            label="饱腹"
+            value={game.hunger}
+            reverse
+          />
+          <StatusPill
+            icon={`${ASSET}/icons/status/status_cleanliness.png`}
+            label="干净"
+            value={game.cleanliness}
+          />
+          <StatusPill
+            icon={`${ASSET}/icons/status/status_boredom.png`}
+            label="有趣"
+            value={game.boredom}
+            reverse
+          />
+          <StatusPill
+            icon={`${ASSET}/icons/status/status_mood.png`}
+            label="心情"
+            value={mood}
+          />
+        </section>
+
+        <div className="wallet" aria-label={`${game.stars}颗星星，${game.fruits}个果子`}>
+          <span><Star size={17} fill="currentColor" /> {game.stars}</span>
+          <span><Apple size={17} fill="currentColor" /> {game.fruits}</span>
+        </div>
+      </header>
+
+      <section className="scene-shell">
+        {view === "home" && (
+          <section className={`scene home-scene ${busy === "sleeping" ? "sleeping-scene" : ""}`}>
+            <div className="scene-title">
+              <small>{formatDate()} · 晴</small>
+              <h1>今天想和{game.name}做什么？</h1>
+            </div>
+
+            <button
+              className="world-hotspot pond-hotspot"
+              type="button"
+              onClick={() => (hideTarget ? guessHidePlace("water") : startSwim())}
+              aria-label={hideTarget ? "找找水里" : "去池塘游泳"}
+              title={hideTarget ? "找找水里" : "去池塘游泳"}
+            >
+              <Waves />
+            </button>
+            <button
+              className="world-hotspot tree-hotspot"
+              type="button"
+              onClick={() => (hideTarget ? guessHidePlace("tree") : setFruitPicker(true))}
+              aria-label={hideTarget ? "找找树梢" : "摘果子"}
+              title={hideTarget ? "找找树梢" : "摘果子"}
+            >
+              <Apple />
+            </button>
+            <button
+              className="world-hotspot trunk-hotspot"
+              type="button"
+              onClick={() => hideTarget && guessHidePlace("behind")}
+              aria-label="找找树干后面"
+              title="找找树干后面"
+            >
+              <Search />
+            </button>
+            <button
+              className="world-hotspot lotus-hotspot"
+              type="button"
+              onClick={() => hideTarget && guessHidePlace("lotus")}
+              aria-label="找找荷叶下面"
+              title="找找荷叶下面"
+            >
+              <Search />
+            </button>
+            <button
+              className="world-hotspot cave-hotspot"
+              type="button"
+              onClick={startSleep}
+              aria-label="回小窝睡觉"
+              title="回小窝睡觉"
+            >
+              <Moon />
+            </button>
+
+            {hideTarget && (
+              <img
+                className={`hidden-turtle hidden-${hideTarget}`}
+                src={`${ASSET}/characters/turtle/${
+                  hideTarget === "water"
+                    ? "turtle_hide_water.png"
+                    : hideTarget === "tree"
+                      ? "turtle_hide_tree_top.png"
+                      : hideTarget === "behind"
+                        ? "turtle_hide_tree_behind.png"
+                        : "turtle_hide_lotus.png"
+                }`}
+                alt="藏起来的龟龟"
+              />
+            )}
+
+            {!hideTarget && !traveling && (
+              <div className={`turtle-wrap ${homeTurtleClass}`}>
+                <div className="speech-tag">
+                  {busy === "swimming"
+                    ? "我在练习划水！"
+                    : busy === "sleeping"
+                      ? "呼…呼…"
+                      : game.hunger > 70
+                        ? "肚子咕咕叫啦"
+                        : game.boredom > 65
+                          ? "陪我玩一会儿吧"
+                          : `嗨，我们一起进步吧！`}
+                </div>
+                <img
+                  className="turtle-sprite"
+                  src={`${ASSET}/characters/turtle/${turtleSprite}`}
+                  alt={`${game.name}正在${busy === "swimming" ? "游泳" : busy === "sleeping" ? "睡觉" : "等你"}`}
+                />
+              </div>
+            )}
+
+            {busy && (
+              <div className="action-progress" role="status">
+                <span>
+                  {busy === "feeding" ? "吃果子" : busy === "swimming" ? "游泳清洁" : "香香睡一觉"}
+                </span>
+                <div><i style={{ width: `${actionProgress}%` }} /></div>
+              </div>
+            )}
+
+            <div className="action-dock" aria-label="照顾龟龟">
+              <button type="button" onClick={() => setFruitPicker(true)} disabled={!!busy || !!hideTarget}>
+                <Apple /><span>喂果子</span>
+              </button>
+              <button type="button" onClick={startSwim} disabled={!!busy || !!hideTarget}>
+                <Waves /><span>去游泳</span>
+              </button>
+              <button type="button" onClick={startHideAndSeek} disabled={!!busy || !!hideTarget}>
+                <Search /><span>捉迷藏</span>
+              </button>
+              <button type="button" onClick={startSleep} disabled={!!busy || !!hideTarget}>
+                <Moon /><span>睡一会</span>
+              </button>
+            </div>
+          </section>
+        )}
+
+        {view === "library" && (
+          <section className="scene library-scene">
+            <div className="page-heading light-heading">
+              <span className="eyebrow"><BookOpen size={16} /> 龟龟书房</span>
+              <h1>一起读点新故事</h1>
+              <p>读到一半时，龟龟会认真向你请教一个问题。</p>
+            </div>
+
+            <div className="book-picker" aria-label="选择一本书">
+              {books.map((book) => (
+                <button
+                  key={book.id}
+                  type="button"
+                  className={selectedBook.id === book.id ? "selected" : ""}
+                  onClick={() => chooseBook(book)}
+                >
+                  <img src={book.cover} alt={`${book.title}封面`} />
+                  <span><strong>{book.title}</strong><small>{book.category}</small></span>
+                  {selectedBook.id === book.id && <Check size={17} />}
+                </button>
+              ))}
+            </div>
+
+            <article className="reading-paper">
+              <div className="reading-meta">
+                <span>{selectedBook.title}</span>
+                <span>第 {bookPage + 1} / {selectedBook.pages.length} 页</span>
+              </div>
+              <div className="reading-progress"><i style={{ width: `${((bookPage + 1) / selectedBook.pages.length) * 100}%` }} /></div>
+              <h2>{selectedBook.pages[bookPage].heading}</h2>
+              <p>{selectedBook.pages[bookPage].body}</p>
+              <div className="reading-controls">
+                <button
+                  className="icon-button"
+                  type="button"
+                  onClick={() => setBookPage((page) => Math.max(0, page - 1))}
+                  disabled={bookPage === 0}
+                  title="上一页"
+                  aria-label="上一页"
+                >
+                  <ChevronLeft />
+                </button>
+                <span>{questionAnswered ? "龟龟已经听懂你的想法啦" : "慢慢读，读懂比读快更重要"}</span>
+                <button className="next-button" type="button" onClick={nextBookPage}>
+                  {bookPage === selectedBook.pages.length - 1 ? "完成阅读" : "下一页"}
+                  <ChevronRight />
+                </button>
+              </div>
+            </article>
+
+            <img
+              className="reading-turtle"
+              src={`${ASSET}/characters/turtle/${questionAnswered ? "turtle_reading.png" : "turtle_reading_question.png"}`}
+              alt={`${game.name}正在陪你读书`}
+            />
+          </section>
+        )}
+
+        {view === "chat" && (
+          <section className="scene chat-scene">
+            <div className="chat-intro">
+              <span className="eyebrow"><MessageCircle size={16} /> 今日悄悄话</span>
+              <h1>把今天讲给{game.name}听</h1>
+              <p>学习、游戏和小发现，龟龟都愿意认真听。</p>
+              <img src={`${ASSET}/characters/turtle/turtle_talking.png`} alt="说话的龟龟" />
+            </div>
+
+            <div className="chat-panel">
+              <div className="prompt-chips" aria-label="快速话题">
+                {["今天我学会了…", "我读了一本书", "我遇到一道难题", "我和朋友一起玩"].map((prompt) => (
+                  <button key={prompt} type="button" onClick={() => setChatInput(prompt)}>{prompt}</button>
+                ))}
+              </div>
+              <div className="message-list" aria-live="polite">
+                {game.chatMessages.map((message) => (
+                  <div key={message.id} className={`message ${message.role}`}>
+                    {message.role === "turtle" && (
+                      <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+                    )}
+                    <p>{message.text}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="chat-composer">
+                <input
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  onKeyDown={(event) => event.key === "Enter" && sendChat()}
+                  placeholder="今天发生了什么？"
+                  aria-label="输入想对龟龟说的话"
+                />
+                <button
+                  className={`icon-button ${listening ? "listening" : ""}`}
+                  type="button"
+                  onClick={() => beginVoiceInput("chat")}
+                  title={listening ? "正在听" : "语音输入"}
+                  aria-label={listening ? "正在听" : "语音输入"}
+                >
+                  {listening ? <MicOff /> : <Mic />}
+                </button>
+                <button className="send-button" type="button" onClick={sendChat} aria-label="发送">
+                  <Send />
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {view === "travel" && (
+          <section className="scene travel-scene">
+            <div className="page-heading travel-heading">
+              <span className="eyebrow"><Compass size={16} /> 龟龟旅行地图</span>
+              <h1>下一站，去哪里发现新知识？</h1>
+            </div>
+
+            {destinations.map((destination) => (
+              <button
+                key={destination.id}
+                className={`map-pin ${destination.position} ${selectedDestination.id === destination.id ? "selected" : ""}`}
+                type="button"
+                onClick={() => setSelectedDestination(destination)}
+                aria-label={`选择${destination.name}`}
+              >
+                <MapPinned />
+                <span>{destination.name}</span>
+              </button>
+            ))}
+
+            <aside className="travel-card">
+              <img src={selectedDestination.photo} alt={`${selectedDestination.name}旅行照片`} />
+              <div>
+                <small>本次目的地</small>
+                <h2>{selectedDestination.name}</h2>
+                <p>{selectedDestination.note}</p>
+                <dl>
+                  <div><dt>旅行时间</dt><dd>{selectedDestination.duration}</dd></div>
+                  <div><dt>可能带回</dt><dd>{selectedDestination.reward}</dd></div>
+                </dl>
+                <button type="button" onClick={startTravel} disabled={!!traveling}>
+                  <Compass /> {traveling ? "旅行中…" : "背好行囊出发"}
+                </button>
+              </div>
+            </aside>
+
+            {traveling && (
+              <div className="traveling-banner" role="status">
+                <img src={`${ASSET}/characters/turtle/turtle_travel_start.png`} alt="出发旅行的龟龟" />
+                <div>
+                  <strong>正在前往{traveling.name}</strong>
+                  <span>沿途的新发现正在装进行囊…</span>
+                  <div><i style={{ width: `${travelProgress}%` }} /></div>
+                </div>
+                <b>{Math.max(0, Math.ceil((100 - travelProgress) * 0.08))}s</b>
+              </div>
+            )}
+          </section>
+        )}
+
+        {view === "journal" && (
+          <section className="scene journal-scene">
+            <div className="journal-header">
+              <div>
+                <span className="eyebrow"><Backpack size={16} /> 成长手账</span>
+                <h1>我们一起留下的足迹</h1>
+              </div>
+              <div className="record-tabs" role="tablist" aria-label="手账分类">
+                <button type="button" role="tab" aria-selected={recordTab === "travel"} onClick={() => setRecordTab("travel")}>旅行手账</button>
+                <button type="button" role="tab" aria-selected={recordTab === "reading"} onClick={() => setRecordTab("reading")}>阅读记录</button>
+                <button type="button" role="tab" aria-selected={recordTab === "items"} onClick={() => setRecordTab("items")}>小背包</button>
+              </div>
+            </div>
+
+            <div className="journal-content">
+              {recordTab === "travel" && (
+                <div className="record-grid">
+                  {game.travelRecords.length ? game.travelRecords.map((record) => (
+                    <article className="travel-record" key={record.id}>
+                      <img src={record.photo} alt={`${record.destination}照片`} />
+                      <div>
+                        <small>{record.date}</small>
+                        <h2>{record.destination}</h2>
+                        <p>带回了：{record.reward}</p>
+                      </div>
+                    </article>
+                  )) : <EmptyRecord type="travel" onAction={() => setView("travel")} />}
+                </div>
+              )}
+
+              {recordTab === "reading" && (
+                <div className="reading-records">
+                  {game.readingRecords.length ? game.readingRecords.map((record) => (
+                    <article className="reading-record" key={record.id}>
+                      <div className="record-icon"><BookOpen /></div>
+                      <div>
+                        <small>{record.date} · 已读完</small>
+                        <h2>{record.title}</h2>
+                        <p>{record.summary}</p>
+                        <blockquote>“{record.answer}”</blockquote>
+                      </div>
+                    </article>
+                  )) : <EmptyRecord type="reading" onAction={() => setView("library")} />}
+                </div>
+              )}
+
+              {recordTab === "items" && (
+                <div className="inventory-grid">
+                  <article><div className="item-art"><img src={`${ASSET}/objects/fruit_basket.png`} alt="果篮" /></div><strong>野外果子</strong><span>× {game.fruits}</span></article>
+                  <article><div className="item-art star-item"><Star /></div><strong>成长星星</strong><span>× {game.stars}</span></article>
+                  {game.travelRecords.map((record) => (
+                    <article key={record.id}><div className="item-art"><img src={record.photo} alt="" /></div><strong>{record.reward}</strong><span>来自{record.destination}</span></article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+      </section>
+
+      <nav className="bottom-nav" aria-label="主要功能">
+        <NavButton active={view === "home"} label="家园" onClick={() => setView("home")}><Home /></NavButton>
+        <NavButton active={view === "library"} label="读书" onClick={() => setView("library")}><BookOpen /></NavButton>
+        <NavButton active={view === "chat"} label="聊天" onClick={() => setView("chat")}><MessageCircle /></NavButton>
+        <NavButton active={view === "travel"} label="旅行" onClick={() => setView("travel")}><Compass /></NavButton>
+        <NavButton active={view === "journal"} label="手账" onClick={() => setView("journal")}><Backpack /></NavButton>
+      </nav>
+
+      {toast && <div className="toast" role="status"><Sparkles /> {toast}</div>}
+
+      {fruitPicker && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setFruitPicker(false)}>
+          <section className="modal fruit-modal" role="dialog" aria-modal="true" aria-labelledby="fruit-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" onClick={() => setFruitPicker(false)} aria-label="关闭"><X /></button>
+            <span className="modal-kicker">果篮里还有 {game.fruits} 个</span>
+            <h2 id="fruit-title">挑一个新鲜果子吧</h2>
+            <p>{game.hunger < 16 ? `${game.name}现在还不太饿，也可以晚点再吃。` : "不同颜色都一样香甜，选你喜欢的就好。"}</p>
+            <div className="fruit-options">
+              <button type="button" onClick={() => feedFruit("红果子")}><img src={`${ASSET}/objects/fruit_red.png`} alt="红果子" /><span>红果子</span></button>
+              <button type="button" onClick={() => feedFruit("橙果子")}><img src={`${ASSET}/objects/fruit_orange.png`} alt="橙果子" /><span>橙果子</span></button>
+              <button type="button" onClick={() => feedFruit("蓝果子")}><img src={`${ASSET}/objects/fruit_blue.png`} alt="蓝果子" /><span>蓝果子</span></button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {editingName && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setEditingName(false)}>
+          <section className="modal name-modal" role="dialog" aria-modal="true" aria-labelledby="name-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" onClick={() => setEditingName(false)} aria-label="关闭"><X /></button>
+            <img src={`${ASSET}/characters/turtle/turtle_waving.png`} alt="挥手的龟龟" />
+            <h2 id="name-title">给伙伴起个名字</h2>
+            <p>最多输入 8 个字，以后它会用这个名字陪着你。</p>
+            <div className="name-entry">
+              <input value={draftName} onChange={(event) => setDraftName(event.target.value)} maxLength={8} autoFocus aria-label="龟龟名字" />
+              <button type="button" onClick={saveName}><Check /> 保存名字</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {questionOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal question-modal" role="dialog" aria-modal="true" aria-labelledby="question-title">
+            <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="提问的龟龟" />
+            <span className="modal-kicker">龟龟有点没读懂</span>
+            <h2 id="question-title">{selectedBook.question}</h2>
+            <p>没有标准答案，把你的想法讲清楚就很棒。</p>
+            <textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得…" aria-label="回答龟龟的问题" />
+            <div className="modal-actions">
+              <button className="voice-button" type="button" onClick={() => beginVoiceInput("reading")}><Volume2 /> {listening ? "正在听…" : "用语音回答"}</button>
+              <button className="primary-button" type="button" onClick={submitReadingAnswer}><Send /> 讲给龟龟听</button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {summaryOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal summary-modal" role="dialog" aria-modal="true" aria-labelledby="summary-title">
+            <button className="modal-close" type="button" onClick={resetReading} aria-label="关闭"><X /></button>
+            <div className="summary-celebration">
+              <img src={`${ASSET}/characters/turtle/turtle_happy_hearts.png`} alt="开心的龟龟" />
+              <div><span className="modal-kicker">阅读完成 · +3 星星</span><h2 id="summary-title">今天的阅读小结</h2></div>
+            </div>
+            <div className="summary-block"><small>今天读了</small><strong>《{selectedBook.title}》</strong></div>
+            <div className="summary-block"><small>故事讲了</small><p>{selectedBook.summary}</p></div>
+            <div className="summary-block"><small>我学到</small><p>{selectedBook.knowledge}</p></div>
+            <div className="turtle-note"><Sparkles /> 你愿意停下来想一想、讲一讲，这就是很棒的阅读！</div>
+            <button className="primary-button full-button" type="button" onClick={() => { resetReading(); setView("journal"); setRecordTab("reading"); }}><BookOpen /> 收进成长手账</button>
+          </section>
+        </div>
+      )}
+
+      {travelReward && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal reward-modal" role="dialog" aria-modal="true" aria-labelledby="reward-title">
+            <button className="modal-close" type="button" onClick={() => setTravelReward(null)} aria-label="关闭"><X /></button>
+            <img className="returning-turtle" src={`${ASSET}/characters/turtle/turtle_travel_return.png`} alt="旅行回来的龟龟" />
+            <span className="modal-kicker">旅行平安归来 · +4 星星</span>
+            <h2 id="reward-title">从{travelReward.name}带回了新发现</h2>
+            <div className="reward-preview">
+              <img src={travelReward.photo} alt={`${travelReward.name}照片`} />
+              <div><small>本次收获</small><strong>{travelReward.reward}</strong><span>还有 1 个野外果子</span></div>
+            </div>
+            <button className="primary-button full-button" type="button" onClick={() => { setTravelReward(null); setView("journal"); setRecordTab("travel"); }}><Backpack /> 放进旅行手账</button>
+          </section>
+        </div>
+      )}
+    </main>
+  );
+}
+
+function EmptyRecord({ type, onAction }: { type: "travel" | "reading"; onAction: () => void }) {
+  const reading = type === "reading";
+  return (
+    <div className="empty-record">
+      {reading ? <BookOpen /> : <MapPinned />}
+      <h2>{reading ? "第一篇阅读小结正在等你" : "第一张旅行照片正在等你"}</h2>
+      <p>{reading ? "选一本喜欢的短篇，和龟龟一起读完吧。" : "挑一个目的地，龟龟会把沿途的新发现带回来。"}</p>
+      <button type="button" onClick={onAction}>{reading ? "去书房" : "去旅行"}<ChevronRight /></button>
+    </div>
+  );
+}
+
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  onstart: () => void;
+  onend: () => void;
+  onerror: () => void;
+  onresult: (event: { results: { 0: { 0: { transcript: string } } } }) => void;
+  start: () => void;
+};
