@@ -87,7 +87,8 @@ type Destination = {
   position: string;
 };
 
-const ASSET = "/assets";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const ASSET = `${BASE_PATH}/assets`;
 
 const initialState: GameState = {
   name: "小乌龟",
@@ -277,7 +278,7 @@ function getLocalReply(input: string, name: string) {
 }
 
 async function askCompanion(payload: Record<string, string>) {
-  const response = await fetch("/api/companion", {
+  const response = await fetch(`${BASE_PATH}/api/companion`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

@@ -31,9 +31,10 @@ test("server-renders the Guigui reading companion", async () => {
 });
 
 test("keeps the V1.1 product loops, safeguards, and required art assets", async () => {
-  const [page, layout, companionRoute, packageJson] = await Promise.all([
+  const [page, layout, nextConfig, companionRoute, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../next.config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/companion/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
@@ -61,6 +62,8 @@ test("keeps the V1.1 product loops, safeguards, and required art assets", async 
   assert.match(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
+  assert.match(nextConfig, /NEXT_PUBLIC_BASE_PATH/);
+  assert.match(page, /fetch\(`\$\{BASE_PATH\}\/api\/companion`/);
   assert.match(companionRoute, /store: false/);
   assert.match(companionRoute, /function localReply/);
   assert.match(companionRoute, /OPENAI_COMPANION_MODEL/);
