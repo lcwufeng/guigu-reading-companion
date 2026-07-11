@@ -31,12 +31,13 @@ test("server-renders the Guigui reading companion", async () => {
 });
 
 test("keeps the V1.2 product loops, safeguards, and required art assets", async () => {
-  const [page, styles, layout, nextConfig, companionRoute, packageJson] = await Promise.all([
+  const [page, styles, layout, nextConfig, companionRoute, speechRoute, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../next.config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/companion/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/speech/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
@@ -64,7 +65,10 @@ test("keeps the V1.2 product loops, safeguards, and required art assets", async 
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
   assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus"\]/);
-  assert.match(page, /SpeechRecognition/);
+  assert.match(page, /navigator\.mediaDevices\.getUserMedia/);
+  assert.match(page, /encodeWav/);
+  assert.match(page, /我在认真听/);
+  assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
   assert.match(nextConfig, /NEXT_PUBLIC_BASE_PATH/);
@@ -76,6 +80,12 @@ test("keeps the V1.2 product loops, safeguards, and required art assets", async 
   assert.match(companionRoute, /DEEPSEEK_API_KEY/);
   assert.match(companionRoute, /cleanPetName/);
   assert.match(companionRoute, /function localReply/);
+  assert.match(speechRoute, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
+  assert.match(speechRoute, /VOLC_SPEECH_APP_ID/);
+  assert.match(speechRoute, /VOLC_SPEECH_ACCESS_TOKEN/);
+  assert.match(speechRoute, /volc\.bigasr\.sauc\.duration/);
+  assert.match(speechRoute, /MAX_AUDIO_BYTES/);
+  assert.match(packageJson, /"ws"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 
   for (const path of [

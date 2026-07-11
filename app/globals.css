@@ -1481,6 +1481,201 @@ button:disabled {
   width: 17px;
 }
 
+.voice-listening-backdrop {
+  align-items: flex-end;
+  background: rgba(10, 37, 31, 0.66);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 260;
+}
+
+.voice-listening-panel {
+  align-items: center;
+  background: #f8fffb;
+  box-shadow: 0 24px 80px rgba(4, 28, 21, 0.38);
+  display: flex;
+  flex-direction: column;
+  min-height: 470px;
+  padding: 34px 36px 28px;
+  position: relative;
+  width: min(640px, calc(100vw - 48px));
+}
+
+.voice-listening-panel > img {
+  height: 112px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  position: absolute;
+  right: 34px;
+  top: 24px;
+  width: 112px;
+}
+
+.voice-panel-close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  height: 42px;
+  justify-content: center;
+  left: 20px;
+  padding: 0;
+  position: absolute;
+  top: 18px;
+  width: 42px;
+}
+
+.voice-panel-close svg {
+  height: 24px;
+  width: 24px;
+}
+
+.voice-orb {
+  --voice-level: 0.08;
+  align-items: center;
+  background: #ef6355;
+  border: 10px solid rgba(239, 99, 85, 0.16);
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  height: 112px;
+  justify-content: center;
+  margin-top: 26px;
+  position: relative;
+  transform: scale(calc(1 + var(--voice-level) * 0.08));
+  transition: transform 90ms linear;
+  width: 112px;
+}
+
+.voice-orb::before,
+.voice-orb::after {
+  border: 2px solid rgba(239, 99, 85, 0.28);
+  border-radius: 50%;
+  content: "";
+  inset: -22px;
+  position: absolute;
+  animation: voice-pulse 1.8s ease-out infinite;
+}
+
+.voice-orb::after {
+  animation-delay: 0.7s;
+}
+
+.voice-orb.recognizing {
+  background: #18764c;
+  border-color: rgba(24, 118, 76, 0.16);
+  animation: voice-breathe 1.2s ease-in-out infinite;
+}
+
+.voice-orb.recognizing::before,
+.voice-orb.recognizing::after {
+  border-color: rgba(24, 118, 76, 0.25);
+}
+
+.voice-orb svg {
+  height: 42px;
+  width: 42px;
+}
+
+.voice-panel-copy {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.voice-panel-copy span {
+  color: #18764c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.voice-panel-copy h2 {
+  font-size: 25px;
+  margin: 5px 0 6px;
+}
+
+.voice-panel-copy p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.voice-wave {
+  align-items: center;
+  display: flex;
+  gap: 5px;
+  height: 66px;
+  justify-content: center;
+  margin: 10px 0 0;
+}
+
+.voice-wave i {
+  background: #ef6355;
+  border-radius: 3px;
+  display: block;
+  min-height: 10px;
+  transition: height 90ms linear;
+  width: 5px;
+}
+
+.voice-orb.recognizing ~ .voice-wave i {
+  background: #18764c;
+}
+
+.voice-clock {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  margin-top: -3px;
+}
+
+.voice-panel-actions {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1.35fr;
+  margin-top: 18px;
+  width: min(360px, 100%);
+}
+
+.voice-panel-actions button {
+  align-items: center;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  display: flex;
+  font-size: 14px;
+  font-weight: 800;
+  gap: 7px;
+  justify-content: center;
+  min-height: 46px;
+}
+
+.voice-panel-actions button:first-child {
+  background: white;
+}
+
+.voice-panel-actions button:last-child {
+  background: #18764c;
+  border-color: #18764c;
+  color: white;
+}
+
+.voice-panel-actions svg {
+  height: 18px;
+  width: 18px;
+}
+
+@keyframes voice-pulse {
+  0% { opacity: 0.7; transform: scale(0.9); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+
+@keyframes voice-breathe {
+  0%, 100% { transform: scale(0.96); }
+  50% { transform: scale(1.04); }
+}
+
 .modal-backdrop {
   align-items: center;
   background: rgba(14, 37, 29, 0.58);
@@ -2422,6 +2617,33 @@ button:disabled {
   .reward-preview > img {
     height: 110px;
     width: 88px;
+  }
+
+  .voice-listening-backdrop {
+    padding: 0;
+  }
+
+  .voice-listening-panel {
+    min-height: 500px;
+    padding: 42px 22px 28px;
+    width: 100%;
+  }
+
+  .voice-listening-panel > img {
+    height: 82px;
+    right: 16px;
+    top: 18px;
+    width: 82px;
+  }
+
+  .voice-orb {
+    height: 104px;
+    margin-top: 34px;
+    width: 104px;
+  }
+
+  .voice-panel-copy h2 {
+    font-size: 22px;
   }
 }
 

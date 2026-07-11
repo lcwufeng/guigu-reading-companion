@@ -21,7 +21,6 @@ import {
   Send,
   Sparkles,
   Star,
-  Volume2,
   Waves,
   X,
 } from "lucide-react";
@@ -99,6 +98,24 @@ type CompanionPayload = {
   question?: string;
   answer?: string;
   history?: Array<{ role: "user" | "assistant"; content: string }>;
+};
+
+type VoiceTarget = "chat" | "reading";
+type VoicePhase = "idle" | "recording" | "recognizing";
+type VoiceSession = {
+  target: VoiceTarget;
+  stream: MediaStream;
+  context: AudioContext;
+  source: MediaStreamAudioSourceNode;
+  analyser: AnalyserNode;
+  processor: ScriptProcessorNode;
+  silentGain: GainNode;
+  chunks: Float32Array[];
+  sampleRate: number;
+  startedAt: number;
+  animationFrame: number;
+  clockTimer: number;
+  maxTimer: number;
 };
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -296,6 +313,51 @@ function clamp(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function encodeWav(chunks: Float32Array[], inputRate: number) {
+  const length = chunks.reduce((total, chunk) => total + chunk.length, 0);
+  const merged = new Float32Array(length);
+  let cursor = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, cursor);
+    cursor += chunk.length;
+  }
+
+  const outputRate = 16000;
+  const ratio = inputRate / outputRate;
+  const output = new Float32Array(Math.max(1, Math.floor(merged.length / ratio)));
+  for (let index = 0; index < output.length; index += 1) {
+    const position = index * ratio;
+    const left = Math.floor(position);
+    const right = Math.min(left + 1, merged.length - 1);
+    const mix = position - left;
+    output[index] = merged[left] * (1 - mix) + merged[right] * mix;
+  }
+
+  const buffer = new ArrayBuffer(44 + output.length * 2);
+  const view = new DataView(buffer);
+  const write = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
+  };
+  write(0, "RIFF");
+  view.setUint32(4, 36 + output.length * 2, true);
+  write(8, "WAVE");
+  write(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, outputRate, true);
+  view.setUint32(28, outputRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  write(36, "data");
+  view.setUint32(40, output.length * 2, true);
+  for (let index = 0; index < output.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, output[index]));
+    view.setInt16(44 + index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+  }
+  return new Blob([buffer], { type: "audio/wav" });
+}
+
 function formatDate() {
   return new Intl.DateTimeFormat("zh-CN", {
     month: "long",
@@ -434,13 +496,19 @@ export default function HomePage() {
   const [chatInput, setChatInput] = useState("");
   const [chatThinking, setChatThinking] = useState(false);
   const [companionLoading, setCompanionLoading] = useState(false);
-  const [listening, setListening] = useState(false);
+  const [voicePhase, setVoicePhase] = useState<VoicePhase>("idle");
+  const [voiceTarget, setVoiceTarget] = useState<VoiceTarget>("chat");
+  const [voiceSeconds, setVoiceSeconds] = useState(0);
+  const [voiceLevel, setVoiceLevel] = useState(0.08);
   const [selectedDestination, setSelectedDestination] = useState<Destination>(destinations[0]);
   const [travelProgress, setTravelProgress] = useState(0);
   const [travelReward, setTravelReward] = useState<Destination | null>(null);
   const [knowledgeOpen, setKnowledgeOpen] = useState<Destination | null>(null);
   const [recordTab, setRecordTab] = useState<RecordTab>("travel");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceSessionRef = useRef<VoiceSession | null>(null);
+  const autoFinishVoiceRef = useRef<() => void>(() => undefined);
+  const voiceAbortRef = useRef<AbortController | null>(null);
 
   const mood = useMemo(
     () => clamp(0.35 * (100 - game.hunger) + 0.3 * game.cleanliness + 0.35 * (100 - game.boredom)),
@@ -759,29 +827,137 @@ export default function HomePage() {
     setSummaryOpen(true);
   };
 
-  const beginVoiceInput = (target: "chat" | "reading") => {
-    const SpeechRecognition =
-      (window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike }).SpeechRecognition ||
-      (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionLike }).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      showToast("当前浏览器暂不支持语音输入，可以用文字告诉龟龟");
+  const releaseVoiceSession = useCallback(() => {
+    const session = voiceSessionRef.current;
+    if (!session) return null;
+    window.cancelAnimationFrame(session.animationFrame);
+    window.clearInterval(session.clockTimer);
+    window.clearTimeout(session.maxTimer);
+    session.processor.disconnect();
+    session.analyser.disconnect();
+    session.source.disconnect();
+    session.silentGain.disconnect();
+    session.stream.getTracks().forEach((track) => track.stop());
+    void session.context.close();
+    voiceSessionRef.current = null;
+    return session;
+  }, []);
+
+  const cancelVoiceInput = useCallback(() => {
+    releaseVoiceSession();
+    voiceAbortRef.current?.abort();
+    voiceAbortRef.current = null;
+    setVoicePhase("idle");
+    setVoiceSeconds(0);
+    setVoiceLevel(0.08);
+  }, [releaseVoiceSession]);
+
+  const finishVoiceInput = useCallback(async () => {
+    const session = releaseVoiceSession();
+    if (!session) return;
+    if (Date.now() - session.startedAt < 600 || !session.chunks.length) {
+      setVoicePhase("idle");
+      showToast("说得太短啦，请再试一次");
       return;
     }
-    const recognition = new SpeechRecognition();
-    recognition.lang = "zh-CN";
-    recognition.interimResults = false;
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => {
-      setListening(false);
-      showToast("没有听清楚，再试一次或改用文字吧");
-    };
-    recognition.onresult = (event) => {
-      const text = event.results[0][0].transcript;
-      if (target === "chat") setChatInput(text);
-      else setReadingAnswer(text);
-    };
-    recognition.start();
+
+    setVoicePhase("recognizing");
+    setVoiceLevel(0.08);
+    const controller = new AbortController();
+    voiceAbortRef.current = controller;
+    try {
+      const audio = encodeWav(session.chunks, session.sampleRate);
+      const response = await fetch(`${BASE_PATH}/api/speech`, {
+        method: "POST",
+        headers: { "Content-Type": "audio/wav" },
+        body: audio,
+        signal: controller.signal,
+      });
+      const data = (await response.json()) as { transcript?: string; error?: string };
+      if (!response.ok || !data.transcript) throw new Error(data.error || "speech unavailable");
+      if (session.target === "chat") setChatInput(data.transcript);
+      else setReadingAnswer(data.transcript);
+      showToast("听清楚啦，文字已经填好");
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        showToast(error instanceof Error && error.message.includes("没有听清楚") ? error.message : "语音识别暂时不可用，可以改用文字输入");
+      }
+    } finally {
+      if (voiceAbortRef.current === controller) {
+        voiceAbortRef.current = null;
+        setVoicePhase("idle");
+        setVoiceSeconds(0);
+      }
+    }
+  }, [releaseVoiceSession, showToast]);
+
+  useEffect(() => {
+    autoFinishVoiceRef.current = () => void finishVoiceInput();
+  }, [finishVoiceInput]);
+
+  useEffect(() => () => {
+    releaseVoiceSession();
+    voiceAbortRef.current?.abort();
+  }, [releaseVoiceSession]);
+
+  const beginVoiceInput = async (target: VoiceTarget) => {
+    if (voicePhase !== "idle") return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      showToast("当前浏览器暂不支持录音，可以用文字告诉龟龟");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      const context = new AudioContext();
+      const source = context.createMediaStreamSource(stream);
+      const analyser = context.createAnalyser();
+      const processor = context.createScriptProcessor(4096, 1, 1);
+      const silentGain = context.createGain();
+      const chunks: Float32Array[] = [];
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.72;
+      silentGain.gain.value = 0;
+      processor.onaudioprocess = (event) => chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+      source.connect(analyser);
+      analyser.connect(processor);
+      processor.connect(silentGain);
+      silentGain.connect(context.destination);
+
+      const session: VoiceSession = {
+        target,
+        stream,
+        context,
+        source,
+        analyser,
+        processor,
+        silentGain,
+        chunks,
+        sampleRate: context.sampleRate,
+        startedAt: Date.now(),
+        animationFrame: 0,
+        clockTimer: 0,
+        maxTimer: 0,
+      };
+      const samples = new Uint8Array(analyser.fftSize);
+      const updateLevel = () => {
+        analyser.getByteTimeDomainData(samples);
+        let energy = 0;
+        for (const sample of samples) energy += ((sample - 128) / 128) ** 2;
+        setVoiceLevel(Math.min(1, Math.max(0.08, Math.sqrt(energy / samples.length) * 4.8)));
+        session.animationFrame = window.requestAnimationFrame(updateLevel);
+      };
+      session.animationFrame = window.requestAnimationFrame(updateLevel);
+      session.clockTimer = window.setInterval(() => setVoiceSeconds(Math.min(30, Math.floor((Date.now() - session.startedAt) / 1000))), 250);
+      session.maxTimer = window.setTimeout(() => autoFinishVoiceRef.current(), 30_000);
+      voiceSessionRef.current = session;
+      setVoiceTarget(target);
+      setVoiceSeconds(0);
+      setVoicePhase("recording");
+    } catch {
+      showToast("没有获得麦克风权限，请允许访问后再试");
+    }
   };
 
   const sendChat = async () => {
@@ -1121,13 +1297,14 @@ export default function HomePage() {
                   disabled={chatThinking}
                 />
                 <button
-                  className={`icon-button ${listening ? "listening" : ""}`}
+                  className={`icon-button ${voicePhase !== "idle" ? "listening" : ""}`}
                   type="button"
                   onClick={() => beginVoiceInput("chat")}
-                  title={listening ? "正在听" : "语音输入"}
-                  aria-label={listening ? "正在听" : "语音输入"}
+                  title={voicePhase !== "idle" ? "正在处理语音" : "语音输入"}
+                  aria-label={voicePhase !== "idle" ? "正在处理语音" : "语音输入"}
+                  disabled={voicePhase !== "idle" || chatThinking}
                 >
-                  {listening ? <MicOff /> : <Mic />}
+                  {voicePhase !== "idle" ? <MicOff /> : <Mic />}
                 </button>
                 <button className="send-button" type="button" onClick={() => void sendChat()} aria-label="发送" disabled={chatThinking || !chatInput.trim()}>
                   <Send />
@@ -1276,6 +1453,35 @@ export default function HomePage() {
 
       {toast && <div className="toast" role="status"><Sparkles /> {toast}</div>}
 
+      {voicePhase !== "idle" && (
+        <div className="voice-listening-backdrop" role="presentation">
+          <section className="voice-listening-panel" role="dialog" aria-modal="true" aria-labelledby="voice-panel-title">
+            <button className="voice-panel-close" type="button" onClick={cancelVoiceInput} aria-label="取消语音输入"><X /></button>
+            <img src={`${ASSET}/characters/turtle/turtle_thinking.png`} alt="认真倾听的龟龟" />
+            <div className={`voice-orb ${voicePhase}`} style={{ "--voice-level": voiceLevel } as React.CSSProperties}>
+              {voicePhase === "recording" ? <Mic /> : <Sparkles />}
+            </div>
+            <div className="voice-panel-copy">
+              <span>{voiceTarget === "chat" ? "说给龟龟听" : "回答阅读问题"}</span>
+              <h2 id="voice-panel-title">{voicePhase === "recording" ? "我在认真听…" : "正在听懂你的话…"}</h2>
+              <p>{voicePhase === "recording" ? "说完后点击“完成”，最多录制 30 秒" : "录音已结束，很快就会变成文字"}</p>
+            </div>
+            <div className="voice-wave" aria-hidden="true">
+              {Array.from({ length: 15 }, (_, index) => (
+                <i key={index} style={{ height: `${12 + voiceLevel * (index % 3 === 1 ? 48 : index % 3 === 0 ? 30 : 40)}px` }} />
+              ))}
+            </div>
+            <strong className="voice-clock">00:{String(voiceSeconds).padStart(2, "0")}</strong>
+            {voicePhase === "recording" && (
+              <div className="voice-panel-actions">
+                <button type="button" onClick={cancelVoiceInput}><X /> 取消</button>
+                <button type="button" onClick={() => void finishVoiceInput()}><Check /> 完成</button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
       {fruitPicker && (
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setFruitPicker(false)}>
           <section className="modal fruit-modal" role="dialog" aria-modal="true" aria-labelledby="fruit-title" onMouseDown={(event) => event.stopPropagation()}>
@@ -1325,7 +1531,7 @@ export default function HomePage() {
                 <p>没有标准答案，把你的想法讲清楚就很棒。</p>
                 <textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得…" aria-label="回答龟龟的问题" maxLength={500} disabled={companionLoading} />
                 <div className="modal-actions">
-                  <button className="voice-button" type="button" onClick={() => beginVoiceInput("reading")} disabled={companionLoading}><Volume2 /> {listening ? "正在听…" : "用语音回答"}</button>
+                  <button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 用语音回答</button>
                   <button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在想…" : "讲给龟龟听"}</button>
                 </div>
               </>
@@ -1399,13 +1605,3 @@ function EmptyRecord({ type, onAction }: { type: "travel" | "reading"; onAction:
     </div>
   );
 }
-
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  onstart: () => void;
-  onend: () => void;
-  onerror: () => void;
-  onresult: (event: { results: { 0: { 0: { transcript: string } } } }) => void;
-  start: () => void;
-};
