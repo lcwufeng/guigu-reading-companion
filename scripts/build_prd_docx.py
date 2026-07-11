@@ -353,7 +353,7 @@ def main() -> None:
     add_cover(doc, cover_lines)
     add_body(doc, body_lines)
 
-    doc.core_properties.title = "龟龟伴读 V1.1 产品需求文档"
+    doc.core_properties.title = "龟龟伴读 V1.2 产品需求文档"
     doc.core_properties.subject = "电子宠物学习陪伴产品开发与验收基线"
     doc.core_properties.author = "龟龟伴读产品组"
     doc.core_properties.keywords = "龟龟伴读, 电子宠物, 阅读, 儿童陪伴, PRD"

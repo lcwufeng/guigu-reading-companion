@@ -30,7 +30,7 @@ test("server-renders the Guigui reading companion", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
 
-test("keeps the V1.1 product loops, safeguards, and required art assets", async () => {
+test("keeps the V1.2 product loops, safeguards, and required art assets", async () => {
   const [page, styles, layout, nextConfig, companionRoute, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -53,12 +53,16 @@ test("keeps the V1.1 product loops, safeguards, and required art assets", async 
     assert.match(page, new RegExp(feature));
   }
 
-  for (const destination of ["星沙海湾", "森语树屋", "恐龙博物馆", "太空站"]) {
+  for (const destination of ["星沙海湾", "森语树屋", "恐龙博物馆", "太空站", "未来交通站"]) {
     assert.match(page, new RegExp(destination));
   }
 
   assert.match(page, /guigu-v1-state/);
   assert.match(page, /activeTravel/);
+  assert.match(page, /tickets: 3/);
+  for (const threshold of [10, 15, 50, 70, 100]) {
+    assert.match(page, new RegExp(`requiredStars: ${threshold}`));
+  }
   assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus"\]/);
   assert.match(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
@@ -66,9 +70,12 @@ test("keeps the V1.1 product loops, safeguards, and required art assets", async 
   assert.match(nextConfig, /NEXT_PUBLIC_BASE_PATH/);
   assert.match(page, /fetch\(`\$\{BASE_PATH\}\/api\/companion`/);
   assert.doesNotMatch(styles, /url\(["']?\/assets\//);
-  assert.match(companionRoute, /store: false/);
+  assert.match(companionRoute, /https:\/\/api\.deepseek\.com\/chat\/completions/);
+  assert.match(companionRoute, /deepseek-v4-flash/);
+  assert.match(companionRoute, /thinking: \{ type: "disabled" \}/);
+  assert.match(companionRoute, /DEEPSEEK_API_KEY/);
+  assert.match(companionRoute, /cleanPetName/);
   assert.match(companionRoute, /function localReply/);
-  assert.match(companionRoute, /OPENAI_COMPANION_MODEL/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 
   for (const path of [
@@ -82,6 +89,8 @@ test("keeps the V1.1 product loops, safeguards, and required art assets", async 
     "../public/assets/legacy/travel/location_forest.png",
     "../public/assets/legacy/travel/location_museum.png",
     "../public/assets/legacy/travel/location_space.png",
+    "../public/assets/legacy/travel/location_future_station.png",
+    "../public/assets/legacy/travel/travel_ticket.png",
     "../public/assets/optimized/travel/knowledge_cards/knowledge_tide.webp",
     "../public/assets/optimized/travel/knowledge_cards/knowledge_tree_ring.webp",
     "../public/assets/optimized/travel/knowledge_cards/knowledge_dinosaur.webp",

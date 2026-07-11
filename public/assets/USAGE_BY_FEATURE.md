@@ -1,4 +1,4 @@
-# 龟龟伴读 V1.1 美术资产使用对照
+# 龟龟伴读 V1.2 美术资产使用对照
 
 页面优先加载 `optimized/` 下的 WebP；同名 PNG 作为原始美术源文件保留。顶部品牌使用 `legacy/brand/guigu_logo.png`。
 
@@ -70,18 +70,22 @@
   - `legacy/travel/location_forest.png`
   - `legacy/travel/location_museum.png`
   - `legacy/travel/location_space.png`
+  - `legacy/travel/location_future_station.png`
+- 旅行票：`legacy/travel/travel_ticket.png`
 - 出发动作：`characters/turtle/turtle_travel_start.png`
 - 返回动作：`characters/turtle/turtle_travel_return.png`
 - 旅行照片：
   - `optimized/travel/photos/photo_beach.webp`
   - `optimized/travel/photos/photo_forest.webp`
   - `optimized/travel/photos/photo_museum.webp`
-  - `legacy/travel/location_space.png`（太空站 V1.1 正式地点图）
+  - `legacy/travel/location_space.png`（太空站 V1.2 正式地点图）
+  - `legacy/travel/location_future_station.png`（未来交通站 V1.2 地点图）
 - 知识卡：
   - `optimized/travel/knowledge_cards/knowledge_tide.webp`
   - `optimized/travel/knowledge_cards/knowledge_tree_ring.webp`
   - `optimized/travel/knowledge_cards/knowledge_dinosaur.webp`
   - 太空站知识卡由页面使用地点插画和结构化知识文本生成。
+  - 未来交通站知识卡由页面使用地点插画和结构化知识文本生成。
 - 知识卡入口图标：`legacy/icons/knowledge_card.png`
 - 奖励弹窗：`ui/reward_popup_frame.png`
 
@@ -92,6 +96,6 @@
 
 ## 后续精修方向
 
-- 太空站功能和内容已经完整，可继续补绘独立旅行照片和同系列整图知识卡以提升收藏质感。
+- 太空站和未来交通站功能已经完整，可继续补绘独立旅行照片和同系列整图知识卡以提升收藏质感。
 - 如果要做更强交互，主场景中的果树、池塘、山洞、小桌子建议从背景里分层拆出。
 - 如果要做动画，建议让美术按同一画布尺寸补关键帧，而不是只用当前静态图缩放。

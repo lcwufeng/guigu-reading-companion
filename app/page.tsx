@@ -11,6 +11,7 @@ import {
   Compass,
   Edit3,
   Home,
+  Lock,
   MapPinned,
   MessageCircle,
   Mic,
@@ -55,6 +56,7 @@ type GameState = {
   boredom: number;
   fruits: number;
   stars: number;
+  tickets: number;
   lastSeen: number;
   readingRecords: ReadingRecord[];
   travelRecords: TravelRecord[];
@@ -85,6 +87,18 @@ type Destination = {
   knowledgeTitle: string;
   knowledgeFacts: string[];
   position: string;
+  requiredStars: number;
+};
+
+type CompanionPayload = {
+  mode: "chat" | "reading";
+  name: string;
+  message?: string;
+  title?: string;
+  excerpt?: string;
+  question?: string;
+  answer?: string;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
 };
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -97,6 +111,7 @@ const initialState: GameState = {
   boredom: 25,
   fruits: 5,
   stars: 12,
+  tickets: 3,
   lastSeen: Date.now(),
   readingRecords: [],
   travelRecords: [],
@@ -195,6 +210,7 @@ const destinations: Destination[] = [
     knowledgeTitle: "潮汐的小秘密",
     knowledgeFacts: ["海水会有规律地涨落。", "月球引力是形成潮汐的重要原因。"],
     position: "destination-beach",
+    requiredStars: 10,
   },
   {
     id: "forest",
@@ -208,6 +224,7 @@ const destinations: Destination[] = [
     knowledgeTitle: "大树的时间圈",
     knowledgeFacts: ["年轮记录着树木一年的生长。", "科学家会从年轮了解过去的气候。"],
     position: "destination-forest",
+    requiredStars: 15,
   },
   {
     id: "museum",
@@ -221,6 +238,7 @@ const destinations: Destination[] = [
     knowledgeTitle: "脚印里的远古线索",
     knowledgeFacts: ["恐龙脚印也能成为化石。", "大小、深浅和间距能帮助科学家推测恐龙怎样行动。"],
     position: "destination-museum",
+    requiredStars: 50,
   },
   {
     id: "space",
@@ -233,6 +251,20 @@ const destinations: Destination[] = [
     knowledgeTitle: "绕着地球旅行",
     knowledgeFacts: ["空间站像一座绕地球飞行的实验室。", "在微重力环境里，航天员和物品会呈现漂浮状态。"],
     position: "destination-space",
+    requiredStars: 70,
+  },
+  {
+    id: "future",
+    name: "未来交通站",
+    note: "看看未来的城市怎样出发",
+    duration: "8秒",
+    reward: "未来交通知识卡",
+    photo: `${ASSET}/legacy/travel/location_future_station.png`,
+    locationArt: `${ASSET}/legacy/travel/location_future_station.png`,
+    knowledgeTitle: "会思考的交通站",
+    knowledgeFacts: ["公共交通能让更多人共享一次出行。", "未来交通会更重视安全、节能与无障碍体验。"],
+    position: "destination-future",
+    requiredStars: 100,
   },
 ];
 
@@ -277,7 +309,7 @@ function getLocalReply(input: string, name: string) {
   return "我认真听到了！你能再告诉我，这件事让你学到或发现了什么吗？";
 }
 
-async function askCompanion(payload: Record<string, string>) {
+async function askCompanion(payload: CompanionPayload) {
   const response = await fetch(`${BASE_PATH}/api/companion`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -304,8 +336,8 @@ function KnowledgeArt({ destination }: { destination: Destination }) {
   }
   return (
     <div className="space-knowledge-art">
-      <img src={destination.locationArt} alt="太空站" />
-      <span>太空发现</span>
+      <img src={destination.locationArt} alt={destination.name} />
+      <span>{destination.name}发现</span>
       <strong>{destination.knowledgeTitle}</strong>
     </div>
   );
@@ -670,6 +702,7 @@ export default function HomePage() {
     try {
       feedback = await askCompanion({
         mode: "reading",
+        name: game.name,
         title: selectedBook.title,
         excerpt: selectedBook.pages[0].body,
         question: selectedBook.question,
@@ -706,6 +739,7 @@ export default function HomePage() {
       ...current,
       boredom: clamp(current.boredom - 12),
       stars: current.stars + 3,
+      tickets: current.tickets + 1,
       fruits: current.fruits + 1,
       readingRecords: [record, ...current.readingRecords.filter((item) => item.title !== record.title)],
     }));
@@ -750,7 +784,15 @@ export default function HomePage() {
     setChatThinking(true);
     let reply: string;
     try {
-      reply = await askCompanion({ mode: "chat", message: message.slice(0, 500) });
+      reply = await askCompanion({
+        mode: "chat",
+        name: game.name,
+        message: message.slice(0, 500),
+        history: game.chatMessages.slice(-8).map((item) => ({
+          role: item.role === "turtle" ? "assistant" : "user",
+          content: item.text,
+        })),
+      });
     } catch {
       reply = getLocalReply(message, game.name);
     }
@@ -764,14 +806,27 @@ export default function HomePage() {
 
   const startTravel = () => {
     if (traveling || busy) return;
+    if (game.stars < selectedDestination.requiredStars) {
+      showToast(`还差 ${selectedDestination.requiredStars - game.stars} 颗星才能解锁${selectedDestination.name}`);
+      return;
+    }
+    if (game.tickets < 1) {
+      showToast("旅行票不足，读完一本书可以获得 1 张");
+      return;
+    }
     showToast(`${game.name}背好行囊，出发去${selectedDestination.name}`);
     const startedAt = Date.now();
-    patchGame({
-      activeTravel: {
-        destinationId: selectedDestination.id,
-        startedAt,
-        endsAt: startedAt + 8_000,
-      },
+    setGame((current) => {
+      if (current.activeTravel || current.tickets < 1 || current.stars < selectedDestination.requiredStars) return current;
+      return {
+        ...current,
+        tickets: current.tickets - 1,
+        activeTravel: {
+          destinationId: selectedDestination.id,
+          startedAt,
+          endsAt: startedAt + 8_000,
+        },
+      };
     });
   };
 
@@ -785,6 +840,8 @@ export default function HomePage() {
 
   const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
   const navigationLocked = !!busy || !!hideTarget || !!traveling;
+  const selectedDestinationUnlocked = game.stars >= selectedDestination.requiredStars;
+  const selectedDestinationMissingStars = Math.max(0, selectedDestination.requiredStars - game.stars);
 
   return (
     <main className={`app view-${view}`}>
@@ -836,9 +893,10 @@ export default function HomePage() {
           />
         </section>
 
-        <div className="wallet" aria-label={`${game.stars}颗星星，${game.fruits}个果子`}>
+        <div className="wallet" aria-label={`${game.stars}颗星星，${game.fruits}个果子，${game.tickets}张旅行票`}>
           <span><Star size={17} fill="currentColor" /> {game.stars}</span>
           <span><Apple size={17} fill="currentColor" /> {game.fruits}</span>
+          <span className="wallet-ticket"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="" /> {game.tickets}</span>
         </div>
       </header>
 
@@ -1076,28 +1134,32 @@ export default function HomePage() {
             {destinations.map((destination) => (
               <button
                 key={destination.id}
-                className={`map-pin ${destination.position} ${selectedDestination.id === destination.id ? "selected" : ""}`}
+                className={`map-pin ${destination.position} ${game.stars < destination.requiredStars ? "locked" : ""} ${selectedDestination.id === destination.id ? "selected" : ""}`}
                 type="button"
                 onClick={() => setSelectedDestination(destination)}
-                aria-label={`选择${destination.name}`}
+                aria-label={`${game.stars >= destination.requiredStars ? "选择" : "查看锁定地点"}${destination.name}，${destination.requiredStars}颗星解锁`}
               >
                 <img src={destination.locationArt} alt="" />
-                <span>{destination.name}</span>
+                <span className="pin-name">{destination.name}</span>
+                {game.stars < destination.requiredStars && <span className="pin-lock"><Lock size={12} /> {destination.requiredStars}</span>}
               </button>
             ))}
 
             <aside className="travel-card">
               <img className="destination-art" src={selectedDestination.locationArt} alt={`${selectedDestination.name}地点插画`} />
               <div>
-                <small>本次目的地</small>
+                <small>{selectedDestinationUnlocked ? "本次目的地" : "尚未解锁"}</small>
                 <h2>{selectedDestination.name}</h2>
                 <p>{selectedDestination.note}</p>
                 <dl>
                   <div><dt>旅行时间</dt><dd>{selectedDestination.duration}</dd></div>
+                  <div><dt>解锁条件</dt><dd>{selectedDestination.requiredStars} 颗星</dd></div>
                   <div><dt>可能带回</dt><dd>{selectedDestination.reward}</dd></div>
                 </dl>
-                <button type="button" onClick={startTravel} disabled={!!traveling}>
-                  <Compass /> {traveling ? "旅行中…" : "使用旅行票出发"}
+                {!selectedDestinationUnlocked && <p className="unlock-note">再获得 {selectedDestinationMissingStars} 颗星就能出发</p>}
+                <button type="button" onClick={startTravel} disabled={!!traveling || !selectedDestinationUnlocked || game.tickets < 1}>
+                  {selectedDestinationUnlocked ? <Compass /> : <Lock />}
+                  {traveling ? "旅行中…" : !selectedDestinationUnlocked ? `还差 ${selectedDestinationMissingStars} 颗星` : game.tickets < 1 ? "旅行票不足" : "使用 1 张旅行票出发"}
                 </button>
               </div>
             </aside>
@@ -1174,6 +1236,7 @@ export default function HomePage() {
                 <div className="inventory-grid">
                   <article><div className="item-art"><img src={`${ASSET}/objects/fruit_basket.png`} alt="果篮" /></div><strong>野外果子</strong><span>× {game.fruits}</span></article>
                   <article><div className="item-art star-item"><Star /></div><strong>成长星星</strong><span>× {game.stars}</span></article>
+                  <article><div className="item-art ticket-item"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="旅行票" /></div><strong>旅行票</strong><span>× {game.tickets}</span></article>
                   {game.travelRecords.map((record) => {
                     const destination = destinationForRecord(record);
                     return destination ? (
@@ -1264,7 +1327,7 @@ export default function HomePage() {
             <button className="modal-close" type="button" onClick={resetReading} aria-label="关闭"><X /></button>
             <div className="summary-celebration">
               <img src={`${ASSET}/characters/turtle/turtle_happy_hearts.png`} alt="开心的龟龟" />
-              <div><span className="modal-kicker">阅读完成 · +3 星星</span><h2 id="summary-title">今天的阅读小结</h2></div>
+              <div><span className="modal-kicker">阅读完成 · +3 星星 · +1 旅行票</span><h2 id="summary-title">今天的阅读小结</h2></div>
             </div>
             <div className="summary-block"><small>今天读了</small><strong>《{selectedBook.title}》</strong></div>
             <div className="summary-block"><small>故事讲了</small><p>{selectedBook.summary}</p></div>

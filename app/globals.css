@@ -68,7 +68,7 @@ button:disabled {
   border-bottom: 1px solid rgba(17, 71, 47, 0.12);
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(260px, 0.92fr) minmax(560px, 2.2fr) minmax(150px, 0.55fr);
+  grid-template-columns: minmax(260px, 0.92fr) minmax(560px, 2.2fr) minmax(210px, 0.7fr);
   height: 80px;
   padding: 10px 24px;
   position: relative;
@@ -237,9 +237,22 @@ button:disabled {
 }
 
 .wallet span:last-child {
+  background: #eaf7ff;
+  border-color: #9dcbe5;
+  color: #236789;
+}
+
+.wallet span:nth-child(2) {
   background: #fff0eb;
   border-color: #f0b6a7;
   color: #a9402c;
+}
+
+.wallet-ticket img {
+  height: 17px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  width: 22px;
 }
 
 .scene-shell {
@@ -1006,15 +1019,37 @@ button:disabled {
   width: 54px;
 }
 
-.map-pin span {
+.map-pin .pin-name {
   font-size: 12px;
   font-weight: 800;
+}
+
+.map-pin.locked > img {
+  filter: grayscale(0.72);
+  opacity: 0.62;
+}
+
+.map-pin .pin-lock {
+  align-items: center;
+  background: #31524b;
+  border: 2px solid white;
+  border-radius: 99px;
+  color: white;
+  display: flex;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 3px;
+  padding: 3px 6px;
+  position: absolute;
+  right: -8px;
+  top: -9px;
 }
 
 .destination-beach { left: 7%; top: 53%; }
 .destination-forest { left: 30%; top: 27%; }
 .destination-museum { left: 42%; top: 51%; }
 .destination-space { left: 61%; top: 29%; }
+.destination-future { left: 79%; top: 48%; }
 
 .travel-card {
   background: rgba(255, 255, 255, 0.96);
@@ -1064,6 +1099,13 @@ button:disabled {
   margin: 0 0 10px;
 }
 
+.travel-card .unlock-note {
+  color: #9a561e;
+  font-size: 11px;
+  font-weight: 800;
+  margin: -4px 0 7px;
+}
+
 .travel-card dl {
   margin: 0 0 10px;
 }
@@ -1103,6 +1145,10 @@ button:disabled {
 .travel-card button svg {
   height: 18px;
   width: 18px;
+}
+
+.travel-card button:disabled {
+  background: #71827d;
 }
 
 .traveling-banner {
@@ -1361,6 +1407,11 @@ button:disabled {
   fill: currentColor;
   height: 54px;
   width: 54px;
+}
+
+.ticket-item img {
+  height: 72px;
+  width: 96px;
 }
 
 .inventory-grid strong {
@@ -1803,7 +1854,7 @@ button:disabled {
 @media (max-width: 1100px) {
   .topbar {
     gap: 10px;
-    grid-template-columns: 220px minmax(440px, 1fr) 110px;
+    grid-template-columns: 220px minmax(440px, 1fr) 176px;
     padding-inline: 14px;
   }
 
@@ -2161,7 +2212,7 @@ button:disabled {
     padding: 6px;
   }
 
-  .map-pin span {
+  .map-pin .pin-name {
     display: none;
   }
 
@@ -2169,6 +2220,7 @@ button:disabled {
   .destination-forest { left: 28%; top: 27%; }
   .destination-museum { left: 43%; top: 47%; }
   .destination-space { left: 62%; top: 29%; }
+  .destination-future { left: 79%; top: 47%; }
 
   .travel-card {
     bottom: 10px;
@@ -2316,7 +2368,13 @@ button:disabled {
   }
 
   .wallet span {
-    padding-inline: 6px;
+    font-size: 10px;
+    padding-inline: 5px;
+  }
+
+  .wallet-ticket img {
+    height: 14px;
+    width: 18px;
   }
 
   .status-row {

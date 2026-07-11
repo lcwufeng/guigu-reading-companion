@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 
+type CompanionMessage = {
+  role?: "user" | "assistant";
+  content?: string;
+};
+
 type CompanionRequest = {
   mode?: "chat" | "reading";
+  name?: string;
   message?: string;
   title?: string;
   excerpt?: string;
   question?: string;
   answer?: string;
+  history?: CompanionMessage[];
 };
 
 const personalInfoPattern = /(?:身份证|家庭住址|住在|手机号|电话号码|微信号|QQ号|学校.*班|1[3-9]\d{9})/i;
@@ -14,6 +21,11 @@ const urgentSafetyPattern = /(?:想死|自杀|伤害自己|不想活|杀了我)/
 
 function clean(value: unknown, limit = 500) {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
+}
+
+function cleanPetName(value: unknown) {
+  const name = clean(value, 8).replace(/[^\p{L}\p{N}·_-]/gu, "");
+  return name || "小乌龟";
 }
 
 function localReply(body: CompanionRequest) {
@@ -39,16 +51,32 @@ function localReply(body: CompanionRequest) {
   return "谢谢你讲给我听。发生这件事时，你有什么感受，又发现了什么呢？";
 }
 
-function extractOutputText(data: unknown) {
-  const response = data as {
-    output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
-  };
-  return (response.output ?? [])
-    .flatMap((item) => item.content ?? [])
-    .filter((item) => item.type === "output_text" && item.text)
-    .map((item) => item.text)
-    .join("\n")
-    .trim();
+function buildSystemPrompt(name: string, mode: CompanionRequest["mode"]) {
+  const shared = [
+    `你的名字是“${name}”，你必须始终使用这个名字自称。`,
+    "你是一只面向小学生的电子宠物小乌龟，也是温暖、好奇、耐心、稍微俏皮的伴读伙伴。",
+    "你喜欢听孩子分享今天学到的内容，并鼓励孩子复述、寻找证据、反思过程和表达感受。",
+    "你不是老师或评分者，不直接抛出标准答案；每次回复最多提出一个问题。",
+    "不要索取姓名、学校、地址、电话、账号、密码等个人信息，不邀请线下见面或转移到外部平台，也不让孩子保守秘密。",
+    "遇到危险、自伤或求助内容，明确建议孩子立刻联系身边可信任的大人。",
+    "不要声称自己是真人或能在现实中行动。不要写括号动作、舞台说明或冗长拟声词。",
+  ];
+  if (mode === "reading") {
+    shared.push("阅读回应控制在100个汉字以内：先具体肯定一个有效发现，再用一个启发式问题引导孩子回到文本找证据。");
+  } else {
+    shared.push("日常聊天控制在80个汉字以内，先自然回应孩子说的内容，再根据需要提出一个简短问题。");
+  }
+  return shared.join("\n");
+}
+
+function safeHistory(history: unknown) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .slice(-8)
+    .map((item) => item as CompanionMessage)
+    .filter((item) => item.role === "user" || item.role === "assistant")
+    .map((item) => ({ role: item.role as "user" | "assistant", content: clean(item.content, 350) }))
+    .filter((item) => item.content && !personalInfoPattern.test(item.content) && !urgentSafetyPattern.test(item.content));
 }
 
 export async function POST(request: Request) {
@@ -67,43 +95,45 @@ export async function POST(request: Request) {
     return NextResponse.json({ reply: localReply(body), source: "local" });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ reply: localReply(body), source: "local" });
   }
 
-  const readingContext = body.mode === "reading"
+  const name = cleanPetName(body.name);
+  const userContext = body.mode === "reading"
     ? [
         `书名：${clean(body.title, 80)}`,
         `片段：${clean(body.excerpt, 650)}`,
-        `问题：${clean(body.question, 160)}`,
+        `龟龟的问题：${clean(body.question, 160)}`,
         `孩子的回答：${input}`,
       ].join("\n")
-    : `孩子分享：${input}`;
-
-  const instructions = body.mode === "reading"
-    ? "你是面向小学生的电子宠物龟龟。用温暖、简短的中文回应孩子的阅读回答：先具体肯定一个有效发现，再用一个启发式问题引导孩子回到文本找证据。不要判分，不直接给标准答案，不索取个人信息，控制在90字以内。"
-    : "你是面向小学生的电子宠物龟龟。用温暖、自然、简短的中文倾听孩子的日常和学习分享，优先鼓励复述、反思和表达感受。一次最多问一个问题，不做诊断，不索取个人信息，不让孩子保守秘密，控制在80字以内。";
+    : input;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_COMPANION_MODEL || "gpt-5.4-mini",
-        instructions,
-        input: readingContext,
-        max_output_tokens: 220,
-        store: false,
+        model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
+        messages: [
+          { role: "system", content: buildSystemPrompt(name, body.mode) },
+          ...(body.mode === "chat" ? safeHistory(body.history) : []),
+          { role: "user", content: userContext },
+        ],
+        thinking: { type: "disabled" },
+        max_tokens: 220,
+        stream: false,
       }),
     });
-    if (!response.ok) throw new Error(`responses api ${response.status}`);
-    const reply = extractOutputText(await response.json());
+    if (!response.ok) throw new Error(`deepseek api ${response.status}`);
+    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const reply = clean(data.choices?.[0]?.message?.content, 500);
     if (!reply) throw new Error("empty response");
-    return NextResponse.json({ reply, source: "openai" });
+    return NextResponse.json({ reply, source: "deepseek" });
   } catch {
     return NextResponse.json({ reply: localReply(body), source: "local" });
   }
