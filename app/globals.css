@@ -259,15 +259,15 @@ button:disabled {
 }
 
 .home-scene {
-  background-image: url("/assets/optimized/backgrounds/main_home.webp");
+  background-image: url("./optimized/backgrounds/main_home.webp");
 }
 
 .library-scene {
-  background-image: url("/assets/optimized/backgrounds/reading_room.webp");
+  background-image: url("./optimized/backgrounds/reading_room.webp");
 }
 
 .chat-scene {
-  background-image: linear-gradient(rgba(8, 50, 42, 0.14), rgba(8, 50, 42, 0.14)), url("/assets/optimized/backgrounds/playground_legacy.webp");
+  background-image: linear-gradient(rgba(8, 50, 42, 0.14), rgba(8, 50, 42, 0.14)), url("./optimized/backgrounds/playground_legacy.webp");
   display: grid;
   gap: 6vw;
   grid-template-columns: minmax(260px, 0.72fr) minmax(520px, 1.1fr);
@@ -275,7 +275,7 @@ button:disabled {
 }
 
 .travel-scene {
-  background-image: url("/assets/optimized/backgrounds/travel_map.webp");
+  background-image: url("./optimized/backgrounds/travel_map.webp");
 }
 
 .journal-scene {
