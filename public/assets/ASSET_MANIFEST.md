@@ -83,7 +83,8 @@
 | `legacy/travel/location_forest.png` | 森语树屋地点图 | 地图点位与旅行详情共用。 |
 | `legacy/travel/location_museum.png` | 恐龙博物馆地点图 | 地图点位与旅行详情共用。 |
 | `legacy/travel/location_space.png` | 太空站地点图 | 同时作为 V1.2 太空站旅行图；知识卡由页面排版生成。 |
-| `legacy/travel/location_future_station.png` | 未来交通站地点图 | V1.2 新增的透明底独立地点图；不含路线石或界面文字。 |
+| `legacy/travel/location_ancient_city.png` | 古城遗迹地点图 | 100 颗星解锁的透明底像素地点图。 |
+| `legacy/travel/location_future_station.png` | 未来车站地点图 | 150 颗星解锁的透明底独立地点图；不含路线石或界面文字。 |
 | `legacy/travel/travel_ticket.png` | 旅行票资源图 | 用于顶栏库存、小背包和出发消耗。 |
 | `legacy/icons/knowledge_card.png` | 知识卡入口 | 用于奖励、手账和库存入口。 |
 | `optimized/backgrounds/*.webp` | 场景背景 | 与原始 PNG 同画面，供运行时加载。 |
@@ -94,7 +95,7 @@
 
 ## 后续精修方向
 
-- 太空站与未来交通站使用地点插画和页面生成知识卡，后续可再补独立旅行照片和同系列整图知识卡。
+- 太空站、古城遗迹与未来车站使用地点插画和页面生成知识卡，后续可再补独立旅行照片和同系列整图知识卡。
 - 状态图标已经可用，但如果要完全贴合乌龟像素风，可再找美术统一重绘。
 - 角色动作来自参考图裁切，开发时建议以脚底中心或身体中心作为锚点统一定位。
 - 主场景背景是整张图，若后续要做更强交互，果树、池塘、山洞、荷叶最好拆成分层图。

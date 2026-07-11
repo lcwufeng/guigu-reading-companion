@@ -1049,6 +1049,7 @@ button:disabled {
 .destination-forest { left: 30%; top: 27%; }
 .destination-museum { left: 42%; top: 51%; }
 .destination-space { left: 61%; top: 29%; }
+.destination-ancient { left: 62%; top: 52%; }
 .destination-future { left: 79%; top: 48%; }
 
 .travel-card {
@@ -2220,6 +2221,7 @@ button:disabled {
   .destination-forest { left: 28%; top: 27%; }
   .destination-museum { left: 43%; top: 47%; }
   .destination-space { left: 62%; top: 29%; }
+  .destination-ancient { left: 61%; top: 48%; }
   .destination-future { left: 79%; top: 47%; }
 
   .travel-card {

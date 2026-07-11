@@ -254,8 +254,21 @@ const destinations: Destination[] = [
     requiredStars: 70,
   },
   {
+    id: "ancient",
+    name: "古城遗迹",
+    note: "沿着石阶寻找古城的故事",
+    duration: "8秒",
+    reward: "古城建筑知识卡",
+    photo: `${ASSET}/legacy/travel/location_ancient_city.png`,
+    locationArt: `${ASSET}/legacy/travel/location_ancient_city.png`,
+    knowledgeTitle: "石头留下的城市记忆",
+    knowledgeFacts: ["遗迹能帮助我们了解过去的人怎样生活。", "保护遗迹时，要尽量保留原有材料和历史信息。"],
+    position: "destination-ancient",
+    requiredStars: 100,
+  },
+  {
     id: "future",
-    name: "未来交通站",
+    name: "未来车站",
     note: "看看未来的城市怎样出发",
     duration: "8秒",
     reward: "未来交通知识卡",
@@ -264,7 +277,7 @@ const destinations: Destination[] = [
     knowledgeTitle: "会思考的交通站",
     knowledgeFacts: ["公共交通能让更多人共享一次出行。", "未来交通会更重视安全、节能与无障碍体验。"],
     position: "destination-future",
-    requiredStars: 100,
+    requiredStars: 150,
   },
 ];
 

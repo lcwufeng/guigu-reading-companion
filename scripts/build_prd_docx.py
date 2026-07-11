@@ -302,7 +302,7 @@ def add_headers_and_footers(doc: Document) -> None:
 
         header = section.header.paragraphs[0]
         header.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        run = header.add_run("龟龟伴读  /  V1.1 产品需求文档")
+        run = header.add_run("龟龟伴读  /  V1.2 产品需求文档")
         set_run_font(run, size=8, bold=True, color=LEAF)
         p_pr = header._p.get_or_add_pPr()
         bottom_border = OxmlElement("w:pBdr")

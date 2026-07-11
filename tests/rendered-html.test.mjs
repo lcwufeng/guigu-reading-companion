@@ -53,14 +53,14 @@ test("keeps the V1.2 product loops, safeguards, and required art assets", async 
     assert.match(page, new RegExp(feature));
   }
 
-  for (const destination of ["星沙海湾", "森语树屋", "恐龙博物馆", "太空站", "未来交通站"]) {
+  for (const destination of ["星沙海湾", "森语树屋", "恐龙博物馆", "太空站", "古城遗迹", "未来车站"]) {
     assert.match(page, new RegExp(destination));
   }
 
   assert.match(page, /guigu-v1-state/);
   assert.match(page, /activeTravel/);
   assert.match(page, /tickets: 3/);
-  for (const threshold of [10, 15, 50, 70, 100]) {
+  for (const threshold of [10, 15, 50, 70, 100, 150]) {
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
   assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus"\]/);
@@ -89,6 +89,7 @@ test("keeps the V1.2 product loops, safeguards, and required art assets", async 
     "../public/assets/legacy/travel/location_forest.png",
     "../public/assets/legacy/travel/location_museum.png",
     "../public/assets/legacy/travel/location_space.png",
+    "../public/assets/legacy/travel/location_ancient_city.png",
     "../public/assets/legacy/travel/location_future_station.png",
     "../public/assets/legacy/travel/travel_ticket.png",
     "../public/assets/optimized/travel/knowledge_cards/knowledge_tide.webp",
