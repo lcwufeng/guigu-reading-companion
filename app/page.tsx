@@ -11,6 +11,7 @@ import {
   Compass,
   Edit3,
   Home,
+  Lightbulb,
   Lock,
   MapPinned,
   MessageCircle,
@@ -21,6 +22,7 @@ import {
   Send,
   Sparkles,
   Star,
+  Users,
   Waves,
   X,
 } from "lucide-react";
@@ -509,6 +511,8 @@ export default function HomePage() {
   const voiceSessionRef = useRef<VoiceSession | null>(null);
   const autoFinishVoiceRef = useRef<() => void>(() => undefined);
   const voiceAbortRef = useRef<AbortController | null>(null);
+  const submitChatRef = useRef<(message: string) => void>(() => undefined);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
 
   const mood = useMemo(
     () => clamp(0.35 * (100 - game.hunger) + 0.3 * game.cleanliness + 0.35 * (100 - game.boredom)),
@@ -875,9 +879,14 @@ export default function HomePage() {
       });
       const data = (await response.json()) as { transcript?: string; error?: string };
       if (!response.ok || !data.transcript) throw new Error(data.error || "speech unavailable");
-      if (session.target === "chat") setChatInput(data.transcript);
-      else setReadingAnswer(data.transcript);
-      showToast("听清楚啦，文字已经填好");
+      if (session.target === "chat") {
+        setChatInput("");
+        showToast(`听清楚啦，正在发给${game.name}`);
+        submitChatRef.current(data.transcript);
+      } else {
+        setReadingAnswer(data.transcript);
+        showToast("听清楚啦，文字已经填好");
+      }
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         showToast(error instanceof Error && error.message.includes("没有听清楚") ? error.message : "语音识别暂时不可用，可以改用文字输入");
@@ -889,7 +898,7 @@ export default function HomePage() {
         setVoiceSeconds(0);
       }
     }
-  }, [releaseVoiceSession, showToast]);
+  }, [game.name, releaseVoiceSession, showToast]);
 
   useEffect(() => {
     autoFinishVoiceRef.current = () => void finishVoiceInput();
@@ -960,8 +969,8 @@ export default function HomePage() {
     }
   };
 
-  const sendChat = async () => {
-    const message = chatInput.trim();
+  const sendChat = useCallback(async (messageOverride?: string) => {
+    const message = (messageOverride ?? chatInput).trim();
     if (!message || chatThinking) return;
     const userMessage: ChatMessage = { id: Date.now(), role: "user", text: message };
     setGame((current) => ({
@@ -991,7 +1000,19 @@ export default function HomePage() {
       chatMessages: [...current.chatMessages, turtleMessage].slice(-16),
     }));
     setChatThinking(false);
-  };
+  }, [chatInput, chatThinking, game.chatMessages, game.name]);
+
+  useEffect(() => {
+    submitChatRef.current = (message) => void sendChat(message);
+  }, [sendChat]);
+
+  useEffect(() => {
+    if (view !== "chat") return;
+    const frame = window.requestAnimationFrame(() => {
+      messageListRef.current?.scrollTo({ top: messageListRef.current.scrollHeight, behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [chatThinking, game.chatMessages, view]);
 
   const startTravel = () => {
     if (traveling || busy) return;
@@ -1257,32 +1278,47 @@ export default function HomePage() {
 
         {view === "chat" && (
           <section className="scene chat-scene">
-            <div className="chat-intro">
-              <span className="eyebrow"><MessageCircle size={16} /> 今日悄悄话</span>
-              <h1>把今天讲给{game.name}听</h1>
-              <p>学习、游戏和小发现，龟龟都愿意认真听。</p>
+            <div className="chat-companion">
+              <div className="companion-speech">
+                <span><MessageCircle size={16} /> 今日悄悄话</span>
+                <h1>把今天讲给<br />{game.name}听</h1>
+                <p>开心的、好奇的、没想明白的，都可以说给我听。</p>
+              </div>
               <img src={`${ASSET}/characters/turtle/turtle_talking.png`} alt="说话的龟龟" />
+              <strong className="companion-ready"><i /> 耳朵准备好啦</strong>
             </div>
 
             <div className="chat-panel">
-              <div className="prompt-chips" aria-label="快速话题">
-                {["今天我学会了…", "我读了一本书", "我遇到一道难题", "我和朋友一起玩"].map((prompt) => (
-                  <button key={prompt} type="button" onClick={() => setChatInput(prompt)}>{prompt}</button>
-                ))}
+              <header className="chat-panel-header">
+                <img src={`${ASSET}/characters/turtle/turtle_waving.png`} alt="" />
+                <div><small>我的陪伴伙伴</small><strong>{game.name}</strong></div>
+                <span><i /> 在线陪你聊</span>
+              </header>
+              <div className="prompt-area">
+                <small>今天想聊什么？</small>
+                <div className="prompt-chips" aria-label="快速话题">
+                  <button type="button" onClick={() => setChatInput("今天我学会了…")}><Lightbulb /><span>新发现</span></button>
+                  <button type="button" onClick={() => setChatInput("我读了一本书")}><BookOpen /><span>一本好书</span></button>
+                  <button type="button" onClick={() => setChatInput("我遇到一道难题")}><Sparkles /><span>有点难</span></button>
+                  <button type="button" onClick={() => setChatInput("我和朋友一起玩")}><Users /><span>朋友趣事</span></button>
+                </div>
               </div>
-              <div className="message-list" aria-live="polite">
+              <div className="message-list" aria-live="polite" ref={messageListRef}>
                 {game.chatMessages.map((message) => (
                   <div key={message.id} className={`message ${message.role}`}>
                     {message.role === "turtle" && (
                       <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
                     )}
-                    <p>{message.text}</p>
+                    <div className="message-content">
+                      {message.role === "turtle" && <small>{game.name}</small>}
+                      <p>{message.text}</p>
+                    </div>
                   </div>
                 ))}
                 {chatThinking && (
                   <div className="message turtle thinking-message">
                     <img src={`${ASSET}/characters/turtle/turtle_thinking.png`} alt="" />
-                    <p><span /><span /><span /></p>
+                    <div className="message-content"><small>{game.name}正在想</small><p><span /><span /><span /></p></div>
                   </div>
                 )}
               </div>
@@ -1291,7 +1327,7 @@ export default function HomePage() {
                   value={chatInput}
                   onChange={(event) => setChatInput(event.target.value)}
                   onKeyDown={(event) => event.key === "Enter" && void sendChat()}
-                  placeholder="今天发生了什么？"
+                  placeholder="想说什么？"
                   aria-label="输入想对龟龟说的话"
                   maxLength={500}
                   disabled={chatThinking}
@@ -1299,7 +1335,7 @@ export default function HomePage() {
                 <button
                   className={`icon-button ${voicePhase !== "idle" ? "listening" : ""}`}
                   type="button"
-                  onClick={() => beginVoiceInput("chat")}
+                  onClick={() => void beginVoiceInput("chat")}
                   title={voicePhase !== "idle" ? "正在处理语音" : "语音输入"}
                   aria-label={voicePhase !== "idle" ? "正在处理语音" : "语音输入"}
                   disabled={voicePhase !== "idle" || chatThinking}
@@ -1451,7 +1487,7 @@ export default function HomePage() {
         <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" onClick={() => setView("journal")}><Backpack /></NavButton>
       </nav>
 
-      {toast && <div className="toast" role="status"><Sparkles /> {toast}</div>}
+      {toast && <div className={`toast ${view === "chat" ? "chat-toast" : ""}`} role="status"><Sparkles /> {toast}</div>}
 
       {voicePhase !== "idle" && (
         <div className="voice-listening-backdrop" role="presentation">

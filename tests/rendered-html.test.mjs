@@ -68,6 +68,9 @@ test("keeps the V1.2 product loops, safeguards, and required art assets", async 
   assert.match(page, /navigator\.mediaDevices\.getUserMedia/);
   assert.match(page, /encodeWav/);
   assert.match(page, /我在认真听/);
+  assert.match(page, /submitChatRef\.current\(data\.transcript\)/);
+  assert.match(page, /在线陪你聊/);
+  assert.match(page, /今天想聊什么/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
