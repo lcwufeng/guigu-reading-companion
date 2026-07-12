@@ -16,8 +16,6 @@ import {
   MessageCircle,
   Mic,
   MicOff,
-  NotebookPen,
-  Plus,
   RotateCcw,
   Search,
   Send,
@@ -1197,6 +1195,8 @@ export default function HomePage() {
         "--library-background": `url("${ASSET}/optimized/backgrounds/reading_room.webp")`,
         "--chat-background": `url("${ASSET}/optimized/backgrounds/playground_legacy.webp")`,
         "--travel-background": `url("${ASSET}/optimized/backgrounds/travel_map.webp")`,
+        "--mistake-background": `url("${ASSET}/ui/mistakes/background.webp")`,
+        "--mistake-content-frame": `url("${ASSET}/ui/mistakes/content-frame.png")`,
         "--pixel-frame": `url("${ASSET}/ui/home-refresh/frames/top-frame.png")`,
         "--status-frame": `url("${ASSET}/ui/home-refresh/status/panel.png")`,
       } as React.CSSProperties}
@@ -1387,25 +1387,30 @@ export default function HomePage() {
         {view === "mistakes" && (
           <section className="scene mistake-scene">
             <header className="mistake-header">
-              <div>
-                <span className="eyebrow"><NotebookPen size={17} /> 龟龟错题屋</span>
-                <h1>把没想明白的，变成下一次会做的</h1>
-                <p>记下错因、重新挑战，龟龟陪你慢慢掌握。</p>
+              <div className="mistake-title-art">
+                <img src={`${ASSET}/ui/mistakes/title.png`} alt="错题屋，每一次错题，都是通往进步的小台阶" />
+                <h1 className="visually-hidden">龟龟错题屋</h1>
               </div>
-              <div className="mistake-stats" aria-label={`待复习${mistakeStats.review}道，已掌握${mistakeStats.mastered}道`}>
-                <span><strong>{mistakeStats.review}</strong>待复习</span>
-                <span><strong>{mistakeStats.mastered}</strong>已掌握</span>
+              <div className="mistake-overview" aria-label={`错题总数${game.mistakes.length}道，已掌握${mistakeStats.mastered}道，待复习${mistakeStats.review}道`}>
+                <img className="mistake-overview-frame" src={`${ASSET}/ui/mistakes/stats-panel.png`} alt="" />
+                <div className="mistake-stats">
+                  <span><strong>{game.mistakes.length}</strong>错题总数</span>
+                  <span><strong>{mistakeStats.mastered}</strong>已掌握</span>
+                  <span><strong>{mistakeStats.review}</strong>待复习</span>
+                </div>
+                <button className="add-mistake-button" type="button" onClick={openMistakeForm} aria-label="记一道错题">
+                  <img src={`${ASSET}/ui/mistakes/add-button.png`} alt="" />
+                </button>
               </div>
-              <button className="add-mistake-button" type="button" onClick={openMistakeForm}><Plus /> 记一道错题</button>
             </header>
 
             <div className="mistake-toolbar">
               <div role="tablist" aria-label="错题状态">
-                <button type="button" role="tab" aria-selected={mistakeFilter === "all"} onClick={() => setMistakeFilter("all")}>全部 {game.mistakes.length}</button>
-                <button type="button" role="tab" aria-selected={mistakeFilter === "review"} onClick={() => setMistakeFilter("review")}>待复习 {mistakeStats.review}</button>
-                <button type="button" role="tab" aria-selected={mistakeFilter === "mastered"} onClick={() => setMistakeFilter("mastered")}>已掌握 {mistakeStats.mastered}</button>
+                <button type="button" role="tab" aria-selected={mistakeFilter === "all"} onClick={() => setMistakeFilter("all")}>全部 <b>{game.mistakes.length}</b></button>
+                <button type="button" role="tab" aria-selected={mistakeFilter === "review"} onClick={() => setMistakeFilter("review")}>⌛ 待复习 <b>{mistakeStats.review}</b></button>
+                <button type="button" role="tab" aria-selected={mistakeFilter === "mastered"} onClick={() => setMistakeFilter("mastered")}><Check size={16} /> 已掌握 <b>{mistakeStats.mastered}</b></button>
               </div>
-              <span>掌握一道新错题可得 2 颗星星</span>
+              <span><Star size={16} fill="currentColor" /> 复习一道错题胜过做 2 道新题</span>
             </div>
 
             <div className="mistake-content">
@@ -1432,10 +1437,14 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="mistake-empty">
-                  <img src={`${ASSET}/characters/turtle/turtle_thinking.png`} alt="正在思考的龟龟" />
+                  <img src={`${ASSET}/ui/mistakes/empty-turtle.png`} alt="正在认真记录的龟龟" />
                   <h2>{game.mistakes.length ? "这里暂时没有对应的错题" : "第一道错题正在等你收进来"}</h2>
                   <p>{game.mistakes.length ? "换一个分类看看吧。" : "错题不是失败，是下一次进步的线索。"}</p>
-                  {!game.mistakes.length && <button type="button" onClick={openMistakeForm}><Plus /> 记下第一道错题</button>}
+                  {!game.mistakes.length && (
+                    <button type="button" onClick={openMistakeForm} aria-label="记录一道错题">
+                      <img src={`${ASSET}/ui/mistakes/add-button.png`} alt="" />
+                    </button>
+                  )}
                 </div>
               )}
             </div>

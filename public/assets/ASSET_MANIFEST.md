@@ -105,6 +105,19 @@
 
 动作和状态资源由 `scripts/prepare_supplemental_assets.py` 从设计素材目录裁切和压缩生成；Logo 与底部导航按钮直接复制原始透明 PNG，不做裁切或重绘。
 
+## V1.4 错题屋界面资产
+
+| 文件 | 用途 | 说明 |
+|---|---|---|
+| `ui/mistakes/background.webp` | 错题屋全屏背景 | 草地、路牌、星光门与浅绿色天空。 |
+| `ui/mistakes/title.png` | 页面标题 | 房屋插画、“错题屋”标题和成长文案。 |
+| `ui/mistakes/stats-panel.png` | 动态统计底框 | 承载错题总数、已掌握和待复习数字。 |
+| `ui/mistakes/content-frame.png` | 错题内容框 | 承载空状态或错题卡片列表。 |
+| `ui/mistakes/add-button.png` | 录题按钮 | 用于顶部入口和空状态主操作。 |
+| `ui/mistakes/empty-turtle.png` | 空状态角色 | 龟龟在花草间记录错题。 |
+
+网页版本由 `scripts/prepare_mistake_assets.py` 生成；仅清除素材外部棋盘格并做网页尺寸优化，不重绘主体内容。
+
 ## 后续精修方向
 
 - 太空站、古城遗迹与未来车站使用地点插画和页面生成知识卡，后续可再补独立旅行照片和同系列整图知识卡。

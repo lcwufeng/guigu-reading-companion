@@ -65,7 +65,7 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
   assert.match(page, /tickets: 3/);
   assert.match(page, /mistakes: \[\]/);
   assert.match(page, /firstMastery \? 2 : 0/);
-  assert.match(page, /掌握一道新错题可得 2 颗星星/);
+  assert.match(page, /复习一道错题胜过做 2 道新题/);
   assert.match(page, /记一道错题/);
   assert.match(page, /api\/mistake-scan/);
   assert.match(page, /拍照录题/);
@@ -81,6 +81,10 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
   assert.match(page, /ui\/home-refresh\/status\/panel\.png/);
   assert.match(page, /ui\/supplied\/brand\/logo\.png/);
   assert.match(page, /ui\/supplied\/nav\/home\.png/);
+  assert.match(page, /ui\/mistakes\/title\.png/);
+  assert.match(page, /ui\/mistakes\/stats-panel\.png/);
+  assert.match(page, /ui\/mistakes\/empty-turtle\.png/);
+  assert.match(page, /--mistake-background/);
   assert.match(page, /status-segments/);
   assert.doesNotMatch(page, /className="action-dock"/);
   assert.match(page, /navigator\.mediaDevices\.getUserMedia/);
@@ -144,6 +148,12 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
     "../public/assets/ui/supplied/nav/chat.png",
     "../public/assets/ui/supplied/nav/travel.png",
     "../public/assets/ui/supplied/nav/journal.png",
+    "../public/assets/ui/mistakes/background.webp",
+    "../public/assets/ui/mistakes/title.png",
+    "../public/assets/ui/mistakes/stats-panel.png",
+    "../public/assets/ui/mistakes/content-frame.png",
+    "../public/assets/ui/mistakes/add-button.png",
+    "../public/assets/ui/mistakes/empty-turtle.png",
   ]) {
     await access(new URL(path, import.meta.url));
   }

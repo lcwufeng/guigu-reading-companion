@@ -39,6 +39,16 @@
 - 六项底部导航完整按钮：`ui/supplied/nav/*.png`
 - 补充素材预处理：`scripts/prepare_supplemental_assets.py`
 
+## 错题屋界面
+
+- 全屏背景：`ui/mistakes/background.webp`
+- 页面标题：`ui/mistakes/title.png`
+- 动态统计底框：`ui/mistakes/stats-panel.png`
+- 主内容边框：`ui/mistakes/content-frame.png`
+- 录题按钮：`ui/mistakes/add-button.png`
+- 空状态角色：`ui/mistakes/empty-turtle.png`
+- 素材预处理：`scripts/prepare_mistake_assets.py`
+
 ## 捉迷藏
 
 - 水里隐藏：`characters/turtle/turtle_hide_water.png`
