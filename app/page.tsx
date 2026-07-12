@@ -27,6 +27,7 @@ import {
   Sparkles,
   Star,
   Trash2,
+  Upload,
   Users,
   Waves,
   X,
@@ -69,8 +70,7 @@ type MistakeRecord = {
   imageData?: string;
 };
 
-type MistakeDraft = Pick<MistakeRecord, "subject" | "question" | "wrongAnswer" | "correction" | "cause" | "imageData">;
-type MistakeScanResult = Omit<MistakeDraft, "imageData"> & { notice?: string };
+type MistakeScanResult = Pick<MistakeRecord, "subject" | "question" | "wrongAnswer" | "correction" | "cause"> & { notice?: string };
 
 type GameState = {
   name: string;
@@ -145,15 +145,6 @@ type VoiceSession = {
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const ASSET = `${BASE_PATH}/assets`;
-
-const emptyMistakeDraft: MistakeDraft = {
-  subject: "数学",
-  question: "",
-  wrongAnswer: "",
-  correction: "",
-  cause: "知识点没记牢",
-  imageData: undefined,
-};
 
 const initialState: GameState = {
   name: "小乌龟",
@@ -561,7 +552,6 @@ export default function HomePage() {
   const [recordTab, setRecordTab] = useState<RecordTab>("travel");
   const [mistakeFilter, setMistakeFilter] = useState<"all" | "review" | "mastered">("all");
   const [mistakeFormOpen, setMistakeFormOpen] = useState(false);
-  const [mistakeDraft, setMistakeDraft] = useState<MistakeDraft>(emptyMistakeDraft);
   const [mistakeScanning, setMistakeScanning] = useState(false);
   const [mistakeScanNotice, setMistakeScanNotice] = useState("");
   const [reviewMistake, setReviewMistake] = useState<MistakeRecord | null>(null);
@@ -1086,39 +1076,14 @@ export default function HomePage() {
   }, [chatThinking, game.chatMessages, view]);
 
   const openMistakeForm = () => {
-    setMistakeDraft(emptyMistakeDraft);
     setMistakeScanNotice("");
     setMistakeFormOpen(true);
-  };
-
-  const saveMistake = () => {
-    const question = mistakeDraft.question.trim();
-    const correction = mistakeDraft.correction.trim();
-    if (!question || !correction) {
-      showToast("题目和正确思路还没有填写完整");
-      return;
-    }
-    const record: MistakeRecord = {
-      ...mistakeDraft,
-      id: Date.now(),
-      question: question.slice(0, 600),
-      wrongAnswer: mistakeDraft.wrongAnswer.trim().slice(0, 500),
-      correction: correction.slice(0, 800),
-      cause: mistakeDraft.cause,
-      status: "new",
-      date: formatDate(),
-      reviewCount: 0,
-    };
-    setGame((current) => ({ ...current, mistakes: [record, ...current.mistakes] }));
-    setMistakeFormOpen(false);
-    showToast("错题已经收进小屋，之后再回来挑战它");
   };
 
   const attachMistakePhoto = async (file?: File) => {
     if (!file) return;
     try {
       const imageData = await prepareMistakePhoto(file);
-      setMistakeDraft((current) => ({ ...current, imageData }));
       setMistakeScanning(true);
       setMistakeScanNotice("");
       const response = await fetch(`${BASE_PATH}/api/mistake-scan`, {
@@ -1128,18 +1093,23 @@ export default function HomePage() {
       });
       const data = (await response.json()) as { result?: MistakeScanResult; error?: string };
       if (!response.ok || !data.result) throw new Error(data.error || "照片识别失败");
-      setMistakeDraft((current) => ({
-        ...current,
-        subject: data.result?.subject || current.subject,
-        question: data.result?.question || current.question,
-        wrongAnswer: data.result?.wrongAnswer || current.wrongAnswer,
-        correction: data.result?.correction || current.correction,
-        cause: data.result?.cause || current.cause,
-      }));
-      setMistakeScanNotice(data.result.notice || "AI 已整理完成，请核对题目和正确思路后再保存。" );
-      showToast("照片整理好了，检查一下内容再收进错题屋");
+      const record: MistakeRecord = {
+        id: Date.now(),
+        subject: data.result.subject,
+        question: data.result.question,
+        wrongAnswer: data.result.wrongAnswer,
+        correction: data.result.correction,
+        cause: data.result.cause,
+        imageData,
+        status: "new",
+        date: formatDate(),
+        reviewCount: 0,
+      };
+      setGame((current) => ({ ...current, mistakes: [record, ...current.mistakes] }));
+      setMistakeFormOpen(false);
+      showToast("MiMo 已经整理好错题，之后可以回来挑战它");
     } catch (error) {
-      setMistakeScanNotice("照片已保留，你可以换一张重试或直接手工填写。" );
+      setMistakeScanNotice("这张照片没有读清楚，请重新拍照或换一张图片。" );
       showToast(error instanceof Error ? error.message : "图片读取失败，请换一张试试");
     } finally {
       setMistakeScanning(false);
@@ -1775,26 +1745,23 @@ export default function HomePage() {
       )}
 
       {mistakeFormOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setMistakeFormOpen(false)}>
-          <section className="modal mistake-form-modal" role="dialog" aria-modal="true" aria-labelledby="mistake-form-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" type="button" onClick={() => setMistakeFormOpen(false)} aria-label="关闭"><X /></button>
-            <span className="modal-kicker">收进龟龟错题屋</span>
-            <h2 id="mistake-form-title">记下这次没想明白的地方</h2>
-            <div className="mistake-form-grid">
-              <label><span>学科</span><select value={mistakeDraft.subject} onChange={(event) => setMistakeDraft((current) => ({ ...current, subject: event.target.value }))}><option>数学</option><option>语文</option><option>英语</option><option>科学</option><option>其他</option></select></label>
-              <label><span>卡住原因</span><select value={mistakeDraft.cause} onChange={(event) => setMistakeDraft((current) => ({ ...current, cause: event.target.value }))}><option>知识点没记牢</option><option>题目没读懂</option><option>计算或书写失误</option><option>方法没有想到</option><option>还不确定</option></select></label>
-            </div>
-            <label className="mistake-field"><span>题目内容 *</span><textarea value={mistakeDraft.question} onChange={(event) => setMistakeDraft((current) => ({ ...current, question: event.target.value }))} maxLength={600} placeholder="把题目写在这里…" /></label>
-            <label className="mistake-field"><span>我上次怎么答的</span><textarea value={mistakeDraft.wrongAnswer} onChange={(event) => setMistakeDraft((current) => ({ ...current, wrongAnswer: event.target.value }))} maxLength={500} placeholder="可以留空，也可以记下当时的答案" /></label>
-            <label className="mistake-field"><span>正确思路或答案 *</span><textarea value={mistakeDraft.correction} onChange={(event) => setMistakeDraft((current) => ({ ...current, correction: event.target.value }))} maxLength={800} placeholder="写下关键步骤，不只是最后答案" /></label>
-            <div className="mistake-photo-row">
-              <label className={`mistake-photo-button ${mistakeScanning ? "is-scanning" : ""}`}><Camera /> {mistakeScanning ? "龟龟正在整理…" : mistakeDraft.imageData ? "重新扫描照片" : "扫描错题照片"}<input type="file" accept="image/*" capture="environment" disabled={mistakeScanning} onChange={(event) => void attachMistakePhoto(event.target.files?.[0])} /></label>
-              {mistakeDraft.imageData && <div className="mistake-photo-preview"><img src={mistakeDraft.imageData} alt="待保存的错题照片" /><button type="button" onClick={() => setMistakeDraft((current) => ({ ...current, imageData: undefined }))}>移除</button></div>}
-              {mistakeScanning && <div className="mistake-scan-progress" role="status"><Sparkles /><span><strong>正在读题和整理步骤</strong>学科、题目、原答案和正确思路会自动填入</span></div>}
-              {!mistakeScanning && mistakeScanNotice && <small className="mistake-scan-notice">{mistakeScanNotice}</small>}
-              {!mistakeScanning && !mistakeScanNotice && <small>只框住一道题并避开姓名、学校；照片会发送给 MiMo-V2.5 整理，保存前请核对内容。</small>}
-            </div>
-            <div className="mistake-modal-actions"><button type="button" onClick={() => setMistakeFormOpen(false)}>取消</button><button type="button" disabled={mistakeScanning} onClick={saveMistake}><NotebookPen /> 收进错题屋</button></div>
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => !mistakeScanning && setMistakeFormOpen(false)}>
+          <section className="modal mistake-form-modal mistake-capture-modal" role="dialog" aria-modal="true" aria-labelledby="mistake-form-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" disabled={mistakeScanning} onClick={() => setMistakeFormOpen(false)} aria-label="关闭"><X /></button>
+            <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="帮你整理错题的龟龟" />
+            <span className="modal-kicker">龟龟错题屋</span>
+            <h2 id="mistake-form-title">拍下错题，剩下的交给 MiMo</h2>
+            <p>学科、题目、原答案、正确思路和错因都会自动整理。</p>
+            {mistakeScanning ? (
+              <div className="mistake-capture-loading" role="status"><Sparkles /><strong>正在读题和整理步骤…</strong><span>整理完成后会直接收进错题屋</span></div>
+            ) : (
+              <div className="mistake-capture-actions">
+                <label><Camera /><strong>拍照录题</strong><span>打开摄像头拍下错题</span><input type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void attachMistakePhoto(file); }} /></label>
+                <label><Upload /><strong>上传图片</strong><span>从相册选择错题照片</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void attachMistakePhoto(file); }} /></label>
+              </div>
+            )}
+            {!mistakeScanning && mistakeScanNotice && <p className="mistake-capture-error" role="alert">{mistakeScanNotice}</p>}
+            <small className="mistake-capture-privacy">建议只框住一道题，并避开姓名和学校信息。</small>
           </section>
         </div>
       )}

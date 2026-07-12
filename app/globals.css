@@ -2187,37 +2187,22 @@ button:disabled {
   width: min(700px, 100%);
 }
 
-.mistake-form-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr 1fr;
-  margin: 18px 0 12px;
-}
-
-.mistake-form-grid label,
 .mistake-field {
   display: grid;
   gap: 6px;
 }
 
-.mistake-form-grid span,
 .mistake-field > span {
   color: #516961;
   font-size: 11px;
   font-weight: 800;
 }
 
-.mistake-form-grid select,
 .mistake-field textarea {
   background: white;
   border: 1px solid #c8d8cf;
   border-radius: 6px;
   color: var(--ink);
-}
-
-.mistake-form-grid select {
-  height: 42px;
-  padding: 0 10px;
 }
 
 .mistake-field {
@@ -2230,109 +2215,112 @@ button:disabled {
   resize: vertical;
 }
 
-.mistake-photo-row {
-  align-items: center;
-  background: #f1f7f2;
-  border: 1px dashed #a9c4b1;
-  display: flex;
+.mistake-capture-modal {
+  text-align: center;
+  width: min(560px, 100%);
+}
+
+.mistake-capture-modal > img {
+  height: 92px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  width: 92px;
+}
+
+.mistake-capture-modal > p {
+  margin-bottom: 16px;
+}
+
+.mistake-capture-actions {
+  display: grid;
   gap: 12px;
-  min-height: 72px;
-  padding: 10px;
+  grid-template-columns: 1fr 1fr;
 }
 
-.mistake-photo-button {
+.mistake-capture-actions label {
   align-items: center;
-  background: white;
-  border: 1px solid #b9cec0;
+  background: #f3f8f3;
+  border: 1px solid #b7cdbd;
+  border-radius: 8px;
   cursor: pointer;
-  display: flex;
-  flex: 0 0 auto;
-  font-size: 11px;
-  font-weight: 800;
-  gap: 6px;
-  min-height: 38px;
-  padding: 7px 10px;
-}
-
-.mistake-photo-button input {
-  display: none;
-}
-
-.mistake-photo-button svg {
-  height: 17px;
-  width: 17px;
-}
-
-.mistake-photo-button.is-scanning {
-  background: #fff8dc;
-  cursor: wait;
-}
-
-.mistake-photo-button.is-scanning svg,
-.mistake-scan-progress svg {
-  animation: mistake-scan-pulse 1.1s ease-in-out infinite;
-}
-
-.mistake-photo-preview {
-  align-items: center;
-  display: flex;
+  display: grid;
   gap: 5px;
+  justify-items: center;
+  min-height: 122px;
+  padding: 16px 12px;
 }
 
-.mistake-photo-preview img {
-  height: 50px;
-  object-fit: cover;
-  width: 70px;
+.mistake-capture-actions label:hover {
+  background: #e8f5e9;
+  border-color: var(--leaf);
 }
 
-.mistake-photo-preview button {
-  background: transparent;
-  border: 0;
-  color: #a04a42;
-  cursor: pointer;
+.mistake-capture-actions svg {
+  color: var(--leaf);
+  height: 30px;
+  width: 30px;
+}
+
+.mistake-capture-actions strong {
+  font-size: 15px;
+}
+
+.mistake-capture-actions span {
+  color: var(--muted);
   font-size: 10px;
 }
 
-.mistake-scan-progress {
+.mistake-capture-actions input {
+  display: none;
+}
+
+.mistake-capture-loading {
   align-items: center;
-  color: #28583f;
-  display: flex;
-  flex: 1;
-  gap: 8px;
-  min-width: 210px;
-}
-
-.mistake-scan-progress svg {
-  color: #d18b16;
-  flex: 0 0 auto;
-  height: 22px;
-  width: 22px;
-}
-
-.mistake-scan-progress span {
+  background: #fff8dc;
+  border: 1px solid #e4c46b;
+  border-radius: 8px;
   display: grid;
-  font-size: 9px;
-  gap: 2px;
-  line-height: 1.4;
+  gap: 6px;
+  justify-items: center;
+  min-height: 150px;
+  padding: 22px;
 }
 
-.mistake-scan-progress strong {
-  font-size: 11px;
+.mistake-capture-loading svg {
+  animation: mistake-scan-pulse 1.1s ease-in-out infinite;
+  color: #d18b16;
+  height: 36px;
+  width: 36px;
 }
 
-.mistake-scan-notice {
-  color: #6b5520 !important;
+.mistake-capture-loading strong {
+  font-size: 15px;
+}
+
+.mistake-capture-loading span,
+.mistake-capture-privacy {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.mistake-capture-error {
+  background: #fff1e8;
+  border: 1px solid #e7b49c;
+  border-radius: 6px;
+  color: #8b3f2e !important;
+  font-size: 11px !important;
+  margin: 12px 0 0 !important;
+  padding: 9px;
+}
+
+.mistake-capture-privacy {
+  display: block;
+  margin-top: 13px;
 }
 
 @keyframes mistake-scan-pulse {
   0%, 100% { opacity: 0.45; transform: scale(0.88); }
   50% { opacity: 1; transform: scale(1.06); }
-}
-
-.mistake-photo-row > small {
-  color: var(--muted);
-  font-size: 9px;
-  line-height: 1.5;
 }
 
 .mistake-modal-actions,
@@ -3238,22 +3226,9 @@ button:disabled {
     padding: 24px 18px;
   }
 
-  .mistake-form-grid {
-    grid-template-columns: 1fr;
-    margin-top: 14px;
-  }
-
-  .mistake-photo-row {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .mistake-photo-row > small {
-    flex-basis: 100%;
-  }
-
-  .mistake-scan-progress {
-    flex-basis: 100%;
+  .mistake-capture-actions label {
+    min-height: 112px;
+    padding-inline: 8px;
   }
 
   .mistake-review-heading {

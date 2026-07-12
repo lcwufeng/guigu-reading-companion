@@ -308,6 +308,8 @@ def add_body(doc: Document, lines: list[str]) -> None:
             continue
         if stripped.startswith("## "):
             active_numbering_id = None
+            if stripped == "## 17. 本轮迭代结论":
+                doc.add_page_break()
             paragraph = doc.add_paragraph(style="Heading 1")
             paragraph.add_run(strip_inline_markup(stripped[3:]))
         elif stripped.startswith("### "):

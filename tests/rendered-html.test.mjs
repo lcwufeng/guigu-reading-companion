@@ -68,7 +68,11 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
   assert.match(page, /掌握一道新错题可得 2 颗星星/);
   assert.match(page, /记一道错题/);
   assert.match(page, /api\/mistake-scan/);
-  assert.match(page, /龟龟正在整理/);
+  assert.match(page, /拍照录题/);
+  assert.match(page, /上传图片/);
+  assert.match(page, /整理完成后会直接收进错题屋/);
+  assert.match(page, /mistakes: \[record, \.\.\.current\.mistakes\]/);
+  assert.doesNotMatch(page, /mistakeDraft|saveMistake/);
   for (const threshold of [10, 15, 50, 70, 100, 150]) {
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }

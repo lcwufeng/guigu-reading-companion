@@ -48,7 +48,7 @@ export async function POST(request: Request) {
             role: "system",
             content: [
               "你是龟龟伴读的错题整理助手，服务对象是小学生。",
-              "请识别图片中的一道主要题目，并整理为可复习的错题记录。不要编造看不清的文字。",
+              "请识别图片中的一道主要错题，并独立判断学科、题目内容、学生原答案、正确思路和错因，整理为可复习的错题记录。不要要求用户补填字段，也不要编造看不清的文字。",
               "仅返回 JSON，不要使用 Markdown 或添加解释。固定格式：",
               '{"subject":"数学|语文|英语|科学|其他","question":"完整题目文字","wrongAnswer":"图片中可见的学生原答案，没有则为空字符串","correction":"简洁、分步骤、适合小学生核对的正确思路与答案","cause":"知识点没记牢|题目没读懂|计算或书写失误|方法没有想到|还不确定","notice":"需要用户核对的模糊处，没有则为空字符串"}',
               "subject 和 cause 必须严格使用给定枚举。若题目不完整，在 notice 说明；无法可靠推断错因时使用还不确定。",
@@ -82,9 +82,9 @@ export async function POST(request: Request) {
       cause: enumValue(parsed.cause, causes, "还不确定"),
       notice: clean(parsed.notice, 180),
     };
-    if (!result.question) throw new Error("question not recognized");
+    if (!result.question || !result.correction) throw new Error("incomplete recognition");
     return NextResponse.json({ result, source: "mimo-v2.5" });
   } catch {
-    return NextResponse.json({ error: "这张照片暂时没有识别清楚，请换一张或手工填写" }, { status: 502 });
+    return NextResponse.json({ error: "这张照片暂时没有识别清楚，请重新拍照或换一张图片" }, { status: 502 });
   }
 }
