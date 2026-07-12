@@ -64,14 +64,17 @@ button:disabled {
 
 .topbar {
   align-items: center;
-  background: #35ace4;
-  border-bottom: 3px solid rgba(18, 108, 151, 0.3);
+  background: transparent;
+  border: 0;
   display: grid;
   gap: 24px;
   grid-template-columns: minmax(420px, 1fr) auto;
-  height: 84px;
-  padding: 8px 22px;
-  position: relative;
+  height: 92px;
+  left: 0;
+  padding: 10px 24px;
+  position: absolute;
+  right: 0;
+  top: 0;
   z-index: 40;
 }
 
@@ -84,11 +87,11 @@ button:disabled {
 
 .brand-logo {
   flex: 0 0 auto;
-  filter: drop-shadow(0 2px 0 rgba(255, 255, 255, 0.55));
-  height: 54px;
+  filter: drop-shadow(0 3px 2px rgba(25, 70, 36, 0.2));
+  height: 72px;
   image-rendering: pixelated;
   object-fit: contain;
-  width: 178px;
+  width: 280px;
 }
 
 .pet-name {
@@ -153,16 +156,16 @@ button:disabled {
 .status-pill {
   align-items: center;
   display: grid;
-  gap: 7px;
-  grid-template-columns: 30px minmax(0, 1fr);
-  min-height: 37px;
+  gap: 9px;
+  grid-template-columns: 36px minmax(0, 1fr);
+  min-height: 45px;
 }
 
 .status-pill img {
-  height: 29px;
+  height: 35px;
   image-rendering: pixelated;
   object-fit: contain;
-  width: 29px;
+  width: 35px;
 }
 
 .status-copy {
@@ -172,9 +175,9 @@ button:disabled {
 .status-copy span {
   color: #294b31;
   display: block;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
 .reading-progress,
@@ -206,7 +209,7 @@ button:disabled {
   background: rgba(76, 87, 67, 0.14);
   border: 1px solid rgba(65, 80, 54, 0.15);
   border-radius: 2px;
-  height: 12px;
+  height: 14px;
 }
 
 .status-pill:nth-child(1) .status-segments i.active { background: #f29939; }
@@ -220,39 +223,39 @@ button:disabled {
   background-repeat: no-repeat;
   background-size: 100% 100%;
   filter: drop-shadow(0 8px 7px rgba(30, 73, 40, 0.2));
-  height: 328px;
-  padding: 31px 28px 25px;
+  height: 375px;
+  padding: 18px 31px 25px;
   position: absolute;
-  right: 22px;
-  top: 28px;
-  width: 266px;
+  right: 24px;
+  top: 106px;
+  width: 300px;
   z-index: 15;
 }
 
 .status-panel-title {
   align-items: center;
   display: flex;
-  gap: 8px;
-  height: 46px;
+  gap: 10px;
+  height: 58px;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
 .status-panel-title img {
-  height: 43px;
+  height: 50px;
   image-rendering: pixelated;
   object-fit: contain;
-  width: 43px;
+  width: 50px;
 }
 
 .status-panel-title strong {
   color: #1d5732;
-  font-size: 18px;
+  font-size: 21px;
 }
 
 .home-status-panel .status-row {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .wallet {
@@ -261,11 +264,11 @@ button:disabled {
   background-repeat: no-repeat;
   background-size: 100% 100%;
   display: flex;
-  gap: 4px;
-  height: 58px;
+  gap: 8px;
+  height: 70px;
   justify-content: flex-end;
-  min-width: 350px;
-  padding: 9px 23px;
+  min-width: 430px;
+  padding: 9px 28px;
 }
 
 .wallet span {
@@ -274,12 +277,12 @@ button:disabled {
   border: 0;
   color: #8a5b06;
   display: flex;
-  font-size: 13px;
+  font-size: 20px;
   font-weight: 800;
-  gap: 4px;
+  gap: 8px;
   justify-content: center;
-  min-width: 92px;
-  padding: 7px 9px;
+  min-width: 112px;
+  padding: 7px 10px;
 }
 
 .wallet span:last-child {
@@ -291,14 +294,27 @@ button:disabled {
 }
 
 .wallet-ticket img {
-  height: 17px;
+  height: 31px;
   image-rendering: pixelated;
   object-fit: contain;
-  width: 22px;
+  width: 40px;
+}
+
+.wallet-icon {
+  height: 31px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  width: 31px;
+}
+
+.wallet-star {
+  color: #f4b51f;
+  height: 31px;
+  width: 31px;
 }
 
 .scene-shell {
-  height: calc(100dvh - 174px);
+  height: 100dvh;
   min-height: 560px;
   position: relative;
 }
@@ -326,7 +342,7 @@ button:disabled {
   display: grid;
   gap: 4vw;
   grid-template-columns: minmax(290px, 0.68fr) minmax(560px, 1.22fr);
-  padding: 34px max(4vw, 42px) 28px;
+  padding: 112px max(4vw, 42px) 108px;
 }
 
 .travel-scene {
@@ -338,13 +354,13 @@ button:disabled {
   color: var(--ink);
   display: block;
   overflow-y: auto;
-  padding: 0 0 56px;
+  padding: 0 0 112px;
 }
 
 .journal-scene {
   background: #eef8f1;
   overflow-y: auto;
-  padding: 38px max(5vw, 48px) 56px;
+  padding: 120px max(5vw, 48px) 112px;
 }
 
 .scene-title {
@@ -353,7 +369,7 @@ button:disabled {
   left: 34px;
   padding: 13px 18px;
   position: absolute;
-  top: 26px;
+  top: 108px;
   z-index: 5;
 }
 
@@ -433,7 +449,7 @@ button:disabled {
 }
 
 .hide-action {
-  bottom: 9%;
+  bottom: 12%;
   left: 73%;
 }
 
@@ -583,7 +599,7 @@ button:disabled {
 
 .action-progress {
   background: rgba(255, 255, 255, 0.94);
-  bottom: 22px;
+  bottom: 112px;
   box-shadow: var(--shadow);
   left: 50%;
   padding: 10px 13px;
@@ -612,16 +628,16 @@ button:disabled {
 
 .bottom-nav {
   align-items: center;
-  background: linear-gradient(#d5f0bd, #a8d983);
-  border-top: 3px solid #568f43;
+  background: transparent;
+  border: 0;
   bottom: 0;
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(6, minmax(112px, 208px));
-  height: 90px;
+  gap: 4px;
+  grid-template-columns: repeat(6, minmax(112px, 220px));
+  height: 96px;
   justify-content: center;
   left: 0;
-  padding: 8px 18px;
+  padding: 0 18px 4px;
   position: fixed;
   right: 0;
   z-index: 50;
@@ -629,56 +645,51 @@ button:disabled {
 
 .nav-button {
   align-items: center;
-  background: #fff4d4;
-  background-image: var(--pixel-frame);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
+  background: transparent;
   border: 0;
   cursor: pointer;
-  display: grid;
-  gap: 2px;
-  grid-template-columns: 50px 1fr;
-  height: 70px;
+  display: flex;
+  height: 82px;
   justify-content: center;
-  padding: 8px 20px 9px 15px;
+  overflow: visible;
+  padding: 0;
   position: relative;
 }
 
 .nav-art {
-  height: 48px;
+  height: auto;
   image-rendering: pixelated;
-  object-fit: contain;
-  width: 48px;
+  max-width: none;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(230px, 18vw);
 }
 
 .nav-button span {
-  color: #593d22;
-  font-size: 16px;
-  font-weight: 900;
-  white-space: nowrap;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+  clip: rect(0 0 0 0);
 }
 
 .nav-button.active {
-  filter: brightness(1.05) drop-shadow(0 4px 2px rgba(56, 91, 42, 0.2));
-  transform: translateY(-3px);
+  filter: brightness(1.06) drop-shadow(0 7px 4px rgba(42, 79, 38, 0.3));
+  transform: translateY(-4px);
 }
 
 .nav-button.active::before {
-  background: #3e9b4c;
-  border-radius: 3px;
-  content: "";
-  height: 5px;
-  left: 20px;
-  position: absolute;
-  right: 20px;
-  top: 2px;
+  content: none;
 }
 
 .page-heading {
   left: 4vw;
   position: absolute;
-  top: 34px;
+  top: 108px;
   z-index: 3;
 }
 
@@ -713,7 +724,7 @@ button:disabled {
 
 .book-picker {
   background: rgba(255, 253, 246, 0.95);
-  bottom: 24px;
+  bottom: 112px;
   box-shadow: var(--shadow);
   display: grid;
   gap: 7px;
@@ -1235,7 +1246,7 @@ button:disabled {
   display: grid;
   gap: 26px;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  padding: 24px max(5vw, 48px);
+  padding: 112px max(5vw, 48px) 24px;
 }
 
 .mistake-header h1 {
@@ -1547,7 +1558,7 @@ button:disabled {
 
 .travel-card {
   background: rgba(255, 255, 255, 0.96);
-  bottom: 24px;
+  bottom: 112px;
   box-shadow: var(--shadow);
   display: grid;
   grid-template-columns: 150px 1fr;
@@ -1648,7 +1659,7 @@ button:disabled {
 .traveling-banner {
   align-items: center;
   background: rgba(255, 255, 255, 0.96);
-  bottom: 24px;
+  bottom: 112px;
   box-shadow: var(--shadow);
   display: grid;
   gap: 12px;
@@ -2808,7 +2819,7 @@ button:disabled {
   }
 
   .brand-logo {
-    width: 150px;
+    width: 230px;
   }
 
   .identity-cluster {
@@ -2816,26 +2827,21 @@ button:disabled {
   }
 
   .wallet {
-    min-width: 310px;
+    min-width: 370px;
   }
 
   .bottom-nav {
-    gap: 6px;
+    gap: 2px;
     grid-template-columns: repeat(6, minmax(102px, 1fr));
   }
 
   .nav-button {
-    grid-template-columns: 42px 1fr;
-    padding-inline: 12px 16px;
+    padding: 0;
   }
 
   .nav-art {
-    height: 42px;
-    width: 42px;
-  }
-
-  .nav-button span {
-    font-size: 14px;
+    height: auto;
+    width: min(205px, 19vw);
   }
 
   .chat-scene {
@@ -2862,15 +2868,15 @@ button:disabled {
   .app {
     min-height: 100dvh;
     overflow: visible;
-    padding-bottom: 72px;
+    padding-bottom: 0;
   }
 
   .topbar {
     gap: 8px;
     grid-template-columns: 1fr auto;
-    height: 70px;
+    height: 76px;
     padding: 6px 8px;
-    position: sticky;
+    position: absolute;
     top: 0;
   }
 
@@ -2882,7 +2888,7 @@ button:disabled {
     height: 52px;
     min-width: 0;
     padding: 6px 16px 7px 10px;
-    width: min(220px, 50vw);
+    width: min(220px, 42vw);
   }
 
   .pet-name small {
@@ -2905,14 +2911,14 @@ button:disabled {
   }
 
   .wallet span {
-    font-size: 10px;
-    min-width: 45px;
+    font-size: 14px;
+    min-width: 50px;
     padding: 5px 3px;
   }
 
   .wallet {
     gap: 0;
-    height: 52px;
+    height: 58px;
     min-width: 0;
     padding: 7px 12px;
     width: min(220px, 46vw);
@@ -2920,32 +2926,25 @@ button:disabled {
 
   .scene-shell,
   .scene {
-    height: calc(100dvh - 142px);
+    height: 100dvh;
     min-height: 540px;
   }
 
   .bottom-nav {
     gap: 2px;
     grid-template-columns: repeat(6, 1fr);
-    height: 72px;
-    padding: 4px 6px;
+    height: 76px;
+    padding: 0 4px 2px;
   }
 
   .nav-button {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    height: 62px;
-    padding: 5px 3px 7px;
-  }
-
-  .nav-button span {
-    font-size: 9px;
+    height: 66px;
+    padding: 0;
   }
 
   .nav-art {
-    height: 34px;
-    width: 38px;
+    height: auto;
+    width: 78px;
   }
 
   .scene-title {
@@ -2953,44 +2952,44 @@ button:disabled {
   }
 
   .home-status-panel {
-    height: 226px;
-    padding: 20px 18px 16px;
+    height: 250px;
+    padding: 12px 19px 16px;
     right: 8px;
-    top: 8px;
-    width: 178px;
+    top: 82px;
+    width: 200px;
   }
 
   .status-panel-title {
-    height: 31px;
-    margin-bottom: 5px;
+    height: 40px;
+    margin-bottom: 7px;
   }
 
   .status-panel-title img {
-    height: 30px;
-    width: 30px;
+    height: 36px;
+    width: 36px;
   }
 
   .status-panel-title strong {
-    font-size: 13px;
+    font-size: 15px;
   }
 
   .home-status-panel .status-row {
-    gap: 2px;
+    gap: 3px;
   }
 
   .status-pill {
-    gap: 4px;
-    grid-template-columns: 21px 1fr;
-    min-height: 34px;
+    gap: 5px;
+    grid-template-columns: 25px 1fr;
+    min-height: 39px;
   }
 
   .status-pill img {
-    height: 21px;
-    width: 21px;
+    height: 25px;
+    width: 25px;
   }
 
   .status-copy span {
-    font-size: 9px;
+    font-size: 10px;
     margin-bottom: 2px;
   }
 
@@ -2999,7 +2998,7 @@ button:disabled {
   }
 
   .status-segments i {
-    height: 8px;
+    height: 9px;
   }
 
   .home-scene {
@@ -3057,7 +3056,7 @@ button:disabled {
   }
 
   .pond-action { left: 3%; top: 42%; }
-  .tree-action { left: 28%; top: 34%; }
+  .tree-action { left: 28%; top: 40%; }
   .hide-action { bottom: 13%; left: 3%; }
   .cave-action { left: 68%; top: 44%; }
 
@@ -3067,13 +3066,13 @@ button:disabled {
   .hidden-lotus { bottom: 19%; left: 13%; }
 
   .action-progress {
-    bottom: 18px;
+    bottom: 86px;
   }
 
   .page-heading {
     left: 12px;
     right: 12px;
-    top: 12px;
+    top: 86px;
   }
 
   .page-heading h1,
@@ -3090,7 +3089,7 @@ button:disabled {
   }
 
   .book-picker {
-    bottom: 8px;
+    bottom: 82px;
     display: flex;
     left: 9px;
     overflow-x: auto;
@@ -3156,7 +3155,7 @@ button:disabled {
 
   .chat-scene {
     display: block;
-    padding: 0;
+    padding: 76px 0;
   }
 
   .chat-companion {
@@ -3241,7 +3240,7 @@ button:disabled {
   .mistake-header {
     gap: 10px;
     grid-template-columns: 1fr auto;
-    padding: 14px 12px;
+    padding: 88px 12px 14px;
   }
 
   .mistake-header h1 {
@@ -3347,7 +3346,7 @@ button:disabled {
   .destination-future { left: 79%; top: 47%; }
 
   .travel-card {
-    bottom: 10px;
+    bottom: 82px;
     grid-template-columns: 92px 1fr;
     left: 9px;
     right: 9px;
@@ -3377,16 +3376,16 @@ button:disabled {
   }
 
   .traveling-banner {
-    bottom: 10px;
+    bottom: 82px;
     left: 9px;
     width: calc(100% - 18px);
   }
 
   .journal-scene {
     height: auto;
-    min-height: calc(100dvh - 188px);
+    min-height: 100dvh;
     overflow: visible;
-    padding: 22px 14px 36px;
+    padding: 92px 14px 92px;
   }
 
   .journal-header {
@@ -3489,22 +3488,34 @@ button:disabled {
   }
 
   .pet-name {
-    width: 47vw;
+    width: 40vw;
   }
 
   .wallet {
-    gap: 4px;
-    width: 43vw;
+    gap: 2px;
+    padding-inline: 9px;
+    width: 53vw;
   }
 
   .wallet span {
-    font-size: 10px;
-    padding-inline: 5px;
+    font-size: 13px;
+    min-width: 0;
+    padding-inline: 3px;
+  }
+
+  .wallet-icon {
+    height: 24px;
+    width: 24px;
+  }
+
+  .wallet-star {
+    height: 24px;
+    width: 24px;
   }
 
   .wallet-ticket img {
-    height: 14px;
-    width: 18px;
+    height: 24px;
+    width: 31px;
   }
 
   .home-status-panel .status-pill {
@@ -3512,7 +3523,7 @@ button:disabled {
   }
 
   .status-copy span {
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .fruit-options {

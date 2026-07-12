@@ -35,7 +35,8 @@
 - 场景动作按钮：`ui/home-refresh/actions/*.png`
 - 状态面板和状态图标：`ui/home-refresh/status/*.png`
 - 宠物身份与资源框：`ui/home-refresh/frames/top-frame.png`
-- 六项底部导航插画：`ui/home-refresh/nav/*.png`
+- 透明品牌 Logo：`ui/supplied/brand/logo.png`
+- 六项底部导航完整按钮：`ui/supplied/nav/*.png`
 - 补充素材预处理：`scripts/prepare_supplemental_assets.py`
 
 ## 捉迷藏

@@ -79,7 +79,8 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
   assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus"\]/);
   assert.match(page, /ui\/home-refresh\/actions\/swim\.png/);
   assert.match(page, /ui\/home-refresh\/status\/panel\.png/);
-  assert.match(page, /ui\/home-refresh\/nav\/home\.png/);
+  assert.match(page, /ui\/supplied\/brand\/logo\.png/);
+  assert.match(page, /ui\/supplied\/nav\/home\.png/);
   assert.match(page, /status-segments/);
   assert.doesNotMatch(page, /className="action-dock"/);
   assert.match(page, /navigator\.mediaDevices\.getUserMedia/);
@@ -136,12 +137,13 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
     "../public/assets/ui/home-refresh/actions/sleep.png",
     "../public/assets/ui/home-refresh/status/panel.png",
     "../public/assets/ui/home-refresh/status/turtle-head.png",
-    "../public/assets/ui/home-refresh/nav/home.png",
-    "../public/assets/ui/home-refresh/nav/reading.png",
-    "../public/assets/ui/home-refresh/nav/mistakes.png",
-    "../public/assets/ui/home-refresh/nav/chat.png",
-    "../public/assets/ui/home-refresh/nav/travel.png",
-    "../public/assets/ui/home-refresh/nav/journal.png",
+    "../public/assets/ui/supplied/brand/logo.png",
+    "../public/assets/ui/supplied/nav/home.png",
+    "../public/assets/ui/supplied/nav/reading.png",
+    "../public/assets/ui/supplied/nav/mistakes.png",
+    "../public/assets/ui/supplied/nav/chat.png",
+    "../public/assets/ui/supplied/nav/travel.png",
+    "../public/assets/ui/supplied/nav/journal.png",
   ]) {
     await access(new URL(path, import.meta.url));
   }

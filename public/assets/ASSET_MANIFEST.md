@@ -99,10 +99,11 @@
 |---|---|---|
 | `ui/home-refresh/actions/` | 家园场景动作 | 喂果子、池塘洗澡、捉迷藏、睡一会 4 个透明像素按钮。 |
 | `ui/home-refresh/status/` | 右侧状态面板 | 面板框、龟龟头像及饱腹、清洁、有趣、心情图标。 |
-| `ui/home-refresh/nav/` | 底部一级导航 | 从补充素材提取的 6 个透明功能插画，文字由页面渲染。 |
+| `ui/supplied/nav/` | 底部一级导航 | 补充素材中的 6 张完整透明按钮原图，保留原图文字，不做裁切加工。 |
+| `ui/supplied/brand/logo.png` | 顶部品牌 | 补充素材中的透明“龟龟伴读”Logo 原图。 |
 | `ui/home-refresh/frames/top-frame.png` | 顶部与导航框体 | 用于宠物身份、资源库存和底部导航的可拉伸像素框。 |
 
-以上资源由 `scripts/prepare_supplemental_assets.py` 从设计素材目录裁切和压缩生成，不直接修改源图。
+动作和状态资源由 `scripts/prepare_supplemental_assets.py` 从设计素材目录裁切和压缩生成；Logo 与底部导航按钮直接复制原始透明 PNG，不做裁切或重绘。
 
 ## 后续精修方向
 

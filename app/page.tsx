@@ -2,7 +2,6 @@
 "use client";
 
 import {
-  Apple,
   Backpack,
   BookOpen,
   Camera,
@@ -1202,7 +1201,7 @@ export default function HomePage() {
     >
       <header className="topbar">
         <div className="identity-cluster">
-          <img className="brand-logo" src={`${ASSET}/legacy/brand/guigu_logo.png`} alt="龟龟伴读" />
+          <img className="brand-logo" src={`${ASSET}/ui/supplied/brand/logo.png`} alt="龟龟伴读" />
           <button
             className="pet-name"
             type="button"
@@ -1224,8 +1223,8 @@ export default function HomePage() {
         </div>
 
         <div className="wallet" aria-label={`${game.stars}颗星星，${game.fruits}个果子，${game.tickets}张旅行票`}>
-          <span><Star size={17} fill="currentColor" /> {game.stars}</span>
-          <span><Apple size={17} fill="currentColor" /> {game.fruits}</span>
+          <span><Star className="wallet-star" fill="currentColor" aria-hidden="true" /> {game.stars}</span>
+          <span><img className="wallet-icon" src={`${ASSET}/objects/fruit_orange.png`} alt="" /> {game.fruits}</span>
           <span className="wallet-ticket"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="" /> {game.tickets}</span>
         </div>
       </header>
@@ -1645,12 +1644,12 @@ export default function HomePage() {
       </section>
 
       <nav className="bottom-nav" aria-label="主要功能">
-        <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" art={`${ASSET}/ui/home-refresh/nav/home.png`} onClick={() => setView("home")} />
-        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/home-refresh/nav/reading.png`} onClick={() => setView("library")} />
-        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/home-refresh/nav/mistakes.png`} onClick={() => setView("mistakes")} />
-        <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/home-refresh/nav/chat.png`} onClick={() => setView("chat")} />
-        <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/home-refresh/nav/travel.png`} onClick={() => setView("travel")} />
-        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/home-refresh/nav/journal.png`} onClick={() => setView("journal")} />
+        <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" art={`${ASSET}/ui/supplied/nav/home.png`} onClick={() => setView("home")} />
+        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/supplied/nav/reading.png`} onClick={() => setView("library")} />
+        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/supplied/nav/mistakes.png`} onClick={() => setView("mistakes")} />
+        <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/supplied/nav/chat.png`} onClick={() => setView("chat")} />
+        <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/supplied/nav/travel.png`} onClick={() => setView("travel")} />
+        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/supplied/nav/journal.png`} onClick={() => setView("journal")} />
       </nav>
 
       {toast && <div className={`toast ${view === "chat" ? "chat-toast" : ""}`} role="status"><Sparkles /> {toast}</div>}
