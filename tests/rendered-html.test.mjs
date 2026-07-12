@@ -31,13 +31,14 @@ test("server-renders the Guigui reading companion", async () => {
 });
 
 test("keeps the V1.3 product loops, safeguards, and required art assets", async () => {
-  const [page, styles, layout, nextConfig, companionRoute, speechRoute, packageJson] = await Promise.all([
+  const [page, styles, layout, nextConfig, companionRoute, speechRoute, mistakeScanRoute, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../next.config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/companion/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/speech/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mistake-scan/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
@@ -66,6 +67,8 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
   assert.match(page, /firstMastery \? 2 : 0/);
   assert.match(page, /掌握一道新错题可得 2 颗星星/);
   assert.match(page, /记一道错题/);
+  assert.match(page, /api\/mistake-scan/);
+  assert.match(page, /龟龟正在整理/);
   for (const threshold of [10, 15, 50, 70, 100, 150]) {
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
@@ -93,6 +96,11 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
   assert.match(speechRoute, /VOLC_SPEECH_ACCESS_TOKEN/);
   assert.match(speechRoute, /volc\.bigasr\.sauc\.duration/);
   assert.match(speechRoute, /MAX_AUDIO_BYTES/);
+  assert.match(mistakeScanRoute, /api\.xiaomimimo\.com\/v1\/chat\/completions/);
+  assert.match(mistakeScanRoute, /MIMO_API_KEY/);
+  assert.match(mistakeScanRoute, /mimo-v2\.5/);
+  assert.match(mistakeScanRoute, /response_format: \{ type: "json_object" \}/);
+  assert.match(mistakeScanRoute, /MAX_IMAGE_DATA_LENGTH/);
   assert.match(packageJson, /"ws"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 

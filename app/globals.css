@@ -2263,24 +2263,70 @@ button:disabled {
   width: 17px;
 }
 
-.mistake-photo-row > div {
+.mistake-photo-button.is-scanning {
+  background: #fff8dc;
+  cursor: wait;
+}
+
+.mistake-photo-button.is-scanning svg,
+.mistake-scan-progress svg {
+  animation: mistake-scan-pulse 1.1s ease-in-out infinite;
+}
+
+.mistake-photo-preview {
   align-items: center;
   display: flex;
   gap: 5px;
 }
 
-.mistake-photo-row > div img {
+.mistake-photo-preview img {
   height: 50px;
   object-fit: cover;
   width: 70px;
 }
 
-.mistake-photo-row > div button {
+.mistake-photo-preview button {
   background: transparent;
   border: 0;
   color: #a04a42;
   cursor: pointer;
   font-size: 10px;
+}
+
+.mistake-scan-progress {
+  align-items: center;
+  color: #28583f;
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  min-width: 210px;
+}
+
+.mistake-scan-progress svg {
+  color: #d18b16;
+  flex: 0 0 auto;
+  height: 22px;
+  width: 22px;
+}
+
+.mistake-scan-progress span {
+  display: grid;
+  font-size: 9px;
+  gap: 2px;
+  line-height: 1.4;
+}
+
+.mistake-scan-progress strong {
+  font-size: 11px;
+}
+
+.mistake-scan-notice {
+  color: #6b5520 !important;
+}
+
+@keyframes mistake-scan-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.88); }
+  50% { opacity: 1; transform: scale(1.06); }
 }
 
 .mistake-photo-row > small {
@@ -3203,6 +3249,10 @@ button:disabled {
   }
 
   .mistake-photo-row > small {
+    flex-basis: 100%;
+  }
+
+  .mistake-scan-progress {
     flex-basis: 100%;
   }
 
