@@ -255,8 +255,43 @@ def add_code_callout(doc: Document, text: str) -> None:
     set_run_font(run, name="SF Mono", size=8.8, bold=True, color=LEAF)
 
 
+def add_restarted_numbering(doc: Document, paragraph, num_id: int | None = None) -> int:
+    if num_id is None:
+        style_num_id = int(doc.styles["List Number"]._element.xpath("./w:pPr/w:numPr/w:numId")[0].get(qn("w:val")))
+        numbering = doc.part.numbering_part.element
+        base_num = next(
+            item for item in numbering.findall(qn("w:num"))
+            if int(item.get(qn("w:numId"))) == style_num_id
+        )
+        abstract_num_id = base_num.find(qn("w:abstractNumId")).get(qn("w:val"))
+        num_id = max(int(item.get(qn("w:numId"))) for item in numbering.findall(qn("w:num"))) + 1
+
+        num = OxmlElement("w:num")
+        num.set(qn("w:numId"), str(num_id))
+        abstract = OxmlElement("w:abstractNumId")
+        abstract.set(qn("w:val"), abstract_num_id)
+        num.append(abstract)
+        override = OxmlElement("w:lvlOverride")
+        override.set(qn("w:ilvl"), "0")
+        start = OxmlElement("w:startOverride")
+        start.set(qn("w:val"), "1")
+        override.append(start)
+        num.append(override)
+        numbering.append(num)
+
+    num_pr = OxmlElement("w:numPr")
+    level = OxmlElement("w:ilvl")
+    level.set(qn("w:val"), "0")
+    direct_num_id = OxmlElement("w:numId")
+    direct_num_id.set(qn("w:val"), str(num_id))
+    num_pr.extend([level, direct_num_id])
+    paragraph._p.get_or_add_pPr().append(num_pr)
+    return num_id
+
+
 def add_body(doc: Document, lines: list[str]) -> None:
     index = 0
+    active_numbering_id = None
     while index < len(lines):
         raw = lines[index].rstrip()
         stripped = raw.strip()
@@ -264,6 +299,7 @@ def add_body(doc: Document, lines: list[str]) -> None:
             index += 1
             continue
         if stripped.startswith("|"):
+            active_numbering_id = None
             table_lines = []
             while index < len(lines) and lines[index].strip().startswith("|"):
                 table_lines.append(lines[index])
@@ -271,20 +307,26 @@ def add_body(doc: Document, lines: list[str]) -> None:
             add_table(doc, table_lines)
             continue
         if stripped.startswith("## "):
+            active_numbering_id = None
             paragraph = doc.add_paragraph(style="Heading 1")
             paragraph.add_run(strip_inline_markup(stripped[3:]))
         elif stripped.startswith("### "):
+            active_numbering_id = None
             paragraph = doc.add_paragraph(style="Heading 2")
             paragraph.add_run(strip_inline_markup(stripped[4:]))
         elif stripped.startswith("- "):
+            active_numbering_id = None
             paragraph = doc.add_paragraph(style="List Bullet")
             paragraph.add_run(strip_inline_markup(stripped[2:]))
         elif re.match(r"^\d+\.\s", stripped):
             paragraph = doc.add_paragraph(style="List Number")
+            active_numbering_id = add_restarted_numbering(doc, paragraph, active_numbering_id)
             paragraph.add_run(strip_inline_markup(re.sub(r"^\d+\.\s", "", stripped)))
         elif stripped.startswith("`") and stripped.endswith("`"):
+            active_numbering_id = None
             add_code_callout(doc, stripped)
         else:
+            active_numbering_id = None
             paragraph = doc.add_paragraph()
             paragraph.add_run(strip_inline_markup(stripped))
         index += 1
@@ -302,7 +344,7 @@ def add_headers_and_footers(doc: Document) -> None:
 
         header = section.header.paragraphs[0]
         header.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        run = header.add_run("龟龟伴读  /  V1.2 产品需求文档")
+        run = header.add_run("龟龟伴读  /  V1.3 产品需求文档")
         set_run_font(run, size=8, bold=True, color=LEAF)
         p_pr = header._p.get_or_add_pPr()
         bottom_border = OxmlElement("w:pBdr")
@@ -353,7 +395,7 @@ def main() -> None:
     add_cover(doc, cover_lines)
     add_body(doc, body_lines)
 
-    doc.core_properties.title = "龟龟伴读 V1.2 产品需求文档"
+    doc.core_properties.title = "龟龟伴读 V1.3 产品需求文档"
     doc.core_properties.subject = "电子宠物学习陪伴产品开发与验收基线"
     doc.core_properties.author = "龟龟伴读产品组"
     doc.core_properties.keywords = "龟龟伴读, 电子宠物, 阅读, 儿童陪伴, PRD"

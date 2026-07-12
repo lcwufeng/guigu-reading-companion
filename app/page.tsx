@@ -5,6 +5,7 @@ import {
   Apple,
   Backpack,
   BookOpen,
+  Camera,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -18,17 +19,21 @@ import {
   Mic,
   MicOff,
   Moon,
+  NotebookPen,
+  Plus,
+  RotateCcw,
   Search,
   Send,
   Sparkles,
   Star,
+  Trash2,
   Users,
   Waves,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type View = "home" | "library" | "chat" | "travel" | "journal";
+type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal";
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
 type RecordTab = "travel" | "reading" | "items";
 type ChatMessage = { id: number; role: "turtle" | "user"; text: string };
@@ -50,6 +55,22 @@ type TravelRecord = {
   knowledge?: string;
 };
 
+type MistakeStatus = "new" | "reviewing" | "mastered";
+type MistakeRecord = {
+  id: number;
+  subject: string;
+  question: string;
+  wrongAnswer: string;
+  correction: string;
+  cause: string;
+  status: MistakeStatus;
+  date: string;
+  reviewCount: number;
+  imageData?: string;
+};
+
+type MistakeDraft = Pick<MistakeRecord, "subject" | "question" | "wrongAnswer" | "correction" | "cause" | "imageData">;
+
 type GameState = {
   name: string;
   hunger: number;
@@ -63,6 +84,7 @@ type GameState = {
   travelRecords: TravelRecord[];
   chatMessages: ChatMessage[];
   activeTravel: ActiveTravel | null;
+  mistakes: MistakeRecord[];
 };
 
 type Book = {
@@ -123,6 +145,15 @@ type VoiceSession = {
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const ASSET = `${BASE_PATH}/assets`;
 
+const emptyMistakeDraft: MistakeDraft = {
+  subject: "数学",
+  question: "",
+  wrongAnswer: "",
+  correction: "",
+  cause: "知识点没记牢",
+  imageData: undefined,
+};
+
 const initialState: GameState = {
   name: "小乌龟",
   hunger: 30,
@@ -142,6 +173,7 @@ const initialState: GameState = {
     },
   ],
   activeTravel: null,
+  mistakes: [],
 };
 
 const books: Book[] = [
@@ -367,6 +399,25 @@ function formatDate() {
   }).format(new Date());
 }
 
+async function prepareMistakePhoto(file: File) {
+  if (!file.type.startsWith("image/")) throw new Error("请选择图片文件");
+  if (file.size > 8 * 1024 * 1024) throw new Error("图片不能超过 8MB");
+  const source = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = source;
+    await image.decode();
+    const scale = Math.min(1, 960 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.72);
+  } finally {
+    URL.revokeObjectURL(source);
+  }
+}
+
 function getLocalReply(input: string, name: string) {
   if (/数学|算|题|乘法|加法/.test(input)) {
     return `数学像一条要慢慢走的小路。你愿意挑一道题，把解题的第一步讲给${name}听吗？`;
@@ -507,6 +558,12 @@ export default function HomePage() {
   const [travelReward, setTravelReward] = useState<Destination | null>(null);
   const [knowledgeOpen, setKnowledgeOpen] = useState<Destination | null>(null);
   const [recordTab, setRecordTab] = useState<RecordTab>("travel");
+  const [mistakeFilter, setMistakeFilter] = useState<"all" | "review" | "mastered">("all");
+  const [mistakeFormOpen, setMistakeFormOpen] = useState(false);
+  const [mistakeDraft, setMistakeDraft] = useState<MistakeDraft>(emptyMistakeDraft);
+  const [reviewMistake, setReviewMistake] = useState<MistakeRecord | null>(null);
+  const [reviewAnswer, setReviewAnswer] = useState("");
+  const [correctionRevealed, setCorrectionRevealed] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceSessionRef = useRef<VoiceSession | null>(null);
   const autoFinishVoiceRef = useRef<() => void>(() => undefined);
@@ -523,6 +580,17 @@ export default function HomePage() {
     () => destinations.find((destination) => destination.id === game.activeTravel?.destinationId) ?? null,
     [game.activeTravel],
   );
+
+  const visibleMistakes = useMemo(() => game.mistakes.filter((mistake) => {
+    if (mistakeFilter === "review") return mistake.status !== "mastered";
+    if (mistakeFilter === "mastered") return mistake.status === "mastered";
+    return true;
+  }), [game.mistakes, mistakeFilter]);
+
+  const mistakeStats = useMemo(() => ({
+    review: game.mistakes.filter((mistake) => mistake.status !== "mastered").length,
+    mastered: game.mistakes.filter((mistake) => mistake.status === "mastered").length,
+  }), [game.mistakes]);
 
   const ambientSprite = useMemo(() => {
     if (game.hunger > 72) return "turtle_hungry.png";
@@ -1014,6 +1082,78 @@ export default function HomePage() {
     return () => window.cancelAnimationFrame(frame);
   }, [chatThinking, game.chatMessages, view]);
 
+  const openMistakeForm = () => {
+    setMistakeDraft(emptyMistakeDraft);
+    setMistakeFormOpen(true);
+  };
+
+  const saveMistake = () => {
+    const question = mistakeDraft.question.trim();
+    const correction = mistakeDraft.correction.trim();
+    if (!question || !correction) {
+      showToast("题目和正确思路还没有填写完整");
+      return;
+    }
+    const record: MistakeRecord = {
+      ...mistakeDraft,
+      id: Date.now(),
+      question: question.slice(0, 600),
+      wrongAnswer: mistakeDraft.wrongAnswer.trim().slice(0, 500),
+      correction: correction.slice(0, 800),
+      cause: mistakeDraft.cause,
+      status: "new",
+      date: formatDate(),
+      reviewCount: 0,
+    };
+    setGame((current) => ({ ...current, mistakes: [record, ...current.mistakes] }));
+    setMistakeFormOpen(false);
+    showToast("错题已经收进小屋，之后再回来挑战它");
+  };
+
+  const attachMistakePhoto = async (file?: File) => {
+    if (!file) return;
+    try {
+      const imageData = await prepareMistakePhoto(file);
+      setMistakeDraft((current) => ({ ...current, imageData }));
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "图片读取失败，请换一张试试");
+    }
+  };
+
+  const startMistakeReview = (mistake: MistakeRecord) => {
+    setGame((current) => ({
+      ...current,
+      mistakes: current.mistakes.map((item) => item.id === mistake.id && item.status === "new" ? { ...item, status: "reviewing" } : item),
+    }));
+    setReviewMistake({ ...mistake, status: mistake.status === "new" ? "reviewing" : mistake.status });
+    setReviewAnswer("");
+    setCorrectionRevealed(false);
+  };
+
+  const finishMistakeReview = (mastered: boolean) => {
+    if (!reviewMistake) return;
+    const firstMastery = mastered && reviewMistake.status !== "mastered";
+    setGame((current) => ({
+      ...current,
+      stars: current.stars + (firstMastery ? 2 : 0),
+      boredom: clamp(current.boredom - (firstMastery ? 5 : 2)),
+      mistakes: current.mistakes.map((item) => item.id === reviewMistake.id ? {
+        ...item,
+        status: mastered ? "mastered" : "reviewing",
+        reviewCount: item.reviewCount + 1,
+      } : item),
+    }));
+    setReviewMistake(null);
+    setCorrectionRevealed(false);
+    showToast(mastered ? `掌握啦！${firstMastery ? "获得 2 颗成长星星" : "这道题依然很稳"}` : "先放回待复习，下次再挑战");
+  };
+
+  const deleteMistake = (mistake: MistakeRecord) => {
+    if (!window.confirm("确定要删除这道错题吗？删除后不能恢复。")) return;
+    setGame((current) => ({ ...current, mistakes: current.mistakes.filter((item) => item.id !== mistake.id) }));
+    showToast("这道错题已经删除");
+  };
+
   const startTravel = () => {
     if (traveling || busy) return;
     if (game.stars < selectedDestination.requiredStars) {
@@ -1276,6 +1416,64 @@ export default function HomePage() {
           </section>
         )}
 
+        {view === "mistakes" && (
+          <section className="scene mistake-scene">
+            <header className="mistake-header">
+              <div>
+                <span className="eyebrow"><NotebookPen size={17} /> 龟龟错题屋</span>
+                <h1>把没想明白的，变成下一次会做的</h1>
+                <p>记下错因、重新挑战，龟龟陪你慢慢掌握。</p>
+              </div>
+              <div className="mistake-stats" aria-label={`待复习${mistakeStats.review}道，已掌握${mistakeStats.mastered}道`}>
+                <span><strong>{mistakeStats.review}</strong>待复习</span>
+                <span><strong>{mistakeStats.mastered}</strong>已掌握</span>
+              </div>
+              <button className="add-mistake-button" type="button" onClick={openMistakeForm}><Plus /> 记一道错题</button>
+            </header>
+
+            <div className="mistake-toolbar">
+              <div role="tablist" aria-label="错题状态">
+                <button type="button" role="tab" aria-selected={mistakeFilter === "all"} onClick={() => setMistakeFilter("all")}>全部 {game.mistakes.length}</button>
+                <button type="button" role="tab" aria-selected={mistakeFilter === "review"} onClick={() => setMistakeFilter("review")}>待复习 {mistakeStats.review}</button>
+                <button type="button" role="tab" aria-selected={mistakeFilter === "mastered"} onClick={() => setMistakeFilter("mastered")}>已掌握 {mistakeStats.mastered}</button>
+              </div>
+              <span>掌握一道新错题可得 2 颗星星</span>
+            </div>
+
+            <div className="mistake-content">
+              {visibleMistakes.length ? (
+                <div className="mistake-grid">
+                  {visibleMistakes.map((mistake) => (
+                    <article className="mistake-card" key={mistake.id}>
+                      <div className="mistake-card-top">
+                        <span>{mistake.subject}</span>
+                        <strong className={`mistake-status status-${mistake.status}`}>
+                          {mistake.status === "new" ? "新收录" : mistake.status === "reviewing" ? "待复习" : "已掌握"}
+                        </strong>
+                      </div>
+                      {mistake.imageData && <img src={mistake.imageData} alt="错题照片" />}
+                      <small>{mistake.date} · 复习 {mistake.reviewCount} 次</small>
+                      <h2>{mistake.question}</h2>
+                      <p><b>卡住原因</b>{mistake.cause}</p>
+                      <div className="mistake-card-actions">
+                        <button type="button" onClick={() => startMistakeReview(mistake)}><RotateCcw /> {mistake.status === "mastered" ? "再练一次" : "开始复习"}</button>
+                        <button type="button" onClick={() => deleteMistake(mistake)} aria-label={`删除${mistake.question}`} title="删除错题"><Trash2 /></button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="mistake-empty">
+                  <img src={`${ASSET}/characters/turtle/turtle_thinking.png`} alt="正在思考的龟龟" />
+                  <h2>{game.mistakes.length ? "这里暂时没有对应的错题" : "第一道错题正在等你收进来"}</h2>
+                  <p>{game.mistakes.length ? "换一个分类看看吧。" : "错题不是失败，是下一次进步的线索。"}</p>
+                  {!game.mistakes.length && <button type="button" onClick={openMistakeForm}><Plus /> 记下第一道错题</button>}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {view === "chat" && (
           <section className="scene chat-scene">
             <div className="chat-companion">
@@ -1482,6 +1680,7 @@ export default function HomePage() {
       <nav className="bottom-nav" aria-label="主要功能">
         <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" onClick={() => setView("home")}><Home /></NavButton>
         <NavButton active={view === "library"} disabled={navigationLocked} label="读书" onClick={() => setView("library")}><BookOpen /></NavButton>
+        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" onClick={() => setView("mistakes")}><NotebookPen /></NavButton>
         <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" onClick={() => setView("chat")}><MessageCircle /></NavButton>
         <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" onClick={() => setView("travel")}><Compass /></NavButton>
         <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" onClick={() => setView("journal")}><Backpack /></NavButton>
@@ -1545,6 +1744,52 @@ export default function HomePage() {
               <input value={draftName} onChange={(event) => setDraftName(event.target.value)} maxLength={8} autoFocus aria-label="龟龟名字" />
               <button type="button" onClick={saveName}><Check /> 保存名字</button>
             </div>
+          </section>
+        </div>
+      )}
+
+      {mistakeFormOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setMistakeFormOpen(false)}>
+          <section className="modal mistake-form-modal" role="dialog" aria-modal="true" aria-labelledby="mistake-form-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" onClick={() => setMistakeFormOpen(false)} aria-label="关闭"><X /></button>
+            <span className="modal-kicker">收进龟龟错题屋</span>
+            <h2 id="mistake-form-title">记下这次没想明白的地方</h2>
+            <div className="mistake-form-grid">
+              <label><span>学科</span><select value={mistakeDraft.subject} onChange={(event) => setMistakeDraft((current) => ({ ...current, subject: event.target.value }))}><option>数学</option><option>语文</option><option>英语</option><option>科学</option><option>其他</option></select></label>
+              <label><span>卡住原因</span><select value={mistakeDraft.cause} onChange={(event) => setMistakeDraft((current) => ({ ...current, cause: event.target.value }))}><option>知识点没记牢</option><option>题目没读懂</option><option>计算或书写失误</option><option>方法没有想到</option><option>还不确定</option></select></label>
+            </div>
+            <label className="mistake-field"><span>题目内容 *</span><textarea value={mistakeDraft.question} onChange={(event) => setMistakeDraft((current) => ({ ...current, question: event.target.value }))} maxLength={600} placeholder="把题目写在这里…" /></label>
+            <label className="mistake-field"><span>我上次怎么答的</span><textarea value={mistakeDraft.wrongAnswer} onChange={(event) => setMistakeDraft((current) => ({ ...current, wrongAnswer: event.target.value }))} maxLength={500} placeholder="可以留空，也可以记下当时的答案" /></label>
+            <label className="mistake-field"><span>正确思路或答案 *</span><textarea value={mistakeDraft.correction} onChange={(event) => setMistakeDraft((current) => ({ ...current, correction: event.target.value }))} maxLength={800} placeholder="写下关键步骤，不只是最后答案" /></label>
+            <div className="mistake-photo-row">
+              <label className="mistake-photo-button"><Camera /> {mistakeDraft.imageData ? "更换题目照片" : "添加题目照片"}<input type="file" accept="image/*" capture="environment" onChange={(event) => void attachMistakePhoto(event.target.files?.[0])} /></label>
+              {mistakeDraft.imageData && <div><img src={mistakeDraft.imageData} alt="待保存的错题照片" /><button type="button" onClick={() => setMistakeDraft((current) => ({ ...current, imageData: undefined }))}>移除</button></div>}
+              <small>照片仅保存在当前设备，OCR 自动填题将在接入识别服务后开放。</small>
+            </div>
+            <div className="mistake-modal-actions"><button type="button" onClick={() => setMistakeFormOpen(false)}>取消</button><button type="button" onClick={saveMistake}><NotebookPen /> 收进错题屋</button></div>
+          </section>
+        </div>
+      )}
+
+      {reviewMistake && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal mistake-review-modal" role="dialog" aria-modal="true" aria-labelledby="mistake-review-title">
+            <button className="modal-close" type="button" onClick={() => setReviewMistake(null)} aria-label="关闭"><X /></button>
+            <div className="mistake-review-heading">
+              <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪你复习的龟龟" />
+              <div><span className="modal-kicker">{reviewMistake.subject} · 第 {reviewMistake.reviewCount + 1} 次挑战</span><h2 id="mistake-review-title">先自己再想一次</h2></div>
+            </div>
+            {reviewMistake.imageData && <img className="review-question-photo" src={reviewMistake.imageData} alt="错题照片" />}
+            <div className="review-question"><small>题目</small><p>{reviewMistake.question}</p></div>
+            <label className="mistake-field"><span>这次我的答案</span><textarea value={reviewAnswer} onChange={(event) => setReviewAnswer(event.target.value)} maxLength={600} placeholder="把这次的想法和步骤写下来…" disabled={correctionRevealed} /></label>
+            {!correctionRevealed ? (
+              <button className="reveal-correction-button" type="button" onClick={() => setCorrectionRevealed(true)}><Check /> 对照正确思路</button>
+            ) : (
+              <>
+                <div className="correction-panel"><small>上次卡住：{reviewMistake.cause}</small><strong>正确思路</strong><p>{reviewMistake.correction}</p>{reviewMistake.wrongAnswer && <span>上次答案：{reviewMistake.wrongAnswer}</span>}</div>
+                <div className="review-result-actions"><button type="button" onClick={() => finishMistakeReview(false)}><RotateCcw /> 还要再练</button><button type="button" onClick={() => finishMistakeReview(true)}><Star /> 我掌握了</button></div>
+              </>
+            )}
           </section>
         </div>
       )}

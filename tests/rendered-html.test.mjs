@@ -30,7 +30,7 @@ test("server-renders the Guigui reading companion", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
 
-test("keeps the V1.2 product loops, safeguards, and required art assets", async () => {
+test("keeps the V1.3 product loops, safeguards, and required art assets", async () => {
   const [page, styles, layout, nextConfig, companionRoute, speechRoute, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -47,6 +47,7 @@ test("keeps the V1.2 product loops, safeguards, and required art assets", async 
     "捉迷藏",
     "睡一会",
     "龟龟书房",
+    "龟龟错题屋",
     "今日悄悄话",
     "龟龟旅行地图",
     "查看知识卡",
@@ -61,6 +62,10 @@ test("keeps the V1.2 product loops, safeguards, and required art assets", async 
   assert.match(page, /guigu-v1-state/);
   assert.match(page, /activeTravel/);
   assert.match(page, /tickets: 3/);
+  assert.match(page, /mistakes: \[\]/);
+  assert.match(page, /firstMastery \? 2 : 0/);
+  assert.match(page, /掌握一道新错题可得 2 颗星星/);
+  assert.match(page, /记一道错题/);
   for (const threshold of [10, 15, 50, 70, 100, 150]) {
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
