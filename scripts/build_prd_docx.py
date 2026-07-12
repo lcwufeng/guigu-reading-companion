@@ -27,7 +27,7 @@ PALE = "F4F8F3"
 SUN = "FFC94A"
 WHITE = "FFFFFF"
 MUTED = "61746E"
-BODY_FONT = "Arial Unicode MS"
+BODY_FONT = "Hiragino Sans GB"
 WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 

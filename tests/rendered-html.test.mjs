@@ -77,6 +77,11 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
   assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus"\]/);
+  assert.match(page, /ui\/home-refresh\/actions\/swim\.png/);
+  assert.match(page, /ui\/home-refresh\/status\/panel\.png/);
+  assert.match(page, /ui\/home-refresh\/nav\/home\.png/);
+  assert.match(page, /status-segments/);
+  assert.doesNotMatch(page, /className="action-dock"/);
   assert.match(page, /navigator\.mediaDevices\.getUserMedia/);
   assert.match(page, /encodeWav/);
   assert.match(page, /我在认真听/);
@@ -125,6 +130,18 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
     "../public/assets/optimized/travel/knowledge_cards/knowledge_tide.webp",
     "../public/assets/optimized/travel/knowledge_cards/knowledge_tree_ring.webp",
     "../public/assets/optimized/travel/knowledge_cards/knowledge_dinosaur.webp",
+    "../public/assets/ui/home-refresh/actions/feed.png",
+    "../public/assets/ui/home-refresh/actions/swim.png",
+    "../public/assets/ui/home-refresh/actions/hide.png",
+    "../public/assets/ui/home-refresh/actions/sleep.png",
+    "../public/assets/ui/home-refresh/status/panel.png",
+    "../public/assets/ui/home-refresh/status/turtle-head.png",
+    "../public/assets/ui/home-refresh/nav/home.png",
+    "../public/assets/ui/home-refresh/nav/reading.png",
+    "../public/assets/ui/home-refresh/nav/mistakes.png",
+    "../public/assets/ui/home-refresh/nav/chat.png",
+    "../public/assets/ui/home-refresh/nav/travel.png",
+    "../public/assets/ui/home-refresh/nav/journal.png",
   ]) {
     await access(new URL(path, import.meta.url));
   }

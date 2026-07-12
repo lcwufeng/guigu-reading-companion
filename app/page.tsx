@@ -11,14 +11,12 @@ import {
   ChevronRight,
   Compass,
   Edit3,
-  Home,
   Lightbulb,
   Lock,
   MapPinned,
   MessageCircle,
   Mic,
   MicOff,
-  Moon,
   NotebookPen,
   Plus,
   RotateCcw,
@@ -29,7 +27,6 @@ import {
   Trash2,
   Upload,
   Users,
-  Waves,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -475,16 +472,18 @@ function StatusPill({
   reverse?: boolean;
 }) {
   const displayValue = reverse ? 100 - value : value;
+  const activeSegments = Math.ceil(displayValue / 10);
   return (
     <div className="status-pill" aria-label={`${label} ${displayValue}`}>
       <img src={icon} alt="" />
       <div className="status-copy">
         <span>{label}</span>
-        <div className="status-track">
-          <i style={{ width: `${displayValue}%` }} />
+        <div className="status-segments" aria-hidden="true">
+          {Array.from({ length: 10 }, (_, index) => (
+            <i className={index < activeSegments ? "active" : ""} key={index} />
+          ))}
         </div>
       </div>
-      <strong>{displayValue}</strong>
     </div>
   );
 }
@@ -494,13 +493,13 @@ function NavButton({
   disabled,
   label,
   onClick,
-  children,
+  art,
 }: {
   active: boolean;
   disabled?: boolean;
   label: string;
   onClick: () => void;
-  children: React.ReactNode;
+  art: string;
 }) {
   return (
     <button
@@ -511,7 +510,7 @@ function NavButton({
       disabled={disabled}
       type="button"
     >
-      {children}
+      <img className="nav-art" src={art} alt="" />
       <span>{label}</span>
     </button>
   );
@@ -1190,7 +1189,17 @@ export default function HomePage() {
   const selectedDestinationMissingStars = Math.max(0, selectedDestination.requiredStars - game.stars);
 
   return (
-    <main className={`app view-${view}`}>
+    <main
+      className={`app view-${view}`}
+      style={{
+        "--home-background": `url("${ASSET}/optimized/backgrounds/main_home.webp")`,
+        "--library-background": `url("${ASSET}/optimized/backgrounds/reading_room.webp")`,
+        "--chat-background": `url("${ASSET}/optimized/backgrounds/playground_legacy.webp")`,
+        "--travel-background": `url("${ASSET}/optimized/backgrounds/travel_map.webp")`,
+        "--pixel-frame": `url("${ASSET}/ui/home-refresh/frames/top-frame.png")`,
+        "--status-frame": `url("${ASSET}/ui/home-refresh/status/panel.png")`,
+      } as React.CSSProperties}
+    >
       <header className="topbar">
         <div className="identity-cluster">
           <img className="brand-logo" src={`${ASSET}/legacy/brand/guigu_logo.png`} alt="龟龟伴读" />
@@ -1214,31 +1223,6 @@ export default function HomePage() {
           </button>
         </div>
 
-        <section className="status-row" aria-label="龟龟状态">
-          <StatusPill
-            icon={`${ASSET}/icons/status/status_hunger.png`}
-            label="饱腹"
-            value={game.hunger}
-            reverse
-          />
-          <StatusPill
-            icon={`${ASSET}/icons/status/status_cleanliness.png`}
-            label="干净"
-            value={game.cleanliness}
-          />
-          <StatusPill
-            icon={`${ASSET}/icons/status/status_boredom.png`}
-            label="有趣"
-            value={game.boredom}
-            reverse
-          />
-          <StatusPill
-            icon={`${ASSET}/icons/status/status_mood.png`}
-            label="心情"
-            value={mood}
-          />
-        </section>
-
         <div className="wallet" aria-label={`${game.stars}颗星星，${game.fruits}个果子，${game.tickets}张旅行票`}>
           <span><Star size={17} fill="currentColor" /> {game.stars}</span>
           <span><Apple size={17} fill="currentColor" /> {game.fruits}</span>
@@ -1254,42 +1238,43 @@ export default function HomePage() {
               <h1>今天想和{game.name}做什么？</h1>
             </div>
 
-            <button
-              className="world-hotspot pond-hotspot"
-              type="button"
-              onClick={() => (hideTarget ? guessHidePlace("water") : startSwim())}
-              aria-label={hideTarget ? "找找水里" : "去池塘游泳"}
-              title={hideTarget ? "找找水里" : "去池塘游泳"}
-              disabled={!!busy}
-            >
-              <Waves />
-            </button>
-            <button
-              className="world-hotspot tree-hotspot"
-              type="button"
-              onClick={() => (hideTarget ? guessHidePlace("tree") : setFruitPicker(true))}
-              aria-label={hideTarget ? "找找树梢" : "摘果子"}
-              title={hideTarget ? "找找树梢" : "摘果子"}
-              disabled={!!busy}
-            >
-              <Apple />
-            </button>
+            <aside className="home-status-panel" aria-label="龟龟状态">
+              <div className="status-panel-title">
+                <img src={`${ASSET}/ui/home-refresh/status/turtle-head.png`} alt="" />
+                <strong>龟龟状态</strong>
+              </div>
+              <div className="status-row">
+                <StatusPill icon={`${ASSET}/ui/home-refresh/status/hunger.png`} label="饱腹值" value={game.hunger} reverse />
+                <StatusPill icon={`${ASSET}/ui/home-refresh/status/cleanliness.png`} label="清洁值" value={game.cleanliness} />
+                <StatusPill icon={`${ASSET}/ui/home-refresh/status/fun.png`} label="有趣值" value={game.boredom} reverse />
+                <StatusPill icon={`${ASSET}/ui/home-refresh/status/mood.png`} label="心情值" value={mood} />
+              </div>
+            </aside>
+
+            {!hideTarget && (
+              <>
+                <button className="scene-action pond-action" type="button" onClick={startSwim} aria-label="去游泳" title="去游泳" disabled={!!busy}>
+                  <img src={`${ASSET}/ui/home-refresh/actions/swim.png`} alt="" />
+                </button>
+                <button className="scene-action tree-action" type="button" onClick={() => setFruitPicker(true)} aria-label="喂果子" title="喂果子" disabled={!!busy}>
+                  <img src={`${ASSET}/ui/home-refresh/actions/feed.png`} alt="" />
+                </button>
+                <button className="scene-action hide-action" type="button" onClick={startHideAndSeek} aria-label="捉迷藏" title="捉迷藏" disabled={!!busy}>
+                  <img src={`${ASSET}/ui/home-refresh/actions/hide.png`} alt="" />
+                </button>
+                <button className="scene-action cave-action" type="button" onClick={startSleep} aria-label="睡一会" title="睡一会" disabled={!!busy}>
+                  <img src={`${ASSET}/ui/home-refresh/actions/sleep.png`} alt="" />
+                </button>
+              </>
+            )}
             {hideTarget && (
               <>
+                <button className="world-hotspot pond-hotspot" type="button" onClick={() => guessHidePlace("water")} aria-label="找找水里" title="找找水里"><Search /></button>
+                <button className="world-hotspot tree-hotspot" type="button" onClick={() => guessHidePlace("tree")} aria-label="找找树梢" title="找找树梢"><Search /></button>
                 <button className="world-hotspot trunk-hotspot" type="button" onClick={() => guessHidePlace("behind")} aria-label="找找树干后面" title="找找树干后面"><Search /></button>
                 <button className="world-hotspot lotus-hotspot" type="button" onClick={() => guessHidePlace("lotus")} aria-label="找找荷叶下面" title="找找荷叶下面"><Search /></button>
               </>
             )}
-            <button
-              className="world-hotspot cave-hotspot"
-              type="button"
-              onClick={startSleep}
-              aria-label="回小窝睡觉"
-              title="回小窝睡觉"
-              disabled={!!busy || !!hideTarget}
-            >
-              <Moon />
-            </button>
 
             {hideTarget && (
               <img
@@ -1337,20 +1322,6 @@ export default function HomePage() {
               </div>
             )}
 
-            <div className="action-dock" aria-label="照顾龟龟">
-              <button type="button" onClick={() => setFruitPicker(true)} disabled={!!busy || !!hideTarget}>
-                <Apple /><span>喂果子</span>
-              </button>
-              <button type="button" onClick={startSwim} disabled={!!busy || !!hideTarget}>
-                <Waves /><span>去游泳</span>
-              </button>
-              <button type="button" onClick={startHideAndSeek} disabled={!!busy || !!hideTarget}>
-                <Search /><span>捉迷藏</span>
-              </button>
-              <button type="button" onClick={startSleep} disabled={!!busy || !!hideTarget}>
-                <Moon /><span>睡一会</span>
-              </button>
-            </div>
           </section>
         )}
 
@@ -1674,12 +1645,12 @@ export default function HomePage() {
       </section>
 
       <nav className="bottom-nav" aria-label="主要功能">
-        <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" onClick={() => setView("home")}><Home /></NavButton>
-        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" onClick={() => setView("library")}><BookOpen /></NavButton>
-        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" onClick={() => setView("mistakes")}><NotebookPen /></NavButton>
-        <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" onClick={() => setView("chat")}><MessageCircle /></NavButton>
-        <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" onClick={() => setView("travel")}><Compass /></NavButton>
-        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" onClick={() => setView("journal")}><Backpack /></NavButton>
+        <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" art={`${ASSET}/ui/home-refresh/nav/home.png`} onClick={() => setView("home")} />
+        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/home-refresh/nav/reading.png`} onClick={() => setView("library")} />
+        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/home-refresh/nav/mistakes.png`} onClick={() => setView("mistakes")} />
+        <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/home-refresh/nav/chat.png`} onClick={() => setView("chat")} />
+        <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/home-refresh/nav/travel.png`} onClick={() => setView("travel")} />
+        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/home-refresh/nav/journal.png`} onClick={() => setView("journal")} />
       </nav>
 
       {toast && <div className={`toast ${view === "chat" ? "chat-toast" : ""}`} role="status"><Sparkles /> {toast}</div>}
