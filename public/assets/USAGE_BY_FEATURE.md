@@ -39,6 +39,14 @@
 - 六项底部导航完整按钮：`ui/supplied/nav/*.png`
 - 补充素材预处理：`scripts/prepare_supplemental_assets.py`
 
+## 今日任务
+
+- 总框与标题：`ui/daily-tasks/panel.png`、`ui/daily-tasks/title.png`
+- 单项任务与计数：`ui/daily-tasks/task-row.png`、`ui/daily-tasks/counter.png`
+- 任务图标：`ui/daily-tasks/fruit.png`、`clean.png`、`reading.png`、`mistake.png`
+- 完成奖励：`ui/daily-tasks/reward-star.png`
+- 素材预处理：`scripts/prepare_daily_task_assets.py`
+
 ## 错题屋界面
 
 - 全屏背景：`ui/mistakes/background.webp`

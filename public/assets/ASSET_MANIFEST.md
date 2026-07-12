@@ -118,6 +118,22 @@
 
 网页版本由 `scripts/prepare_mistake_assets.py` 生成；仅清除素材外部棋盘格并做网页尺寸优化，不重绘主体内容。
 
+## V1.5 今日任务界面资产
+
+| 文件 | 用途 | 说明 |
+|---|---|---|
+| `ui/daily-tasks/panel.png` | 今日任务总框 | 学习屋右侧任务计划的像素纸张背景。 |
+| `ui/daily-tasks/title.png` | 今日任务标题 | 带星星的木质标题条，手机端同时作为展开入口。 |
+| `ui/daily-tasks/task-row.png` | 单项任务底框 | 承载动态任务名称、图标和实时进度。 |
+| `ui/daily-tasks/counter.png` | 进度计数底框 | 显示 0/1、0/2 或完成勾选。 |
+| `ui/daily-tasks/fruit.png` | 喂养任务图标 | 对应完成一次喂果子。 |
+| `ui/daily-tasks/clean.png` | 清洁任务图标 | 对应完成一次游泳清洁。 |
+| `ui/daily-tasks/reading.png` | 伴读任务图标 | 对应完成一次完整共读。 |
+| `ui/daily-tasks/mistake.png` | 错题任务图标 | 对应收录或复习错题。 |
+| `ui/daily-tasks/reward-star.png` | 全勤奖励图标 | 四项任务全部完成后的 3 星奖励提示。 |
+
+网页版本由 `scripts/prepare_daily_task_assets.py` 生成；保留原始像素主体，仅清理外部棋盘格、透明留白并压缩到网页尺寸。任务文字、目标和进度由页面动态渲染。
+
 ## 后续精修方向
 
 - 太空站、古城遗迹与未来车站使用地点插画和页面生成知识卡，后续可再补独立旅行照片和同系列整图知识卡。

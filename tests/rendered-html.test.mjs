@@ -30,7 +30,7 @@ test("server-renders the Guigui reading companion", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
 
-test("keeps the V1.3 product loops, safeguards, and required art assets", async () => {
+test("keeps the V1.4 product loops, safeguards, and required art assets", async () => {
   const [page, styles, layout, nextConfig, companionRoute, speechRoute, mistakeScanRoute, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -48,6 +48,7 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
     "捉迷藏",
     "睡一会",
     "龟龟书房",
+    "今日任务",
     "龟龟错题屋",
     "今日悄悄话",
     "龟龟旅行地图",
@@ -64,6 +65,13 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
   assert.match(page, /activeTravel/);
   assert.match(page, /tickets: 3/);
   assert.match(page, /mistakes: \[\]/);
+  assert.match(page, /dailyPlan:/);
+  assert.match(page, /createDailyPlan/);
+  assert.match(page, /advanceDailyTask/);
+  assert.match(page, /earnedReward \? 3 : 0/);
+  assert.match(page, /全部完成可得 3 颗星星/);
+  assert.match(page, /ui\/daily-tasks\/title\.png/);
+  assert.match(page, /ui\/daily-tasks\/task-row\.png/);
   assert.match(page, /firstMastery \? 2 : 0/);
   assert.match(page, /复习一道错题胜过做 2 道新题/);
   assert.match(page, /记一道错题/);
@@ -154,6 +162,15 @@ test("keeps the V1.3 product loops, safeguards, and required art assets", async 
     "../public/assets/ui/mistakes/content-frame.png",
     "../public/assets/ui/mistakes/add-button.png",
     "../public/assets/ui/mistakes/empty-turtle.png",
+    "../public/assets/ui/daily-tasks/panel.png",
+    "../public/assets/ui/daily-tasks/title.png",
+    "../public/assets/ui/daily-tasks/task-row.png",
+    "../public/assets/ui/daily-tasks/counter.png",
+    "../public/assets/ui/daily-tasks/fruit.png",
+    "../public/assets/ui/daily-tasks/clean.png",
+    "../public/assets/ui/daily-tasks/mistake.png",
+    "../public/assets/ui/daily-tasks/reading.png",
+    "../public/assets/ui/daily-tasks/reward-star.png",
   ]) {
     await access(new URL(path, import.meta.url));
   }

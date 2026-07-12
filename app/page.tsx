@@ -66,6 +66,17 @@ type MistakeRecord = {
 
 type MistakeScanResult = Pick<MistakeRecord, "subject" | "question" | "wrongAnswer" | "correction" | "cause"> & { notice?: string };
 
+type DailyTaskKey = "feed" | "swim" | "reading" | "mistake";
+type DailyMistakeMode = "add" | "review";
+type DailyTaskValues = Record<DailyTaskKey, number>;
+type DailyPlan = {
+  dateKey: string;
+  mistakeMode: DailyMistakeMode;
+  targets: DailyTaskValues;
+  progress: DailyTaskValues;
+  rewardClaimed: boolean;
+};
+
 type GameState = {
   name: string;
   hunger: number;
@@ -80,6 +91,7 @@ type GameState = {
   chatMessages: ChatMessage[];
   activeTravel: ActiveTravel | null;
   mistakes: MistakeRecord[];
+  dailyPlan: DailyPlan;
 };
 
 type Book = {
@@ -160,6 +172,13 @@ const initialState: GameState = {
   ],
   activeTravel: null,
   mistakes: [],
+  dailyPlan: {
+    dateKey: "",
+    mistakeMode: "add",
+    targets: { feed: 1, swim: 1, reading: 1, mistake: 1 },
+    progress: { feed: 0, swim: 0, reading: 0, mistake: 0 },
+    rewardClaimed: false,
+  },
 };
 
 const books: Book[] = [
@@ -385,6 +404,75 @@ function formatDate() {
   }).format(new Date());
 }
 
+function currentDayKey() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function createDailyPlan(state: Pick<GameState, "mistakes">): DailyPlan {
+  const pendingMistakes = state.mistakes.filter((mistake) => mistake.status !== "mastered").length;
+  return {
+    dateKey: currentDayKey(),
+    mistakeMode: pendingMistakes > 0 ? "review" : "add",
+    targets: {
+      feed: 1,
+      swim: 1,
+      reading: 1,
+      mistake: pendingMistakes > 0 ? Math.min(2, pendingMistakes) : 1,
+    },
+    progress: { feed: 0, swim: 0, reading: 0, mistake: 0 },
+    rewardClaimed: false,
+  };
+}
+
+function ensureDailyPlan(state: GameState): DailyPlan {
+  const saved = state.dailyPlan;
+  if (!saved || saved.dateKey !== currentDayKey()) return createDailyPlan(state);
+  const mistakeMode = saved.mistakeMode === "review" ? "review" : "add";
+  return {
+    dateKey: saved.dateKey,
+    mistakeMode,
+    targets: {
+      feed: 1,
+      swim: 1,
+      reading: 1,
+      mistake: Math.max(1, Math.min(2, Number(saved.targets?.mistake) || 1)),
+    },
+    progress: {
+      feed: Math.max(0, Number(saved.progress?.feed) || 0),
+      swim: Math.max(0, Number(saved.progress?.swim) || 0),
+      reading: Math.max(0, Number(saved.progress?.reading) || 0),
+      mistake: Math.max(0, Number(saved.progress?.mistake) || 0),
+    },
+    rewardClaimed: Boolean(saved.rewardClaimed),
+  };
+}
+
+function advanceDailyTask(state: GameState, task: DailyTaskKey, mistakeMode?: DailyMistakeMode): GameState {
+  const dailyPlan = ensureDailyPlan(state);
+  if (task === "mistake" && dailyPlan.mistakeMode !== mistakeMode) return { ...state, dailyPlan };
+  const target = dailyPlan.targets[task];
+  if (dailyPlan.progress[task] >= target) return { ...state, dailyPlan };
+
+  const progress = {
+    ...dailyPlan.progress,
+    [task]: Math.min(target, dailyPlan.progress[task] + 1),
+  };
+  const allComplete = (Object.keys(progress) as DailyTaskKey[]).every((key) => progress[key] >= dailyPlan.targets[key]);
+  const earnedReward = allComplete && !dailyPlan.rewardClaimed;
+  return {
+    ...state,
+    stars: state.stars + (earnedReward ? 3 : 0),
+    dailyPlan: {
+      ...dailyPlan,
+      progress,
+      rewardClaimed: dailyPlan.rewardClaimed || allComplete,
+    },
+  };
+}
+
 async function prepareMistakePhoto(file: File) {
   if (!file.type.startsWith("image/")) throw new Error("请选择图片文件");
   if (file.size > 8 * 1024 * 1024) throw new Error("图片不能超过 8MB");
@@ -555,6 +643,7 @@ export default function HomePage() {
   const [reviewMistake, setReviewMistake] = useState<MistakeRecord | null>(null);
   const [reviewAnswer, setReviewAnswer] = useState("");
   const [correctionRevealed, setCorrectionRevealed] = useState(false);
+  const [dailyTasksOpen, setDailyTasksOpen] = useState(true);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceSessionRef = useRef<VoiceSession | null>(null);
   const autoFinishVoiceRef = useRef<() => void>(() => undefined);
@@ -583,6 +672,12 @@ export default function HomePage() {
     mastered: game.mistakes.filter((mistake) => mistake.status === "mastered").length,
   }), [game.mistakes]);
 
+  const dailyPlan = useMemo(() => ensureDailyPlan(game), [game]);
+  const dailyCompletedCount = useMemo(
+    () => (Object.keys(dailyPlan.progress) as DailyTaskKey[]).filter((key) => dailyPlan.progress[key] >= dailyPlan.targets[key]).length,
+    [dailyPlan],
+  );
+
   const ambientSprite = useMemo(() => {
     if (game.hunger > 72) return "turtle_hungry.png";
     if (game.cleanliness < 38) return "turtle_dirty.png";
@@ -603,22 +698,24 @@ export default function HomePage() {
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const saved = window.localStorage.getItem("guigu-v1-state");
+      let restored = initialState;
       if (saved) {
         try {
           const parsed = JSON.parse(saved) as Partial<GameState>;
           const hours = Math.min(24, Math.max(0, (Date.now() - (parsed.lastSeen || Date.now())) / 3_600_000));
-          setGame({
+          restored = {
             ...initialState,
             ...parsed,
             hunger: clamp((parsed.hunger ?? initialState.hunger) + hours * 3),
             cleanliness: clamp((parsed.cleanliness ?? initialState.cleanliness) - hours),
             boredom: clamp((parsed.boredom ?? initialState.boredom) + hours * 2),
             lastSeen: Date.now(),
-          });
+          };
         } catch {
-          setGame(initialState);
+          restored = initialState;
         }
       }
+      setGame({ ...restored, dailyPlan: ensureDailyPlan(restored) });
       setHydrated(true);
     });
     return () => window.cancelAnimationFrame(frame);
@@ -631,6 +728,17 @@ export default function HomePage() {
       JSON.stringify({ ...game, lastSeen: Date.now() }),
     );
   }, [game, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const syncDay = () => {
+      setGame((current) => current.dailyPlan.dateKey === currentDayKey()
+        ? current
+        : { ...current, dailyPlan: createDailyPlan(current) });
+    };
+    const interval = window.setInterval(syncDay, 60_000);
+    return () => window.clearInterval(interval);
+  }, [hydrated]);
 
   useEffect(() => {
     return () => {
@@ -732,12 +840,12 @@ export default function HomePage() {
       1800,
       "turtle_eating_fruit.png",
       () => {
-        setGame((current) => ({
+        setGame((current) => advanceDailyTask({
           ...current,
           hunger: clamp(current.hunger - 22),
           boredom: clamp(current.boredom - 3),
           fruits: current.fruits - 1,
-        }));
+        }, "feed"));
         setTurtleSprite("turtle_satisfied.png");
         showToast(`${game.name}吃下${fruit}，肚子满足啦`);
         window.setTimeout(() => setTurtleSprite(null), 1800);
@@ -752,7 +860,7 @@ export default function HomePage() {
       5200,
       "turtle_swimming.png",
       () => {
-        patchGame({ cleanliness: 100 });
+        setGame((current) => advanceDailyTask({ ...current, cleanliness: 100 }, "swim"));
         setTurtleSprite("turtle_clean_sparkle.png");
         showToast("游泳完成，龟壳亮晶晶！");
         window.setTimeout(() => setTurtleSprite(null), 2000);
@@ -879,14 +987,14 @@ export default function HomePage() {
       answer: readingAnswer || "今天认真读完了整篇故事。",
       summary: selectedBook.summary,
     };
-    setGame((current) => ({
+    setGame((current) => advanceDailyTask({
       ...current,
       boredom: clamp(current.boredom - 12),
       stars: current.stars + 3,
       tickets: current.tickets + 1,
       fruits: current.fruits + 1,
       readingRecords: [record, ...current.readingRecords.filter((item) => item.title !== record.title)],
-    }));
+    }, "reading"));
     setSummaryOpen(true);
   };
 
@@ -1103,7 +1211,7 @@ export default function HomePage() {
         date: formatDate(),
         reviewCount: 0,
       };
-      setGame((current) => ({ ...current, mistakes: [record, ...current.mistakes] }));
+      setGame((current) => advanceDailyTask({ ...current, mistakes: [record, ...current.mistakes] }, "mistake", "add"));
       setMistakeFormOpen(false);
       showToast("MiMo 已经整理好错题，之后可以回来挑战它");
     } catch (error) {
@@ -1127,7 +1235,7 @@ export default function HomePage() {
   const finishMistakeReview = (mastered: boolean) => {
     if (!reviewMistake) return;
     const firstMastery = mastered && reviewMistake.status !== "mastered";
-    setGame((current) => ({
+    setGame((current) => advanceDailyTask({
       ...current,
       stars: current.stars + (firstMastery ? 2 : 0),
       boredom: clamp(current.boredom - (firstMastery ? 5 : 2)),
@@ -1136,7 +1244,7 @@ export default function HomePage() {
         status: mastered ? "mastered" : "reviewing",
         reviewCount: item.reviewCount + 1,
       } : item),
-    }));
+    }, "mistake", "review"));
     setReviewMistake(null);
     setCorrectionRevealed(false);
     showToast(mastered ? `掌握啦！${firstMastery ? "获得 2 颗成长星星" : "这道题依然很稳"}` : "先放回待复习，下次再挑战");
@@ -1182,6 +1290,38 @@ export default function HomePage() {
     setBookPage(0);
   };
 
+  const dailyTaskItems: Array<{ key: DailyTaskKey; label: string; icon: string }> = [
+    { key: "feed", label: `给${game.name}喂 1 个果子`, icon: `${ASSET}/ui/daily-tasks/fruit.png` },
+    { key: "swim", label: `陪${game.name}游泳清洁`, icon: `${ASSET}/ui/daily-tasks/clean.png` },
+    { key: "reading", label: "完成 1 次伴读", icon: `${ASSET}/ui/daily-tasks/reading.png` },
+    {
+      key: "mistake",
+      label: dailyPlan.mistakeMode === "review" ? `复习 ${dailyPlan.targets.mistake} 道错题` : "收录 1 道错题",
+      icon: `${ASSET}/ui/daily-tasks/mistake.png`,
+    },
+  ];
+
+  const openDailyTask = (task: DailyTaskKey) => {
+    if (task === "feed") {
+      setFruitPicker(true);
+      return;
+    }
+    if (task === "swim") {
+      startSwim();
+      return;
+    }
+    if (task === "reading") {
+      setView("library");
+      return;
+    }
+    if (dailyPlan.mistakeMode === "add") {
+      openMistakeForm();
+      return;
+    }
+    setMistakeFilter("review");
+    setView("mistakes");
+  };
+
   const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
   const navigationLocked = !!busy || !!hideTarget || !!traveling;
   const selectedDestinationUnlocked = game.stars >= selectedDestination.requiredStars;
@@ -1199,6 +1339,9 @@ export default function HomePage() {
         "--mistake-content-frame": `url("${ASSET}/ui/mistakes/content-frame.png")`,
         "--pixel-frame": `url("${ASSET}/ui/home-refresh/frames/top-frame.png")`,
         "--status-frame": `url("${ASSET}/ui/home-refresh/status/panel.png")`,
+        "--daily-task-panel": `url("${ASSET}/ui/daily-tasks/panel.png")`,
+        "--daily-task-row": `url("${ASSET}/ui/daily-tasks/task-row.png")`,
+        "--daily-task-counter": `url("${ASSET}/ui/daily-tasks/counter.png")`,
       } as React.CSSProperties}
     >
       <header className="topbar">
@@ -1235,9 +1378,52 @@ export default function HomePage() {
         {view === "home" && (
           <section className={`scene home-scene ${busy === "sleeping" ? "sleeping-scene" : ""}`}>
             <div className="scene-title">
-              <small>{formatDate()} · 晴</small>
+              <small suppressHydrationWarning>{formatDate()} · 晴</small>
               <h1>今天想和{game.name}做什么？</h1>
             </div>
+
+            <aside className={`daily-task-panel ${dailyTasksOpen ? "open" : ""}`} aria-label={`今日任务，已完成${dailyCompletedCount}项，共4项`}>
+              <button
+                className="daily-task-heading"
+                type="button"
+                aria-expanded={dailyTasksOpen}
+                onClick={() => setDailyTasksOpen((open) => !open)}
+              >
+                <img src={`${ASSET}/ui/daily-tasks/title.png`} alt="今日任务" />
+                <span>{dailyCompletedCount}/4</span>
+                <ChevronRight aria-hidden="true" />
+              </button>
+              <div className="daily-task-body">
+                <div className="daily-plan-progress" aria-label={`今日计划完成${dailyCompletedCount * 25}%`}>
+                  <span>今日计划</span>
+                  <div><i style={{ width: `${dailyCompletedCount * 25}%` }} /></div>
+                  <b>{dailyCompletedCount}/4</b>
+                </div>
+                <div className="daily-task-list">
+                  {dailyTaskItems.map((task) => {
+                    const progress = Math.min(dailyPlan.progress[task.key], dailyPlan.targets[task.key]);
+                    const complete = progress >= dailyPlan.targets[task.key];
+                    return (
+                      <button
+                        className={complete ? "complete" : ""}
+                        type="button"
+                        key={task.key}
+                        onClick={() => openDailyTask(task.key)}
+                        aria-label={`${task.label}，${complete ? "已完成" : `进度${progress}/${dailyPlan.targets[task.key]}`}`}
+                      >
+                        <img src={task.icon} alt="" />
+                        <strong>{task.label}</strong>
+                        <span>{complete ? <Check aria-hidden="true" /> : `${progress}/${dailyPlan.targets[task.key]}`}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className={`daily-task-reward ${dailyPlan.rewardClaimed ? "claimed" : ""}`}>
+                  <img src={`${ASSET}/ui/daily-tasks/reward-star.png`} alt="" />
+                  <span>{dailyPlan.rewardClaimed ? "今日计划完成，奖励已领取" : "全部完成可得 3 颗星星"}</span>
+                </div>
+              </div>
+            </aside>
 
             <aside className="home-status-panel" aria-label="龟龟状态">
               <div className="status-panel-title">

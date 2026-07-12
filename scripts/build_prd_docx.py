@@ -346,7 +346,7 @@ def add_headers_and_footers(doc: Document) -> None:
 
         header = section.header.paragraphs[0]
         header.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        run = header.add_run("龟龟伴读  /  V1.3 产品需求文档")
+        run = header.add_run("龟龟伴读  /  V1.4 产品需求文档")
         set_run_font(run, size=8, bold=True, color=LEAF)
         p_pr = header._p.get_or_add_pPr()
         bottom_border = OxmlElement("w:pBdr")
@@ -397,7 +397,7 @@ def main() -> None:
     add_cover(doc, cover_lines)
     add_body(doc, body_lines)
 
-    doc.core_properties.title = "龟龟伴读 V1.3 产品需求文档"
+    doc.core_properties.title = "龟龟伴读 V1.4 产品需求文档"
     doc.core_properties.subject = "电子宠物学习陪伴产品开发与验收基线"
     doc.core_properties.author = "龟龟伴读产品组"
     doc.core_properties.keywords = "龟龟伴读, 电子宠物, 阅读, 儿童陪伴, PRD"
