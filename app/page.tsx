@@ -493,12 +493,14 @@ function NavButton({
   label,
   onClick,
   art,
+  maskBackground,
 }: {
   active: boolean;
   disabled?: boolean;
   label: string;
   onClick: () => void;
   art: string;
+  maskBackground?: boolean;
 }) {
   return (
     <button
@@ -509,7 +511,7 @@ function NavButton({
       disabled={disabled}
       type="button"
     >
-      <img className="nav-art" src={art} alt="" />
+      <img className={`nav-art ${maskBackground ? "nav-art-masked" : ""}`} src={art} alt="" />
       <span>{label}</span>
     </button>
   );
@@ -1645,11 +1647,11 @@ export default function HomePage() {
 
       <nav className="bottom-nav" aria-label="主要功能">
         <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" art={`${ASSET}/ui/supplied/nav/home.png`} onClick={() => setView("home")} />
-        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/supplied/nav/reading.png`} onClick={() => setView("library")} />
-        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/supplied/nav/mistakes.png`} onClick={() => setView("mistakes")} />
+        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/supplied/nav/reading.png`} maskBackground onClick={() => setView("library")} />
+        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/supplied/nav/mistakes.png`} maskBackground onClick={() => setView("mistakes")} />
         <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/supplied/nav/chat.png`} onClick={() => setView("chat")} />
         <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/supplied/nav/travel.png`} onClick={() => setView("travel")} />
-        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/supplied/nav/journal.png`} onClick={() => setView("journal")} />
+        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/supplied/nav/journal.png`} maskBackground onClick={() => setView("journal")} />
       </nav>
 
       {toast && <div className={`toast ${view === "chat" ? "chat-toast" : ""}`} role="status"><Sparkles /> {toast}</div>}
