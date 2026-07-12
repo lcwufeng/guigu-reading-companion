@@ -1842,11 +1842,11 @@ export default function HomePage() {
 
       <nav className="bottom-nav" aria-label="主要功能">
         <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" art={`${ASSET}/ui/supplied/nav/home.png`} onClick={() => setView("home")} />
-        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/supplied/nav/reading.png`} maskBackground onClick={() => setView("library")} />
-        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/supplied/nav/mistakes.png`} maskBackground onClick={() => setView("mistakes")} />
+        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/supplied/nav/reading-20260713.png`} maskBackground onClick={() => setView("library")} />
+        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/supplied/nav/mistakes-20260713.png`} maskBackground onClick={() => setView("mistakes")} />
         <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/supplied/nav/chat.png`} onClick={() => setView("chat")} />
         <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/supplied/nav/travel.png`} onClick={() => setView("travel")} />
-        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/supplied/nav/journal.png`} maskBackground onClick={() => setView("journal")} />
+        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/supplied/nav/journal-20260713.png`} maskBackground onClick={() => setView("journal")} />
       </nav>
 
       {toast && <div className={`toast ${view === "chat" ? "chat-toast" : ""}`} role="status"><Sparkles /> {toast}</div>}

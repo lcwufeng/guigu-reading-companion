@@ -37,6 +37,7 @@
 - 宠物身份与资源框：`ui/home-refresh/frames/top-frame.png`
 - 透明品牌 Logo：`ui/supplied/brand/logo.png`
 - 六项底部导航完整按钮：`ui/supplied/nav/*.png`
+- 阅读、错题屋、手账使用版本化整图：`reading-20260713.png`、`mistakes-20260713.png`、`journal-20260713.png`
 - 补充素材预处理：`scripts/prepare_supplemental_assets.py`
 
 ## 今日任务
