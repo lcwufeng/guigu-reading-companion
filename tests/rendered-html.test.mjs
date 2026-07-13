@@ -31,7 +31,7 @@ test("server-renders the Guigui reading companion", async () => {
 });
 
 test("keeps the V1.4 product loops, safeguards, and required art assets", async () => {
-  const [page, styles, layout, nextConfig, companionRoute, speechRoute, mistakeScanRoute, packageJson] = await Promise.all([
+  const [page, styles, layout, nextConfig, companionRoute, speechRoute, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -39,11 +39,14 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
     readFile(new URL("../app/api/companion/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/speech/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mistake-scan/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/student-memory/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/student-memory.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/book-knowledge.ts", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
   for (const feature of [
-    "喂果子",
+    "摘果喂食",
     "去游泳",
     "捉迷藏",
     "睡一会",
@@ -71,7 +74,8 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(page, /earnedReward \? 3 : 0/);
   assert.match(page, /全部完成可得 3 颗星星/);
   assert.match(page, /ui\/daily-tasks\/title\.png/);
-  assert.match(page, /ui\/daily-tasks\/task-row\.png/);
+  assert.doesNotMatch(page, /ui\/daily-tasks\/task-row\.png/);
+  assert.doesNotMatch(styles, /--daily-task-row|var\(--daily-task-row\)/);
   assert.match(page, /firstMastery \? 2 : 0/);
   assert.match(page, /复习一道错题胜过做 2 道新题/);
   assert.match(page, /记一道错题/);
@@ -130,6 +134,13 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(companionRoute, /DEEPSEEK_API_KEY/);
   assert.match(companionRoute, /cleanPetName/);
   assert.match(companionRoute, /function localReply/);
+  assert.match(companionRoute, /formatStudentMemory/);
+  assert.match(companionRoute, /rememberStudentEvent/);
+  assert.match(studentMemoryRoute, /rememberStudentEvent/);
+  assert.match(studentMemoryDb, /STUDENT_MEMORY_FILE/);
+  assert.match(studentMemoryDb, /recentActivities/);
+  assert.match(page, /fruitPickingRemaining/);
+  assert.match(page, /今天已经摘满 5 个果子/);
   assert.match(await readFile(new URL("../db/reading-progress.ts", import.meta.url), "utf8"), /READING_PROGRESS_FILE/);
   assert.match(speechRoute, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
   assert.match(speechRoute, /VOLC_SPEECH_APP_ID/);
@@ -155,6 +166,7 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
     const body = book.slice(divider).replace(/^---\s*$/m, "");
     const chapters = [...body.matchAll(/^#\s+(.+)\s*$/gm)];
     for (let chapter = 0; chapter < chapters.length; chapter += 1) {
+      assert.match(bookKnowledge, new RegExp(`"${chapters[chapter][1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"\\s*:`));
       const start = chapters[chapter].index + chapters[chapter][0].length;
       const end = chapters[chapter + 1]?.index ?? body.length;
       const paragraphs = body.slice(start, end)

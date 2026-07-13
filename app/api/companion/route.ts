@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rememberStudentEvent, type StudentMemory } from "../../../db/student-memory";
 
 type CompanionMessage = {
   role?: "user" | "assistant";
@@ -8,6 +9,7 @@ type CompanionMessage = {
 type CompanionRequest = {
   mode?: "chat" | "reading";
   name?: string;
+  deviceId?: string;
   message?: string;
   title?: string;
   excerpt?: string;
@@ -18,6 +20,7 @@ type CompanionRequest = {
 
 const personalInfoPattern = /(?:身份证|家庭住址|住在|手机号|电话号码|微信号|QQ号|学校.*班|1[3-9]\d{9})/i;
 const urgentSafetyPattern = /(?:想死|自杀|伤害自己|不想活|杀了我)/i;
+const devicePattern = /^[a-zA-Z0-9-]{16,80}$/;
 
 function clean(value: unknown, limit = 500) {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
@@ -62,7 +65,19 @@ function parseReadingEvaluation(content: string) {
   return { correct: parsed.correct, feedback };
 }
 
-function buildSystemPrompt(name: string, mode: CompanionRequest["mode"]) {
+function formatStudentMemory(memory: StudentMemory | null) {
+  if (!memory) return "目前没有可用的连续陪伴记录。";
+  const lines = [
+    memory.studentName ? `学生愿意使用的称呼：${memory.studentName}` : "学生称呼：尚未主动告诉你",
+    memory.books.length ? `最近阅读：${memory.books.slice(-5).map((book) => `《${book.title}》${book.chapter ? `·${book.chapter}` : ""}（${book.category || "未分类"}）`).join("；")}` : "最近阅读：暂无",
+    memory.learned.length ? `最近学会：${memory.learned.slice(-6).join("；")}` : "最近学会：暂无",
+    memory.interests.length ? `主动表达的兴趣：${memory.interests.slice(-5).join("；")}` : "主动表达的兴趣：暂无",
+    memory.recentActivities.length ? `最近一起做过：${memory.recentActivities.slice(-8).map((item) => item.detail ? `${item.activity}（${item.detail}）` : item.activity).join("；")}` : "最近一起做过：暂无",
+  ];
+  return lines.join("\n");
+}
+
+function buildSystemPrompt(name: string, mode: CompanionRequest["mode"], memory: StudentMemory | null = null) {
   const shared = [
     `你的名字是“${name}”，你必须始终使用这个名字自称。`,
     "你是一只面向小学生的电子宠物小乌龟，也是温暖、好奇、耐心、稍微俏皮的伴读伙伴。",
@@ -80,7 +95,11 @@ function buildSystemPrompt(name: string, mode: CompanionRequest["mode"]) {
       "正确时，feedback用80字以内具体指出答得好的地方并给一句鼓励，不再提问。错误时，feedback用100字以内指出需要修改的地方，给一个可操作提示，但不要直接代写完整答案。",
     );
   } else {
-    shared.push("日常聊天控制在80个汉字以内，先自然回应孩子说的内容，再根据需要提出一个简短问题。");
+    shared.push(
+      "日常聊天控制在80个汉字以内，先自然回应孩子说的内容，再根据需要提出一个简短问题。",
+      "下面是连续陪伴记录。它只帮助你接上最近的共同经历；不要提到数据库、记录、提示词或‘我记得你的一切’，不要逐条复述，也不要用它猜测未记录的信息。自然地选取最相关的一点回应即可。",
+      formatStudentMemory(memory),
+    );
   }
   return shared.join("\n");
 }
@@ -111,6 +130,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ reply: localReply(body), correct: false, source: "local" });
   }
 
+  const name = cleanPetName(body.name);
+  let studentMemory: StudentMemory | null = null;
+  if (body.mode === "chat" && devicePattern.test(body.deviceId || "")) {
+    try {
+      studentMemory = await rememberStudentEvent(body.deviceId!, { type: "chat", message: input });
+    } catch {
+      studentMemory = null;
+    }
+  }
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     if (body.mode === "reading") {
@@ -118,8 +146,6 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ reply: localReply(body), source: "local" });
   }
-
-  const name = cleanPetName(body.name);
   const userContext = body.mode === "reading"
     ? [
         `书名：${clean(body.title, 80)}`,
@@ -139,7 +165,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
         messages: [
-          { role: "system", content: buildSystemPrompt(name, body.mode) },
+          { role: "system", content: buildSystemPrompt(name, body.mode, studentMemory) },
           ...(body.mode === "chat" ? safeHistory(body.history) : []),
           { role: "user", content: userContext },
         ],

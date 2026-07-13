@@ -293,16 +293,13 @@ button:disabled {
 
 .daily-task-list > button {
   align-items: center;
-  background-color: transparent;
-  background-image: var(--daily-task-row);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  border: 0;
+  background: rgba(255, 252, 230, 0.66);
+  border: 1px solid rgba(126, 91, 30, 0.13);
+  border-radius: 8px;
   cursor: pointer;
   display: grid;
   gap: 5px;
-  grid-template-columns: 31px minmax(0, 1fr) 43px;
+  grid-template-columns: minmax(0, 1fr) 43px;
   height: 45px;
   padding: 4px 7px 4px 10px;
   text-align: left;
@@ -314,13 +311,6 @@ button:disabled {
   transform: translateX(-2px);
 }
 
-.daily-task-list > button > img {
-  height: 29px;
-  image-rendering: pixelated;
-  object-fit: contain;
-  width: 29px;
-}
-
 .daily-task-list strong {
   color: #4d3419;
   font-size: 12px;
@@ -330,10 +320,6 @@ button:disabled {
 
 .daily-task-list > button > span {
   align-items: center;
-  background-image: var(--daily-task-counter);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
   color: #60421f;
   display: flex;
   font-size: 11px;
@@ -353,11 +339,6 @@ button:disabled {
 .daily-task-list > button.complete strong {
   color: #73806f;
   text-decoration: line-through;
-}
-
-.daily-task-list > button.complete > img {
-  filter: saturate(0.72);
-  opacity: 0.78;
 }
 
 .daily-task-reward {
@@ -616,8 +597,8 @@ button:disabled {
 }
 
 .hide-action {
-  bottom: 12%;
-  left: 73%;
+  left: 52%;
+  top: 61%;
 }
 
 .cave-action {
@@ -3288,14 +3269,9 @@ button:disabled {
   }
 
   .daily-task-list > button {
-    grid-template-columns: 27px minmax(0, 1fr) 39px;
+    grid-template-columns: minmax(0, 1fr) 39px;
     height: 37px;
     padding-inline: 9px 6px;
-  }
-
-  .daily-task-list > button > img {
-    height: 25px;
-    width: 25px;
   }
 
   .daily-task-list strong {
@@ -3617,8 +3593,8 @@ button:disabled {
   }
 
   .pond-action { left: 3%; top: 42%; }
-  .tree-action { left: 28%; top: 40%; }
-  .hide-action { bottom: 13%; left: 3%; }
+  .tree-action { left: 28%; top: 49%; }
+  .hide-action { left: 57%; top: 61%; }
   .cave-action { left: 68%; top: 44%; }
 
   .hidden-water { bottom: 25%; left: 7%; }
@@ -4504,8 +4480,8 @@ button:disabled {
   .reading-companion-card.embedded .companion-card-heading img { display: none; }
   .reading-companion-card.embedded .quiet-reading-note { margin-top: 5px; }
   .knowledge-only-panel { padding: 9px 12px; }
-  .knowledge-only-panel h3,
   .knowledge-only-panel dl { display: none; }
+  .knowledge-only-panel h3 { font-size: 12px; margin: 7px 0 5px; }
   .knowledge-only-panel > p { margin: 5px 0; }
   .book-loading-panel,
   .licensed-content-panel { padding: 18px; }

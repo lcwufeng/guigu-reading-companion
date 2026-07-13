@@ -8,3 +8,9 @@ export const readingProgress = sqliteTable("reading_progress", {
   completed: integer("completed", { mode: "boolean" }).notNull().default(false),
   updatedAt: integer("updated_at").notNull(),
 }, (table) => [primaryKey({ columns: [table.deviceId, table.bookId] })]);
+
+export const studentMemory = sqliteTable("student_memory", {
+  deviceId: text("device_id").primaryKey(),
+  memoryJson: text("memory_json").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});

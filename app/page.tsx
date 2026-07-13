@@ -27,6 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { chapterKnowledge } from "./book-knowledge";
 
 type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal";
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
@@ -76,6 +77,15 @@ type DailyPlan = {
   progress: DailyTaskValues;
   rewardClaimed: boolean;
 };
+type DailyFruitPicking = { dateKey: string; picked: number };
+type StudentMemoryEvent = {
+  type: "reading" | "learning" | "activity";
+  title?: string;
+  category?: string;
+  chapter?: string;
+  detail?: string;
+  activity?: string;
+};
 
 type GameState = {
   name: string;
@@ -93,6 +103,7 @@ type GameState = {
   activeTravel: ActiveTravel | null;
   mistakes: MistakeRecord[];
   dailyPlan: DailyPlan;
+  fruitPicking: DailyFruitPicking;
 };
 
 type Book = {
@@ -106,6 +117,7 @@ type Book = {
   prompts: { page: number; question: string; guide: string }[];
   summary: string;
   knowledge: string;
+  memoryCategory: string;
   source?: {
     url: string;
     format: "markdown" | "gutenberg";
@@ -138,6 +150,7 @@ type Destination = {
 type CompanionPayload = {
   mode: "chat" | "reading";
   name: string;
+  deviceId?: string;
   message?: string;
   title?: string;
   excerpt?: string;
@@ -201,6 +214,7 @@ const initialState: GameState = {
     progress: { feed: 0, swim: 0, reading: 0, mistake: 0 },
     rewardClaimed: false,
   },
+  fruitPicking: { dateKey: "", picked: 0 },
 };
 
 const books: Book[] = [
@@ -215,6 +229,7 @@ const books: Book[] = [
     prompts: [],
     summary: "收录《稻草人》《小白船》《一粒种子》等 13 篇童话，按篇章完整阅读。",
     knowledge: "叶圣陶是中国现代童话创作的重要作家。《稻草人》通过童话人物的所见所感，引导读者观察生活并体会他人的处境。",
+    memoryCategory: "中国儿童文学·童话",
     source: {
       url: `${BASE_PATH}/books/scarecrow-zh.md`,
       format: "markdown",
@@ -233,6 +248,7 @@ const books: Book[] = [
     prompts: [],
     summary: "收录《青蛙王子》《小红帽》《白雪公主》等 22 篇童话，按篇章完整阅读。",
     knowledge: "格林兄弟整理的童话常以森林、城堡、考验与魔法展开。阅读时可以留意人物如何在选择中展现勇气、智慧与责任。",
+    memoryCategory: "欧洲民间童话",
     source: {
       url: `${BASE_PATH}/books/grimms-fairy-tales-zh.md`,
       format: "markdown",
@@ -251,6 +267,7 @@ const books: Book[] = [
     prompts: [],
     summary: "收录《丑小鸭》《拇指姑娘》《野天鹅》等 10 篇童话，按篇章完整阅读。",
     knowledge: "安徒生童话常把温柔、幻想和现实感受放在一起。阅读时可以从人物的选择、愿望和变化中理解勇气、诚实与自我认同。",
+    memoryCategory: "丹麦文学·童话",
     source: {
       url: `${BASE_PATH}/books/andersens-fairy-tales-zh.md`,
       format: "markdown",
@@ -505,6 +522,12 @@ function currentDayKey() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function ensureDailyFruitPicking(state: Pick<GameState, "fruitPicking">): DailyFruitPicking {
+  const saved = state.fruitPicking;
+  if (!saved || saved.dateKey !== currentDayKey()) return { dateKey: currentDayKey(), picked: 0 };
+  return { dateKey: saved.dateKey, picked: Math.max(0, Math.min(5, Math.floor(Number(saved.picked) || 0))) };
 }
 
 function createDailyPlan(state: Pick<GameState, "mistakes">): DailyPlan {
@@ -802,6 +825,16 @@ export default function HomePage() {
     toastTimer.current = setTimeout(() => setToast(""), 3600);
   }, []);
 
+  const remember = useCallback((event: StudentMemoryEvent) => {
+    const deviceId = readerDeviceIdRef.current;
+    if (!deviceId) return Promise.resolve();
+    return fetch(`${BASE_PATH}/api/student-memory`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deviceId, event }),
+    }).then(() => undefined).catch(() => undefined);
+  }, []);
+
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const saved = window.localStorage.getItem("guigu-v1-state");
@@ -823,7 +856,11 @@ export default function HomePage() {
           restored = initialState;
         }
       }
-      setGame({ ...restored, dailyPlan: ensureDailyPlan(restored) });
+      setGame({
+        ...restored,
+        dailyPlan: ensureDailyPlan(restored),
+        fruitPicking: ensureDailyFruitPicking(restored),
+      });
       setHydrated(true);
     });
     return () => window.cancelAnimationFrame(frame);
@@ -914,7 +951,11 @@ export default function HomePage() {
     const syncDay = () => {
       setGame((current) => current.dailyPlan.dateKey === currentDayKey()
         ? current
-        : { ...current, dailyPlan: createDailyPlan(current) });
+        : {
+            ...current,
+            dailyPlan: createDailyPlan(current),
+            fruitPicking: { dateKey: currentDayKey(), picked: 0 },
+          });
     };
     const interval = window.setInterval(syncDay, 60_000);
     return () => window.clearInterval(interval);
@@ -977,9 +1018,10 @@ export default function HomePage() {
       setTravelProgress(0);
       setTravelReward(traveling);
       showToast(`${game.name}带着新发现回来啦！`);
+      void remember({ type: "activity", activity: "旅行", detail: `一起去了${traveling.name}，带回${traveling.reward}` });
     }, 100);
     return () => window.clearInterval(interval);
-  }, [game.activeTravel, game.name, hydrated, showToast, traveling]);
+  }, [game.activeTravel, game.name, hydrated, remember, showToast, traveling]);
 
   const runTimedAction = useCallback(
     (
@@ -1009,6 +1051,28 @@ export default function HomePage() {
     [busy, hideTarget, showToast, traveling],
   );
 
+  const dailyFruitPicking = ensureDailyFruitPicking(game);
+  const fruitPickingRemaining = Math.max(0, 5 - dailyFruitPicking.picked);
+
+  const pickFruitAndOpen = () => {
+    if (fruitPickingRemaining > 0) {
+      setGame((current) => {
+        const picking = ensureDailyFruitPicking(current);
+        if (picking.picked >= 5) return { ...current, fruitPicking: picking };
+        return {
+          ...current,
+          fruits: current.fruits + 1,
+          fruitPicking: { dateKey: currentDayKey(), picked: picking.picked + 1 },
+        };
+      });
+      showToast(`从树上摘下 1 个果子，今天还可以摘 ${fruitPickingRemaining - 1} 个`);
+      void remember({ type: "activity", activity: "摘果喂食", detail: "从果树上摘下一个新鲜果子" });
+    } else {
+      showToast("今天已经摘满 5 个果子啦，明天树上会重新长好");
+    }
+    setFruitPicker(true);
+  };
+
   const feedFruit = (fruit: string) => {
     if (game.fruits < 1) {
       showToast("果篮空啦，读书或旅行可以带回新果子");
@@ -1028,6 +1092,7 @@ export default function HomePage() {
         }, "feed"));
         setTurtleSprite("turtle_satisfied.png");
         showToast(`${game.name}吃下${fruit}，肚子满足啦`);
+        void remember({ type: "activity", activity: "摘果喂食", detail: `给龟龟喂了${fruit}` });
         window.setTimeout(() => setTurtleSprite(null), 1800);
       },
       `${game.name}正在大口吃果子…`,
@@ -1043,6 +1108,7 @@ export default function HomePage() {
         setGame((current) => advanceDailyTask({ ...current, cleanliness: 100 }, "swim"));
         setTurtleSprite("turtle_clean_sparkle.png");
         showToast("游泳完成，龟壳亮晶晶！");
+        void remember({ type: "activity", activity: "游泳", detail: "一起在池塘里游泳清洁" });
         window.setTimeout(() => setTurtleSprite(null), 2000);
       },
       `${game.name}扑通一声跳进池塘`,
@@ -1062,6 +1128,7 @@ export default function HomePage() {
         }));
         setTurtleSprite("turtle_waving.png");
         showToast(`${game.name}睡醒啦，精神满满`);
+        void remember({ type: "activity", activity: "休息", detail: "陪龟龟在小屋里睡了一会儿" });
         window.setTimeout(() => setTurtleSprite(null), 1800);
       },
       "嘘，做一个香香的梦吧",
@@ -1088,6 +1155,7 @@ export default function HomePage() {
         stars: current.stars + 2,
       }));
       showToast(`找到啦！原来藏在${hideLabels[place]}`);
+      void remember({ type: "activity", activity: "捉迷藏", detail: `在${hideLabels[place]}找到了龟龟` });
       window.setTimeout(() => setTurtleSprite(null), 2200);
     } else {
       setHideTries((tries) => tries + 1);
@@ -1112,6 +1180,19 @@ export default function HomePage() {
   } : null;
   const currentPromptKey = `${selectedBook.id}:${selectedChapter}:${bookPage}`;
   const currentPromptAnswered = answeredPromptPages.includes(currentPromptKey);
+  const activeChapterKnowledge = activeChapter
+    ? chapterKnowledge[selectedBook.id]?.[activeChapter.title] || selectedBook.knowledge
+    : selectedBook.knowledge;
+
+  useEffect(() => {
+    if (view !== "library" || !activeChapter) return;
+    void remember({
+      type: "reading",
+      title: selectedBook.title,
+      category: selectedBook.memoryCategory,
+      chapter: activeChapter.title,
+    });
+  }, [activeChapter, remember, selectedBook.memoryCategory, selectedBook.title, view]);
 
   const saveName = () => {
     const cleaned = draftName.trim().slice(0, 8);
@@ -1191,6 +1272,7 @@ export default function HomePage() {
       const result = await askCompanion({
         mode: "reading",
         name: game.name,
+        deviceId: readerDeviceIdRef.current,
         title: `${selectedBook.title} · ${activeChapter?.title || ""}`,
         excerpt: activePage.body,
         question: currentPrompt.question,
@@ -1211,6 +1293,10 @@ export default function HomePage() {
           }));
         }
         showToast(alreadyRewarded ? "回答正确，这道题的星星已经领取过啦" : "回答正确，获得 1 颗成长星星！");
+        void remember({
+          type: "learning",
+          detail: `在《${selectedBook.title}·${activeChapter?.title || "本章"}》中依据原文回答了伴读问题`,
+        });
       } else {
         setReadingEvaluation("incorrect");
         showToast("再根据龟龟的建议修改一下吧");
@@ -1244,6 +1330,10 @@ export default function HomePage() {
       fruits: current.fruits + 1,
       readingRecords: [record, ...current.readingRecords.filter((item) => item.title !== record.title)],
     }, "reading"));
+    void remember({
+      type: "learning",
+      detail: `完成《${selectedBook.title}》全书阅读`,
+    });
     setSummaryOpen(true);
   };
 
@@ -1401,6 +1491,7 @@ export default function HomePage() {
       reply = (await askCompanion({
         mode: "chat",
         name: game.name,
+        deviceId: readerDeviceIdRef.current,
         message: message.slice(0, 500),
         history: game.chatMessages.slice(-8).map((item) => ({
           role: item.role === "turtle" ? "assistant" : "user",
@@ -1461,6 +1552,7 @@ export default function HomePage() {
         reviewCount: 0,
       };
       setGame((current) => advanceDailyTask({ ...current, mistakes: [record, ...current.mistakes] }, "mistake", "add"));
+      void remember({ type: "activity", activity: "整理错题", detail: `收录了一道${record.subject}错题：${record.question.slice(0, 45)}` });
       setMistakeFormOpen(false);
       showToast("MiMo 已经整理好错题，之后可以回来挑战它");
     } catch (error) {
@@ -1496,6 +1588,12 @@ export default function HomePage() {
     }, "mistake", "review"));
     setReviewMistake(null);
     setCorrectionRevealed(false);
+    void remember({
+      type: mastered ? "learning" : "activity",
+      ...(mastered
+        ? { detail: `复习并掌握一道${reviewMistake.subject}错题` }
+        : { activity: "整理错题", detail: `复习了一道${reviewMistake.subject}错题，准备下次再挑战` }),
+    });
     showToast(mastered ? `掌握啦！${firstMastery ? "获得 2 颗成长星星" : "这道题依然很稳"}` : "先放回待复习，下次再挑战");
   };
 
@@ -1539,20 +1637,19 @@ export default function HomePage() {
     setReadingEvaluation(null);
   };
 
-  const dailyTaskItems: Array<{ key: DailyTaskKey; label: string; icon: string }> = [
-    { key: "feed", label: `给${game.name}喂 1 个果子`, icon: `${ASSET}/ui/daily-tasks/fruit.png` },
-    { key: "swim", label: `陪${game.name}游泳清洁`, icon: `${ASSET}/ui/daily-tasks/clean.png` },
-    { key: "reading", label: "完成 1 次伴读", icon: `${ASSET}/ui/daily-tasks/reading.png` },
+  const dailyTaskItems: Array<{ key: DailyTaskKey; label: string }> = [
+    { key: "feed", label: `给${game.name}喂 1 个果子` },
+    { key: "swim", label: `陪${game.name}游泳清洁` },
+    { key: "reading", label: "完成 1 次伴读" },
     {
       key: "mistake",
       label: dailyPlan.mistakeMode === "review" ? `复习 ${dailyPlan.targets.mistake} 道错题` : "收录 1 道错题",
-      icon: `${ASSET}/ui/daily-tasks/mistake.png`,
     },
   ];
 
   const openDailyTask = (task: DailyTaskKey) => {
     if (task === "feed") {
-      setFruitPicker(true);
+      pickFruitAndOpen();
       return;
     }
     if (task === "swim") {
@@ -1588,8 +1685,6 @@ export default function HomePage() {
         "--pixel-frame": `url("${ASSET}/ui/home-refresh/frames/top-frame.png")`,
         "--status-frame": `url("${ASSET}/ui/home-refresh/status/panel.png")`,
         "--daily-task-panel": `url("${ASSET}/ui/daily-tasks/panel.png")`,
-        "--daily-task-row": `url("${ASSET}/ui/daily-tasks/task-row.png")`,
-        "--daily-task-counter": `url("${ASSET}/ui/daily-tasks/counter.png")`,
       } as React.CSSProperties}
     >
       <header className="topbar">
@@ -1659,7 +1754,6 @@ export default function HomePage() {
                         onClick={() => openDailyTask(task.key)}
                         aria-label={`${task.label}，${complete ? "已完成" : `进度${progress}/${dailyPlan.targets[task.key]}`}`}
                       >
-                        <img src={task.icon} alt="" />
                         <strong>{task.label}</strong>
                         <span>{complete ? <Check aria-hidden="true" /> : `${progress}/${dailyPlan.targets[task.key]}`}</span>
                       </button>
@@ -1691,7 +1785,7 @@ export default function HomePage() {
                 <button className="scene-action pond-action" type="button" onClick={startSwim} aria-label="去游泳" title="去游泳" disabled={!!busy}>
                   <img src={`${ASSET}/ui/home-refresh/actions/swim.png`} alt="" />
                 </button>
-                <button className="scene-action tree-action" type="button" onClick={() => setFruitPicker(true)} aria-label="喂果子" title="喂果子" disabled={!!busy}>
+                <button className="scene-action tree-action" type="button" onClick={pickFruitAndOpen} aria-label={`摘果喂食，今天还可以摘${fruitPickingRemaining}个`} title="摘果喂食" disabled={!!busy}>
                   <img src={`${ASSET}/ui/home-refresh/actions/feed.png`} alt="" />
                 </button>
                 <button className="scene-action hide-action" type="button" onClick={startHideAndSeek} aria-label="捉迷藏" title="捉迷藏" disabled={!!busy}>
@@ -1833,8 +1927,8 @@ export default function HomePage() {
                     {readerSideTab === "knowledge" ? (
                       <div className="knowledge-only-panel">
                         <span className="content-type-label supplement">补充内容 · 非原文</span>
-                        <h3>这一章之外的知识</h3>
-                        <p>{selectedBook.knowledge}</p>
+                        <h3>《{activeChapter.title}》知识补充</h3>
+                        <p>{activeChapterKnowledge}</p>
                         <dl><div><dt>原文版本</dt><dd>{selectedBook.source?.label}</dd></div><div><dt>全书进度</dt><dd>{Math.round(overallProgress)}%</dd></div></dl>
                       </div>
                     ) : (
@@ -2193,9 +2287,9 @@ export default function HomePage() {
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setFruitPicker(false)}>
           <section className="modal fruit-modal" role="dialog" aria-modal="true" aria-labelledby="fruit-title" onMouseDown={(event) => event.stopPropagation()}>
             <button className="modal-close" type="button" onClick={() => setFruitPicker(false)} aria-label="关闭"><X /></button>
-            <span className="modal-kicker">果篮里还有 {game.fruits} 个</span>
-            <h2 id="fruit-title">挑一个新鲜果子吧</h2>
-            <p>{game.hunger < 16 ? `${game.name}现在还不太饿，也可以晚点再吃。` : "不同颜色都一样香甜，选你喜欢的就好。"}</p>
+            <span className="modal-kicker">今日已摘 {dailyFruitPicking.picked}/5 · 果篮还有 {game.fruits} 个</span>
+            <h2 id="fruit-title">摘果喂食</h2>
+            <p>{game.hunger < 16 ? `${game.name}现在还不太饿，也可以把果子留在篮子里。` : fruitPickingRemaining > 0 ? `这次摘下 1 个，今天还可以再摘 ${fruitPickingRemaining} 个。` : "今天的 5 个果子已经摘完，选一个喂给龟龟吧。"}</p>
             <div className="fruit-options">
               <button type="button" onClick={() => feedFruit("红果子")}><img src={`${ASSET}/objects/fruit_red.png`} alt="红果子" /><span>红果子</span></button>
               <button type="button" onClick={() => feedFruit("橙果子")}><img src={`${ASSET}/objects/fruit_orange.png`} alt="橙果子" /><span>橙果子</span></button>
