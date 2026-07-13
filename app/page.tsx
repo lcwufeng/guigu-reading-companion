@@ -108,7 +108,8 @@ type Book = {
   knowledge: string;
   source?: {
     url: string;
-    startHeading: string;
+    format: "markdown" | "gutenberg";
+    startHeading?: string;
     label: string;
     language: string;
   };
@@ -204,124 +205,57 @@ const initialState: GameState = {
 
 const books: Book[] = [
   {
-    id: "scarecrow",
+    id: "scarecrow-zh",
     title: "稻草人",
     author: "叶圣陶",
-    category: "原文待授权 · 导读已分离",
+    category: "中文电子版全文",
     coverMark: "稻",
     coverClass: "cover-scarecrow",
-    pages: [
-      {
-        heading: "认识这本书",
-        body: "《稻草人》是叶圣陶创作的童话作品。它没有把童话只写成轻快的幻想，而是让一个不能走动、不能说话的稻草人，安静地看见田野里普通人的生活与难处。这一版是为伴读设计的原创导读，不替代作品原文。",
-      },
-      {
-        heading: "只能站着的守望者",
-        body: "稻草人被扎在田地里，白天黑夜都守着庄稼。他能看见风吹过稻叶，也能察觉危险正在靠近。可他的身体由稻草做成，脚牢牢插在泥土里；即使心里万分着急，也只能拼命摇动手里的扇子。",
-      },
-      {
-        heading: "看见别人的困难",
-        body: "故事借稻草人的眼睛，写下他遇见的不同人物。每一次，他都想伸手帮助，却受困于自己的身体。读到这里，可以留意：作者不只在写“发生了什么”，也在写一个善良的人看见困难却无能为力时的感受。",
-      },
-      {
-        heading: "善良为什么会疼",
-        body: "真正的关心不是说一句“真可怜”就结束了。稻草人的焦急来自他认真看见了别人的处境。童话让我们站到他的身边，练习理解陌生人的难处，也思考：如果我们拥有行动的能力，可以做些什么？",
-      },
-      {
-        heading: "带着问题读原作",
-        body: "阅读原作时，可以给“稻草人的动作”和“稻草人的心情”分别做记号，再找出夜色、田野和声音的描写。你会发现，不能说话的主人公，仍然通过许多细节表达了强烈的愿望。这正是作品最有力量的地方。",
-      },
-    ],
-    prompts: [
-      { page: 1, question: "稻草人明明不会走路，作者为什么还要让他看见这么多事情？", guide: "想一想“看得见”和“做得到”之间有什么不同。" },
-      { page: 3, question: "如果你能走进故事，你最想替稻草人做哪一件事？", guide: "可以说清楚你想帮助谁、准备怎样做。" },
-    ],
-    summary: "从稻草人的视角理解同情、责任与无力感，并学会用细节读懂人物心情。",
-    knowledge: "导读版为原创学习内容；完整原文需由读者使用合法版本阅读。",
-    unavailableReason: "项目中暂时没有《稻草人》的授权原文文件，因此这里不会再用导读内容冒充原文。获得出版社或版权方授权的 TXT/EPUB 后，可直接按章节接入。",
-  },
-  {
-    id: "grimm",
-    title: "格林童话",
-    author: "格林兄弟",
-    category: "英文公版全文",
-    coverMark: "格",
-    coverClass: "cover-grimm",
-    pages: [
-      {
-        heading: "勇敢的小裁缝",
-        body: "一个年轻裁缝正在吃果酱面包，几只苍蝇飞来抢食。他挥动布片，一下打中了七只。裁缝高兴地做了一条腰带，写上“一下打倒七个”，决定去外面的世界闯一闯。别人以为他说的是七个强敌，因此对他又敬又怕。",
-      },
-      {
-        heading: "智慧比力气更有用",
-        body: "巨人想试试裁缝的本领，用手把石头捏出水来。裁缝悄悄拿出奶酪，也挤出了水。巨人又把石头扔得很高，裁缝却放飞一只小鸟，说自己的“石头”再也不会落下。面对比自己强大的对手，他没有硬碰硬，而是仔细观察、灵活想办法。",
-      },
-      {
-        heading: "青蛙王子",
-        body: "公主最喜欢的金球掉进深井，一只青蛙答应帮她捞回来，只希望能成为她的朋友。公主急着拿回金球，随口答应，转身却把约定忘了。青蛙来到城堡，请她兑现承诺。国王提醒公主：别人帮助过你，就不该轻易丢下答应过的事。",
-      },
-      {
-        heading: "承诺不是随口说说",
-        body: "公主起初很不情愿，但她开始面对自己许下的诺言。童话里的变化并不只是魔法，它也像一个提醒：一个人愿意为自己的话负责时，才真正开始长大。青蛙最终恢复了原来的样子，而公主也学会了认真对待他人。",
-      },
-      {
-        heading: "读童话的另一双眼睛",
-        body: "格林童话里常有森林、城堡、考验与魔法。阅读时，不妨问问自己：人物真正的困难是什么？他靠运气、勇气还是智慧解决？故事里的选择放到今天是否仍然合适？童话没有唯一答案，它会随着你的思考长出新的意义。",
-      },
-    ],
-    prompts: [
-      { page: 1, question: "小裁缝没有巨人的力气，他靠什么赢得了较量？", guide: "回到这一页，找找他观察到了什么、又换了什么办法。" },
-      { page: 3, question: "你觉得公主最后真正学会了什么？", guide: "可以从“承诺”“尊重”或“成长”里选一个词来说。" },
-    ],
-    summary: "从《勇敢的小裁缝》和《青蛙王子》的伴读改写中，发现智慧、承诺与成长。",
-    knowledge: "本书选篇根据公版故事重新改写，语言适合儿童独立阅读。",
+    pages: [],
+    prompts: [],
+    summary: "收录《稻草人》《小白船》《一粒种子》等 13 篇童话，按篇章完整阅读。",
+    knowledge: "叶圣陶是中国现代童话创作的重要作家。《稻草人》通过童话人物的所见所感，引导读者观察生活并体会他人的处境。",
     source: {
-      url: `${BASE_PATH}/books/grimms-fairy-tales-en.txt`,
-      startHeading: "THE GOLDEN BIRD",
-      label: "Project Gutenberg #2591 · Edgar Taylor 与 Marian Edwardes 英译本",
-      language: "英文原文",
+      url: `${BASE_PATH}/books/scarecrow-zh.md`,
+      format: "markdown",
+      label: "用户提供《稻草人》中文电子版",
+      language: "中文原文",
     },
   },
   {
-    id: "andersen",
+    id: "grimm-zh",
+    title: "格林童话",
+    author: "格林兄弟",
+    category: "中文电子版全文",
+    coverMark: "格",
+    coverClass: "cover-grimm",
+    pages: [],
+    prompts: [],
+    summary: "收录《青蛙王子》《小红帽》《白雪公主》等 22 篇童话，按篇章完整阅读。",
+    knowledge: "格林兄弟整理的童话常以森林、城堡、考验与魔法展开。阅读时可以留意人物如何在选择中展现勇气、智慧与责任。",
+    source: {
+      url: `${BASE_PATH}/books/grimms-fairy-tales-zh.md`,
+      format: "markdown",
+      label: "用户提供三年级《格林童话》中文电子版（扫描版 OCR 整理）",
+      language: "中文原文",
+    },
+  },
+  {
+    id: "andersen-zh",
     title: "安徒生童话",
     author: "安徒生",
-    category: "英文公版全文",
+    category: "中文电子版全文",
     coverMark: "安",
     coverClass: "cover-andersen",
-    pages: [
-      {
-        heading: "丑小鸭离开家",
-        body: "一只灰扑扑的小鸭最后才从蛋里钻出来。他长得和大家不一样，走到哪里都被取笑。小鸭不明白自己做错了什么，只好离开熟悉的院子。他穿过沼泽和田野，在一次次孤单中，仍然努力寻找可以安身的地方。",
-      },
-      {
-        heading: "寒冬之后",
-        body: "冬天很漫长，小鸭几乎失去了勇气。春天到来时，他看见几只美丽的白鸟，忍不住向它们游去。低头看水面，他才发现自己已经长成了一只天鹅。真正让他珍贵的并不是终于变得漂亮，而是经历误解之后，他仍没有学会嘲笑更弱小的人。",
-      },
-      {
-        heading: "皇帝的新装",
-        body: "一位皇帝只关心新衣服。两个骗子声称能织出神奇布料，还说愚蠢或不称职的人看不见它。大臣们明明什么也没看见，却害怕被别人怀疑，纷纷称赞布料漂亮。皇帝也不敢说真话，最后穿着并不存在的新衣去游行。",
-      },
-      {
-        heading: "孩子说出了真话",
-        body: "街上的人都跟着赞美，因为每个人都担心自己和别人不一样。直到一个孩子喊出：“他什么也没有穿呀！”一句简单的话让人群清醒过来。骗子利用的不是魔法，而是人们害怕承认真实感受的心理。",
-      },
-      {
-        heading: "童话会照见我们",
-        body: "安徒生童话常把温柔和忧伤放在一起。他写外表与内心，也写孤独、勇气和诚实。读完一个故事，可以先说说哪一刻让你高兴、难过或生气，再追问这种感受从哪里来。理解自己的感受，也是理解故事的一部分。",
-      },
-    ],
-    prompts: [
-      { page: 1, question: "丑小鸭变成天鹅，故事最想告诉我们的只是“变漂亮”吗？", guide: "想想他经历困难后，有什么没有改变，又有什么成长了。" },
-      { page: 3, question: "为什么那么多大人都不敢说出自己看到的事实？", guide: "如果你在现场，你会怎样既诚实又不伤害别人地表达？" },
-    ],
-    summary: "通过《丑小鸭》和《皇帝的新装》的伴读改写，理解自我认同、诚实与独立思考。",
-    knowledge: "本书选篇根据公版故事重新改写，保留核心情节并加入阅读引导。",
+    pages: [],
+    prompts: [],
+    summary: "收录《丑小鸭》《拇指姑娘》《野天鹅》等 10 篇童话，按篇章完整阅读。",
+    knowledge: "安徒生童话常把温柔、幻想和现实感受放在一起。阅读时可以从人物的选择、愿望和变化中理解勇气、诚实与自我认同。",
     source: {
-      url: `${BASE_PATH}/books/andersens-fairy-tales-en.txt`,
-      startHeading: "THE EMPEROR'S NEW CLOTHES",
-      label: "Project Gutenberg #1597 · 公版英译本",
-      language: "英文原文",
+      url: `${BASE_PATH}/books/andersens-fairy-tales-zh.md`,
+      format: "markdown",
+      label: "用户提供《安徒生童话》中文电子版",
+      language: "中文原文",
     },
   },
 ];
@@ -344,6 +278,26 @@ function paginateChapter(title: string, paragraphs: string[]): BookPage[] {
   }
   if (current) pages.push({ heading: readableTitle(title), body: current });
   return pages.length ? pages : [{ heading: readableTitle(title), body: "本章没有可显示的正文。" }];
+}
+
+function parseMarkdownBook(text: string): BookChapter[] {
+  const normalized = text.replace(/\r/g, "");
+  const firstDivider = normalized.search(/^---\s*$/m);
+  const body = firstDivider >= 0 ? normalized.slice(firstDivider).replace(/^---\s*$/m, "") : normalized;
+  const headings = [...body.matchAll(/^#\s+(.+)\s*$/gm)];
+
+  return headings.flatMap((heading, index) => {
+    const title = heading[1].trim();
+    const start = (heading.index || 0) + heading[0].length;
+    const end = headings[index + 1]?.index ?? body.length;
+    const paragraphs = body
+      .slice(start, end)
+      .split(/\n\s*\n/)
+      .map((paragraph) => paragraph.replace(/^---\s*$/gm, "").trim())
+      .filter(Boolean);
+    if (!paragraphs.length) return [];
+    return [{ id: `${index + 1}`, title, pages: paginateChapter(title, paragraphs) }];
+  });
 }
 
 function parsePublicDomainBook(text: string, startHeading: string): BookChapter[] {
@@ -906,7 +860,10 @@ export default function HomePage() {
     void fetch(selectedBook.source.url, { signal: controller.signal })
       .then((response) => response.ok ? response.text() : Promise.reject(new Error("book download failed")))
       .then((text) => {
-        const chapters = parsePublicDomainBook(text, selectedBook.source!.startHeading);
+        const source = selectedBook.source!;
+        const chapters = source.format === "markdown"
+          ? parseMarkdownBook(text)
+          : parsePublicDomainBook(text, source.startHeading || "");
         if (!chapters.length) throw new Error("book chapters missing");
         setLoadedBooks((current) => ({ ...current, [selectedBook.id]: chapters }));
       })

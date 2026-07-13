@@ -108,6 +108,11 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(page, /修改后重新提交/);
   assert.match(page, /readingRewards/);
   assert.match(page, /if \(result\.correct\)/);
+  assert.match(page, /scarecrow-zh\.md/);
+  assert.match(page, /grimms-fairy-tales-zh\.md/);
+  assert.match(page, /andersens-fairy-tales-zh\.md/);
+  assert.match(page, /parseMarkdownBook/);
+  assert.doesNotMatch(page, /grimms-fairy-tales-en\.txt|andersens-fairy-tales-en\.txt/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
@@ -184,6 +189,9 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
     "../public/assets/ui/daily-tasks/mistake.png",
     "../public/assets/ui/daily-tasks/reading.png",
     "../public/assets/ui/daily-tasks/reward-star.png",
+    "../public/books/scarecrow-zh.md",
+    "../public/books/grimms-fairy-tales-zh.md",
+    "../public/books/andersens-fairy-tales-zh.md",
   ]) {
     await access(new URL(path, import.meta.url));
   }
