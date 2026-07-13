@@ -113,6 +113,8 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(page, /andersens-fairy-tales-zh\.md/);
   assert.match(page, /parseMarkdownBook/);
   assert.doesNotMatch(page, /grimms-fairy-tales-en\.txt|andersens-fairy-tales-en\.txt/);
+  assert.match(styles, /text-indent: 2em/);
+  assert.match(styles, /text-align: justify/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
@@ -141,6 +143,28 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(mistakeScanRoute, /MAX_IMAGE_DATA_LENGTH/);
   assert.match(packageJson, /"ws"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
+
+  const formattedBooks = await Promise.all([
+    readFile(new URL("../public/books/scarecrow-zh.md", import.meta.url), "utf8"),
+    readFile(new URL("../public/books/grimms-fairy-tales-zh.md", import.meta.url), "utf8"),
+    readFile(new URL("../public/books/andersens-fairy-tales-zh.md", import.meta.url), "utf8"),
+  ]);
+  const paragraphEnding = /[。！？!?…：；”’」』）】〞"']$/;
+  for (const book of formattedBooks) {
+    const divider = book.search(/^---\s*$/m);
+    const body = book.slice(divider).replace(/^---\s*$/m, "");
+    const chapters = [...body.matchAll(/^#\s+(.+)\s*$/gm)];
+    for (let chapter = 0; chapter < chapters.length; chapter += 1) {
+      const start = chapters[chapter].index + chapters[chapter][0].length;
+      const end = chapters[chapter + 1]?.index ?? body.length;
+      const paragraphs = body.slice(start, end)
+        .split(/\n\s*\n/)
+        .map((paragraph) => paragraph.replace(/^---\s*$/gm, "").trim())
+        .filter(Boolean);
+      paragraphs.slice(0, -1).forEach((paragraph) => assert.match(paragraph, paragraphEnding));
+    }
+  }
+  assert.doesNotMatch(formattedBooks[1], /^(?:L0怎|40wv|≤H］)$/m);
 
   for (const path of [
     "../public/assets/optimized/backgrounds/main_home.webp",

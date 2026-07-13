@@ -4288,11 +4288,13 @@ button:disabled {
 
 .original-book-text p {
   color: #35443b;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", Georgia, serif;
   font-size: 16px;
   line-height: 1.75;
   margin: 0 0 0.9em;
-  text-align: left;
+  text-align: justify;
+  text-indent: 2em;
+  text-justify: inter-ideograph;
 }
 
 .complete-reading-paper .reading-controls {
