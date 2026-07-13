@@ -128,6 +128,7 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(companionRoute, /DEEPSEEK_API_KEY/);
   assert.match(companionRoute, /cleanPetName/);
   assert.match(companionRoute, /function localReply/);
+  assert.match(await readFile(new URL("../db/reading-progress.ts", import.meta.url), "utf8"), /READING_PROGRESS_FILE/);
   assert.match(speechRoute, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
   assert.match(speechRoute, /VOLC_SPEECH_APP_ID/);
   assert.match(speechRoute, /VOLC_SPEECH_ACCESS_TOKEN/);
