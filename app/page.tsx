@@ -791,6 +791,7 @@ export default function HomePage() {
   const voiceAbortRef = useRef<AbortController | null>(null);
   const readerDeviceIdRef = useRef("");
   const restoredBookRef = useRef<Record<string, boolean>>({});
+  const readerTextRef = useRef<HTMLDivElement | null>(null);
   const submitChatRef = useRef<(message: string) => void>(() => undefined);
   const messageListRef = useRef<HTMLDivElement | null>(null);
 
@@ -933,6 +934,13 @@ export default function HomePage() {
     }, 700);
     return () => window.clearTimeout(timer);
   }, [bookPage, loadedBooks, selectedBook.id, selectedChapter]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      readerTextRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [bookPage, selectedChapter]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1823,7 +1831,7 @@ export default function HomePage() {
                     <div className="reading-progress"><i style={{ width: `${overallProgress}%` }} /></div>
                     <small className="chapter-position">第 {selectedChapter + 1} 章 · 本章 {bookPage + 1}/{activePages.length} 页</small>
                     <h2>{activePage.heading}</h2>
-                    <div className="original-book-text">{activePage.body.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
+                    <div className="original-book-text" ref={readerTextRef}>{activePage.body.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
                     <div className="reading-controls">
                       <button className="icon-button" type="button" onClick={previousBookPage} disabled={selectedChapter === 0 && bookPage === 0} title="上一页" aria-label="上一页"><ChevronLeft /></button>
                       <span>{currentPromptAnswered ? "龟龟把这次思考收好啦" : "进度已自动保存"}</span>
