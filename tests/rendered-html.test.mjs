@@ -122,6 +122,12 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
+  assert.match(layout, /viewportFit: "cover"/);
+  assert.match(styles, /Phone layout is intentionally isolated here/);
+  assert.match(styles, /--mobile-topbar/);
+  assert.match(styles, /--mobile-nav/);
+  assert.match(styles, /overscroll-behavior-x: none/);
+  assert.match(page, /const \[dailyTasksOpen, setDailyTasksOpen\] = useState\(false\)/);
   assert.match(nextConfig, /NEXT_PUBLIC_BASE_PATH/);
   assert.match(page, /fetch\(`\$\{BASE_PATH\}\/api\/companion`/);
   assert.doesNotMatch(styles, /url\(["']?\/assets\//);

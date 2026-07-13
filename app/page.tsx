@@ -26,7 +26,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { chapterKnowledge } from "./book-knowledge";
 
 type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal";
@@ -185,6 +185,21 @@ type VoiceSession = {
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const ASSET = `${BASE_PATH}/assets`;
+const MOBILE_LAYOUT_QUERY = "(max-width: 820px)";
+
+function subscribeMobileLayout(onChange: () => void) {
+  const media = window.matchMedia(MOBILE_LAYOUT_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+function getMobileLayoutSnapshot() {
+  return window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
+}
+
+function getServerMobileLayoutSnapshot() {
+  return false;
+}
 
 const initialState: GameState = {
   name: "小乌龟",
@@ -770,7 +785,9 @@ export default function HomePage() {
   const [reviewMistake, setReviewMistake] = useState<MistakeRecord | null>(null);
   const [reviewAnswer, setReviewAnswer] = useState("");
   const [correctionRevealed, setCorrectionRevealed] = useState(false);
-  const [dailyTasksOpen, setDailyTasksOpen] = useState(true);
+  const [dailyTasksOpen, setDailyTasksOpen] = useState(false);
+  const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
+  const dailyTasksExpanded = mobileLayout ? dailyTasksOpen : true;
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceSessionRef = useRef<VoiceSession | null>(null);
   const autoFinishVoiceRef = useRef<() => void>(() => undefined);
@@ -1725,11 +1742,11 @@ export default function HomePage() {
               <h1>今天想和{game.name}做什么？</h1>
             </div>
 
-            <aside className={`daily-task-panel ${dailyTasksOpen ? "open" : ""}`} aria-label={`今日任务，已完成${dailyCompletedCount}项，共4项`}>
+            <aside className={`daily-task-panel ${dailyTasksExpanded ? "open" : ""}`} aria-label={`今日任务，已完成${dailyCompletedCount}项，共4项`}>
               <button
                 className="daily-task-heading"
                 type="button"
-                aria-expanded={dailyTasksOpen}
+                aria-expanded={dailyTasksExpanded}
                 onClick={() => setDailyTasksOpen((open) => !open)}
               >
                 <img src={`${ASSET}/ui/daily-tasks/title.png`} alt="今日任务" />
