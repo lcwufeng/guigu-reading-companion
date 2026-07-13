@@ -97,10 +97,12 @@ type GameState = {
 type Book = {
   id: string;
   title: string;
+  author: string;
   category: string;
-  cover: string;
+  coverMark: string;
+  coverClass: string;
   pages: { heading: string; body: string }[];
-  question: string;
+  prompts: { page: number; question: string; guide: string }[];
   summary: string;
   knowledge: string;
 };
@@ -183,73 +185,112 @@ const initialState: GameState = {
 
 const books: Book[] = [
   {
-    id: "forest",
-    title: "会唱歌的森林",
-    category: "童话 · 3分钟",
-    cover: `${ASSET}/books/book_forest_story.png`,
+    id: "scarecrow",
+    title: "稻草人",
+    author: "叶圣陶",
+    category: "名著导读 · 8分钟",
+    coverMark: "稻",
+    coverClass: "cover-scarecrow",
     pages: [
       {
-        heading: "清晨的声音",
-        body: "清晨，小松鼠米米被一阵轻轻的歌声叫醒。风吹过树叶，沙沙地响；小溪绕过石头，叮咚地唱。米米背上小布包，决定去找一找森林里最好听的声音。",
+        heading: "认识这本书",
+        body: "《稻草人》是叶圣陶创作的童话作品。它没有把童话只写成轻快的幻想，而是让一个不能走动、不能说话的稻草人，安静地看见田野里普通人的生活与难处。这一版是为伴读设计的原创导读，不替代作品原文。",
       },
       {
-        heading: "每个人的歌",
-        body: "啄木鸟敲出清脆的鼓点，黄鹂唱出亮亮的高音，就连慢吞吞的蜗牛，也用触角轻轻敲着露珠。米米忽然发现，森林不是只有一种歌声，每一种声音都很重要。",
+        heading: "只能站着的守望者",
+        body: "稻草人被扎在田地里，白天黑夜都守着庄稼。他能看见风吹过稻叶，也能察觉危险正在靠近。可他的身体由稻草做成，脚牢牢插在泥土里；即使心里万分着急，也只能拼命摇动手里的扇子。",
       },
       {
-        heading: "合唱开始啦",
-        body: "傍晚，米米邀请大家来到老橡树下。风声、溪水声和动物们的声音合在一起，变成了一首从没听过的歌。米米明白了：认真听见别人，大家才能唱出最美的歌。",
+        heading: "看见别人的困难",
+        body: "故事借稻草人的眼睛，写下他遇见的不同人物。每一次，他都想伸手帮助，却受困于自己的身体。读到这里，可以留意：作者不只在写“发生了什么”，也在写一个善良的人看见困难却无能为力时的感受。",
+      },
+      {
+        heading: "善良为什么会疼",
+        body: "真正的关心不是说一句“真可怜”就结束了。稻草人的焦急来自他认真看见了别人的处境。童话让我们站到他的身边，练习理解陌生人的难处，也思考：如果我们拥有行动的能力，可以做些什么？",
+      },
+      {
+        heading: "带着问题读原作",
+        body: "阅读原作时，可以给“稻草人的动作”和“稻草人的心情”分别做记号，再找出夜色、田野和声音的描写。你会发现，不能说话的主人公，仍然通过许多细节表达了强烈的愿望。这正是作品最有力量的地方。",
       },
     ],
-    question: "米米为什么觉得每一种声音都很重要呀？",
-    summary: "米米寻找森林中最好听的声音，最后发现大家各不相同的声音合在一起才最动听。",
-    knowledge: "认真倾听，能让我们发现每个人独特的优点。",
+    prompts: [
+      { page: 1, question: "稻草人明明不会走路，作者为什么还要让他看见这么多事情？", guide: "想一想“看得见”和“做得到”之间有什么不同。" },
+      { page: 3, question: "如果你能走进故事，你最想替稻草人做哪一件事？", guide: "可以说清楚你想帮助谁、准备怎样做。" },
+    ],
+    summary: "从稻草人的视角理解同情、责任与无力感，并学会用细节读懂人物心情。",
+    knowledge: "导读版为原创学习内容；完整原文需由读者使用合法版本阅读。",
   },
   {
-    id: "ocean",
-    title: "潮汐的小秘密",
-    category: "科普 · 4分钟",
-    cover: `${ASSET}/books/book_ocean_note.png`,
+    id: "grimm",
+    title: "格林童话",
+    author: "格林兄弟",
+    category: "公版改写 · 10分钟",
+    coverMark: "格",
+    coverClass: "cover-grimm",
     pages: [
       {
-        heading: "海水去哪儿了",
-        body: "早晨，沙滩上的海水离岸边很远；到了下午，海水又慢慢靠近。海水有规律地涨起来、落下去，这种现象叫作潮汐。涨潮时海面升高，退潮时海面降低。",
+        heading: "勇敢的小裁缝",
+        body: "一个年轻裁缝正在吃果酱面包，几只苍蝇飞来抢食。他挥动布片，一下打中了七只。裁缝高兴地做了一条腰带，写上“一下打倒七个”，决定去外面的世界闯一闯。别人以为他说的是七个强敌，因此对他又敬又怕。",
       },
       {
-        heading: "月亮在帮忙",
-        body: "月球虽然离我们很远，却会用引力轻轻拉着地球上的海水。太阳也会产生影响。当地球、月球和太阳的位置变化时，潮水的高低也会跟着变化。",
+        heading: "智慧比力气更有用",
+        body: "巨人想试试裁缝的本领，用手把石头捏出水来。裁缝悄悄拿出奶酪，也挤出了水。巨人又把石头扔得很高，裁缝却放飞一只小鸟，说自己的“石头”再也不会落下。面对比自己强大的对手，他没有硬碰硬，而是仔细观察、灵活想办法。",
       },
       {
-        heading: "海边的时钟",
-        body: "渔民会查看潮汐时间，决定什么时候出海；小螃蟹也会趁退潮寻找食物。潮汐像海边的一座大时钟，提醒着许多生命安排一天的活动。",
+        heading: "青蛙王子",
+        body: "公主最喜欢的金球掉进深井，一只青蛙答应帮她捞回来，只希望能成为她的朋友。公主急着拿回金球，随口答应，转身却把约定忘了。青蛙来到城堡，请她兑现承诺。国王提醒公主：别人帮助过你，就不该轻易丢下答应过的事。",
+      },
+      {
+        heading: "承诺不是随口说说",
+        body: "公主起初很不情愿，但她开始面对自己许下的诺言。童话里的变化并不只是魔法，它也像一个提醒：一个人愿意为自己的话负责时，才真正开始长大。青蛙最终恢复了原来的样子，而公主也学会了认真对待他人。",
+      },
+      {
+        heading: "读童话的另一双眼睛",
+        body: "格林童话里常有森林、城堡、考验与魔法。阅读时，不妨问问自己：人物真正的困难是什么？他靠运气、勇气还是智慧解决？故事里的选择放到今天是否仍然合适？童话没有唯一答案，它会随着你的思考长出新的意义。",
       },
     ],
-    question: "潮汐为什么像海边的一座大时钟呢？",
-    summary: "海水会规律地涨落，月球和太阳的引力会影响潮汐，海边的人和动物也会按潮汐安排活动。",
-    knowledge: "月球的引力是形成潮汐的重要原因。",
+    prompts: [
+      { page: 1, question: "小裁缝没有巨人的力气，他靠什么赢得了较量？", guide: "回到这一页，找找他观察到了什么、又换了什么办法。" },
+      { page: 3, question: "你觉得公主最后真正学会了什么？", guide: "可以从“承诺”“尊重”或“成长”里选一个词来说。" },
+    ],
+    summary: "从《勇敢的小裁缝》和《青蛙王子》的伴读改写中，发现智慧、承诺与成长。",
+    knowledge: "本书选篇根据公版故事重新改写，语言适合儿童独立阅读。",
   },
   {
-    id: "dino",
-    title: "恐龙脚印侦探",
-    category: "探索 · 4分钟",
-    cover: `${ASSET}/books/book_dino_knowledge.png`,
+    id: "andersen",
+    title: "安徒生童话",
+    author: "安徒生",
+    category: "公版改写 · 10分钟",
+    coverMark: "安",
+    coverClass: "cover-andersen",
     pages: [
       {
-        heading: "石头里的脚印",
-        body: "小小在博物馆看到一块奇怪的石头，上面留着三个长长的脚趾印。讲解员说，这是恐龙脚印化石。很久以前，恐龙踩过湿软的泥地，脚印被泥沙慢慢盖住。",
+        heading: "丑小鸭离开家",
+        body: "一只灰扑扑的小鸭最后才从蛋里钻出来。他长得和大家不一样，走到哪里都被取笑。小鸭不明白自己做错了什么，只好离开熟悉的院子。他穿过沼泽和田野，在一次次孤单中，仍然努力寻找可以安身的地方。",
       },
       {
-        heading: "脚印会说话",
-        body: "科学家会测量脚印的大小、深浅和前后距离。脚印又大又深，说明恐龙可能很重；两排脚印靠得很近，说明它可能正慢慢走；距离变大时，它也许跑了起来。",
+        heading: "寒冬之后",
+        body: "冬天很漫长，小鸭几乎失去了勇气。春天到来时，他看见几只美丽的白鸟，忍不住向它们游去。低头看水面，他才发现自己已经长成了一只天鹅。真正让他珍贵的并不是终于变得漂亮，而是经历误解之后，他仍没有学会嘲笑更弱小的人。",
       },
       {
-        heading: "看不见的故事",
-        body: "我们没有见过真正的恐龙，但化石留下了线索。科学家把许多小线索放在一起，就能猜想恐龙怎样走路、在哪里生活。发现问题、寻找证据，就是科学侦探的工作。",
+        heading: "皇帝的新装",
+        body: "一位皇帝只关心新衣服。两个骗子声称能织出神奇布料，还说愚蠢或不称职的人看不见它。大臣们明明什么也没看见，却害怕被别人怀疑，纷纷称赞布料漂亮。皇帝也不敢说真话，最后穿着并不存在的新衣去游行。",
+      },
+      {
+        heading: "孩子说出了真话",
+        body: "街上的人都跟着赞美，因为每个人都担心自己和别人不一样。直到一个孩子喊出：“他什么也没有穿呀！”一句简单的话让人群清醒过来。骗子利用的不是魔法，而是人们害怕承认真实感受的心理。",
+      },
+      {
+        heading: "童话会照见我们",
+        body: "安徒生童话常把温柔和忧伤放在一起。他写外表与内心，也写孤独、勇气和诚实。读完一个故事，可以先说说哪一刻让你高兴、难过或生气，再追问这种感受从哪里来。理解自己的感受，也是理解故事的一部分。",
       },
     ],
-    question: "科学家能从恐龙脚印里知道哪些事情？",
-    summary: "恐龙脚印变成化石后保留了许多线索，科学家通过测量和比较，推测恐龙的体重与行动方式。",
-    knowledge: "化石是研究古代生命的重要证据。",
+    prompts: [
+      { page: 1, question: "丑小鸭变成天鹅，故事最想告诉我们的只是“变漂亮”吗？", guide: "想想他经历困难后，有什么没有改变，又有什么成长了。" },
+      { page: 3, question: "为什么那么多大人都不敢说出自己看到的事实？", guide: "如果你在现场，你会怎样既诚实又不伤害别人地表达？" },
+    ],
+    summary: "通过《丑小鸭》和《皇帝的新装》的伴读改写，理解自我认同、诚实与独立思考。",
+    knowledge: "本书选篇根据公版故事重新改写，保留核心情节并加入阅读引导。",
   },
 ];
 
@@ -619,8 +660,7 @@ export default function HomePage() {
   const [draftName, setDraftName] = useState("");
   const [selectedBook, setSelectedBook] = useState<Book>(books[0]);
   const [bookPage, setBookPage] = useState(0);
-  const [questionOpen, setQuestionOpen] = useState(false);
-  const [questionAnswered, setQuestionAnswered] = useState(false);
+  const [answeredPromptPages, setAnsweredPromptPages] = useState<number[]>([]);
   const [readingAnswer, setReadingAnswer] = useState("");
   const [readingFeedback, setReadingFeedback] = useState("");
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -928,17 +968,14 @@ export default function HomePage() {
     setBookPage(0);
     setReadingAnswer("");
     setReadingFeedback("");
-    setQuestionAnswered(false);
-    setQuestionOpen(false);
+    setAnsweredPromptPages([]);
   };
 
   const nextBookPage = () => {
-    if (bookPage === 0 && !questionAnswered) {
-      setQuestionOpen(true);
-      return;
-    }
     if (bookPage < selectedBook.pages.length - 1) {
       setBookPage((page) => page + 1);
+      setReadingAnswer("");
+      setReadingFeedback("");
     } else {
       finishReading();
     }
@@ -950,21 +987,23 @@ export default function HomePage() {
       return;
     }
     setCompanionLoading(true);
+    const prompt = selectedBook.prompts.find((item) => item.page === bookPage);
+    if (!prompt) return;
     let feedback: string;
     try {
       feedback = await askCompanion({
         mode: "reading",
         name: game.name,
         title: selectedBook.title,
-        excerpt: selectedBook.pages[0].body,
-        question: selectedBook.question,
+        excerpt: selectedBook.pages[bookPage].body,
+        question: prompt.question,
         answer: readingAnswer.trim().slice(0, 500),
       });
     } catch {
       feedback = "我听见你是这样想的。你还可以回到故事里找一句话，看看它能不能支持你的发现。";
     }
     setReadingFeedback(feedback);
-    setQuestionAnswered(true);
+    setAnsweredPromptPages((pages) => pages.includes(bookPage) ? pages : [...pages, bookPage]);
     setGame((current) => ({
       ...current,
       boredom: clamp(current.boredom - 8),
@@ -974,9 +1013,8 @@ export default function HomePage() {
   };
 
   const continueAfterAnswer = () => {
-    setQuestionOpen(false);
-    setBookPage(1);
-    showToast("龟龟记住你的想法啦");
+    setReadingFeedback("");
+    showToast("龟龟记住你的想法啦，继续慢慢读吧");
   };
 
   const finishReading = () => {
@@ -1284,7 +1322,7 @@ export default function HomePage() {
 
   const resetReading = () => {
     setSummaryOpen(false);
-    setQuestionAnswered(false);
+    setAnsweredPromptPages([]);
     setReadingAnswer("");
     setReadingFeedback("");
     setBookPage(0);
@@ -1326,6 +1364,8 @@ export default function HomePage() {
   const navigationLocked = !!busy || !!hideTarget || !!traveling;
   const selectedDestinationUnlocked = game.stars >= selectedDestination.requiredStars;
   const selectedDestinationMissingStars = Math.max(0, selectedDestination.requiredStars - game.stars);
+  const currentPrompt = selectedBook.prompts.find((item) => item.page === bookPage);
+  const currentPromptAnswered = answeredPromptPages.includes(bookPage);
 
   return (
     <main
@@ -1516,8 +1556,8 @@ export default function HomePage() {
           <section className="scene library-scene">
             <div className="page-heading light-heading">
               <span className="eyebrow"><BookOpen size={16} /> 龟龟书房</span>
-              <h1>一起读点新故事</h1>
-              <p>读到一半时，龟龟会认真向你请教一个问题。</p>
+              <h1>名著伴读书房</h1>
+              <p>问题会轻轻出现在书页旁边，不催促，也不打断。</p>
             </div>
 
             <div className="book-picker" aria-label="选择一本书">
@@ -1528,43 +1568,60 @@ export default function HomePage() {
                   className={selectedBook.id === book.id ? "selected" : ""}
                   onClick={() => chooseBook(book)}
                 >
-                  <img src={book.cover} alt={`${book.title}封面`} />
-                  <span><strong>{book.title}</strong><small>{book.category}</small></span>
+                  <span className={`book-cover ${book.coverClass}`} aria-hidden="true"><b>{book.coverMark}</b><i>{book.author}</i></span>
+                  <span><strong>{book.title}</strong><small>{book.author} · {book.category}</small></span>
                   {selectedBook.id === book.id && <Check size={17} />}
                 </button>
               ))}
             </div>
 
-            <article className="reading-paper">
-              <div className="reading-meta">
-                <span>{selectedBook.title}</span>
-                <span>第 {bookPage + 1} / {selectedBook.pages.length} 页</span>
-              </div>
-              <div className="reading-progress"><i style={{ width: `${((bookPage + 1) / selectedBook.pages.length) * 100}%` }} /></div>
-              <h2>{selectedBook.pages[bookPage].heading}</h2>
-              <p>{selectedBook.pages[bookPage].body}</p>
-              <div className="reading-controls">
-                <button
-                  className="icon-button"
-                  type="button"
-                  onClick={() => setBookPage((page) => Math.max(0, page - 1))}
-                  disabled={bookPage === 0}
-                  title="上一页"
-                  aria-label="上一页"
-                >
-                  <ChevronLeft />
-                </button>
-                <span>{questionAnswered ? "龟龟已经听懂你的想法啦" : "慢慢读，读懂比读快更重要"}</span>
-                <button className="next-button" type="button" onClick={nextBookPage}>
-                  {bookPage === selectedBook.pages.length - 1 ? "完成阅读" : "下一页"}
-                  <ChevronRight />
-                </button>
-              </div>
-            </article>
+            <div className={`reading-workspace ${currentPrompt ? "has-companion-note" : ""}`}>
+              <article className="reading-paper">
+                <div className="reading-meta">
+                  <span>{selectedBook.title} · {selectedBook.author}</span>
+                  <span>第 {bookPage + 1} / {selectedBook.pages.length} 页</span>
+                </div>
+                <div className="reading-progress"><i style={{ width: `${((bookPage + 1) / selectedBook.pages.length) * 100}%` }} /></div>
+                <h2>{selectedBook.pages[bookPage].heading}</h2>
+                <p>{selectedBook.pages[bookPage].body}</p>
+                <div className="reading-controls">
+                  <button className="icon-button" type="button" onClick={() => { setBookPage((page) => Math.max(0, page - 1)); setReadingAnswer(""); setReadingFeedback(""); }} disabled={bookPage === 0} title="上一页" aria-label="上一页"><ChevronLeft /></button>
+                  <span>{currentPromptAnswered ? "龟龟把这次思考收好啦" : "慢慢读，读懂比读快更重要"}</span>
+                  <button className="next-button" type="button" onClick={nextBookPage}>{bookPage === selectedBook.pages.length - 1 ? "完成阅读" : "下一页"}<ChevronRight /></button>
+                </div>
+              </article>
+
+              {currentPrompt && (
+                <aside className="reading-companion-card" aria-label="龟龟伴读提问">
+                  <div className="companion-card-heading">
+                    <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪读的龟龟" />
+                    <div><small>{currentPromptAnswered ? "你的想法很有意思" : "读到这里，想一想"}</small><strong>{game.name}的小问题</strong></div>
+                  </div>
+                  {readingFeedback ? (
+                    <>
+                      <div className="inline-reading-feedback"><Sparkles /><p>{readingFeedback}</p></div>
+                      <button className="companion-continue" type="button" onClick={continueAfterAnswer}>收好发现，继续读</button>
+                    </>
+                  ) : currentPromptAnswered ? (
+                    <p className="answered-note"><Check /> 这一页已经认真想过啦。翻回其他页时，你仍然可以看看当时的发现。</p>
+                  ) : (
+                    <>
+                      <h3>{currentPrompt.question}</h3>
+                      <p className="reading-guide"><Lightbulb /> {currentPrompt.guide}</p>
+                      <textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得……" aria-label="回答龟龟的问题" maxLength={500} disabled={companionLoading} />
+                      <div className="companion-card-actions">
+                        <button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音</button>
+                        <button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在想…" : "讲给龟龟听"}</button>
+                      </div>
+                    </>
+                  )}
+                </aside>
+              )}
+            </div>
 
             <img
               className="reading-turtle"
-              src={`${ASSET}/characters/turtle/${questionAnswered ? "turtle_reading.png" : "turtle_reading_question.png"}`}
+              src={`${ASSET}/characters/turtle/${currentPrompt ? "turtle_reading_question.png" : "turtle_reading.png"}`}
               alt={`${game.name}正在陪你读书`}
             />
           </section>
@@ -1950,33 +2007,6 @@ export default function HomePage() {
               <>
                 <div className="correction-panel"><small>上次卡住：{reviewMistake.cause}</small><strong>正确思路</strong><p>{reviewMistake.correction}</p>{reviewMistake.wrongAnswer && <span>上次答案：{reviewMistake.wrongAnswer}</span>}</div>
                 <div className="review-result-actions"><button type="button" onClick={() => finishMistakeReview(false)}><RotateCcw /> 还要再练</button><button type="button" onClick={() => finishMistakeReview(true)}><Star /> 我掌握了</button></div>
-              </>
-            )}
-          </section>
-        </div>
-      )}
-
-      {questionOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <section className="modal question-modal" role="dialog" aria-modal="true" aria-labelledby="question-title">
-            <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="提问的龟龟" />
-            {readingFeedback ? (
-              <>
-                <span className="modal-kicker">龟龟认真听完了</span>
-                <h2 id="question-title">这是我的新发现</h2>
-                <div className="reading-feedback"><Sparkles /> <p>{readingFeedback}</p></div>
-                <button className="primary-button full-button" type="button" onClick={continueAfterAnswer}><BookOpen /> 带着发现继续读</button>
-              </>
-            ) : (
-              <>
-                <span className="modal-kicker">龟龟有点没读懂</span>
-                <h2 id="question-title">{selectedBook.question}</h2>
-                <p>没有标准答案，把你的想法讲清楚就很棒。</p>
-                <textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得…" aria-label="回答龟龟的问题" maxLength={500} disabled={companionLoading} />
-                <div className="modal-actions">
-                  <button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 用语音回答</button>
-                  <button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在想…" : "讲给龟龟听"}</button>
-                </div>
               </>
             )}
           </section>
