@@ -4202,3 +4202,283 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Complete-book reader: original text, companion prompts and notes are deliberately separated. */
+.complete-reader {
+  align-items: stretch;
+  height: min(525px, calc(100% - 190px));
+  left: 58%;
+  width: min(1160px, 80vw);
+}
+
+.complete-reader .reading-paper {
+  flex: 1 1 560px;
+  min-height: 0;
+  padding: 20px 28px 18px;
+  width: auto;
+}
+
+.complete-reading-paper {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.content-type-label {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  padding: 4px 9px;
+  width: fit-content;
+}
+
+.content-type-label.original { background: #334b3d; color: #fff; }
+.content-type-label.supplement { background: #fff0c9; color: #80591b; }
+
+.chapter-position {
+  color: #89948d;
+  display: block;
+  font-size: 10px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.complete-reading-paper h2 {
+  flex: 0 0 auto;
+  font-size: 24px;
+  margin: 12px 0 10px;
+}
+
+.original-book-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 0 2px;
+  scrollbar-color: #b8c4ba transparent;
+  scrollbar-width: thin;
+}
+
+.original-book-text p {
+  color: #35443b;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.75;
+  margin: 0 0 0.9em;
+  text-align: left;
+}
+
+.complete-reading-paper .reading-controls {
+  flex: 0 0 auto;
+  margin-top: 10px;
+}
+
+.chapter-drawer {
+  background: rgba(251, 248, 237, 0.98);
+  border: 1px solid rgba(77, 99, 80, 0.24);
+  box-shadow: 0 15px 38px rgba(31, 51, 37, 0.2);
+  display: flex;
+  flex: 0 0 205px;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chapter-drawer-toggle {
+  align-items: center;
+  background: #405c49;
+  border: 0;
+  color: white;
+  display: flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 7px;
+  min-height: 44px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.chapter-drawer-toggle svg { height: 16px; width: 16px; }
+.chapter-drawer-toggle span { margin-left: auto; opacity: 0.75; }
+
+.chapter-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.chapter-list-scroll button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #e6e1d4;
+  color: #536158;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 24px 1fr;
+  padding: 9px 7px;
+  text-align: left;
+  width: 100%;
+}
+
+.chapter-list-scroll button > span { color: #98a097; font-size: 9px; }
+.chapter-list-scroll button strong { font-size: 11px; line-height: 1.3; }
+.chapter-list-scroll button small { color: #9aa39c; font-size: 8px; grid-column: 2; }
+.chapter-list-scroll button:hover,
+.chapter-list-scroll button.active { background: #e5efe1; color: #294b37; }
+
+.reader-side-panel {
+  background: rgba(255, 253, 244, 0.98);
+  border: 2px solid #91bd7f;
+  box-shadow: 0 15px 38px rgba(31, 65, 45, 0.24);
+  flex: 0 0 270px;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.reader-side-tabs {
+  background: #e9f2e4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 5px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.reader-side-tabs button {
+  background: transparent;
+  border: 0;
+  color: #66756b;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 850;
+  padding: 8px;
+}
+
+.reader-side-tabs button[aria-selected="true"] { background: #fff; color: #315840; box-shadow: 0 2px 8px rgba(31, 71, 45, 0.1); }
+.reading-companion-card.embedded { border: 0; box-shadow: none; padding: 11px 13px 14px; }
+.reading-companion-card.embedded::before { display: none; }
+
+.quiet-reading-note {
+  align-items: flex-start;
+  background: #f0f5ec;
+  color: #65726a;
+  display: flex;
+  font-size: 11px;
+  gap: 7px;
+  line-height: 1.65;
+  margin: 12px 0 0;
+  padding: 11px;
+}
+
+.quiet-reading-note svg { flex: 0 0 auto; height: 16px; width: 16px; }
+
+.knowledge-only-panel { padding: 16px; }
+.knowledge-only-panel h3 { color: #394a3f; font-size: 15px; margin: 15px 0 9px; }
+.knowledge-only-panel > p { color: #58665d; font-size: 12px; line-height: 1.75; }
+.knowledge-only-panel dl { border-top: 1px solid #e5dfcf; margin-top: 14px; padding-top: 10px; }
+.knowledge-only-panel dl div { margin-bottom: 10px; }
+.knowledge-only-panel dt { color: #8b958e; font-size: 9px; font-weight: 850; }
+.knowledge-only-panel dd { color: #526158; font-size: 10px; line-height: 1.5; margin: 3px 0 0; }
+
+.book-loading-panel,
+.licensed-content-panel {
+  background: rgba(255, 253, 245, 0.98);
+  box-shadow: 0 18px 54px rgba(37, 51, 29, 0.29);
+  margin: auto;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 28px;
+  width: min(760px, 100%);
+}
+
+.book-loading-panel {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  justify-content: center;
+  min-height: 260px;
+}
+
+.book-loading-panel svg { color: var(--leaf); height: 42px; width: 42px; }
+.book-loading-panel span { color: #7b867f; font-size: 12px; }
+.book-loading-panel.error svg { color: #a75b47; }
+
+.original-status { align-items: flex-start; display: flex; gap: 14px; }
+.original-status > svg { color: #9a7042; flex: 0 0 auto; height: 30px; width: 30px; }
+.original-status small { color: #9a7042; font-size: 10px; font-weight: 900; }
+.original-status h2 { color: #37463d; font-size: 21px; margin: 5px 0 8px; }
+.original-status p { color: #69746d; font-size: 12px; line-height: 1.7; margin: 0; }
+.separate-supplement { border-top: 1px solid #e3dccb; margin-top: 20px; padding-top: 16px; }
+.separate-supplement article { border-bottom: 1px solid #ece6da; padding: 10px 0; }
+.separate-supplement h3 { color: #536157; font-size: 13px; margin: 0 0 5px; }
+.separate-supplement p { color: #6f786f; font-size: 11px; line-height: 1.65; margin: 0; }
+
+@media (max-width: 1100px) {
+  .complete-reader { left: 50%; width: calc(100% - 24px); }
+  .chapter-drawer { flex-basis: 180px; }
+  .reader-side-panel { flex-basis: 240px; }
+  .book-picker { width: min(280px, 27vw); }
+}
+
+@media (max-width: 760px) {
+  .complete-reader {
+    display: block;
+    height: calc(100% - 238px);
+    top: 46%;
+    width: calc(100% - 18px);
+  }
+  .chapter-drawer {
+    display: block;
+    height: 42px;
+    left: 0;
+    overflow: visible;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 8;
+  }
+  .chapter-drawer.open .chapter-list-scroll { display: block; }
+  .chapter-list-scroll {
+    background: #fbf8ed;
+    box-shadow: 0 12px 26px rgba(30, 45, 34, 0.28);
+    display: none;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .complete-reader .complete-reading-paper {
+    height: calc(100% - 152px);
+    left: 0;
+    max-height: none;
+    min-height: 230px;
+    overflow: hidden;
+    padding: 14px;
+    position: absolute;
+    top: 48px;
+    width: 100%;
+  }
+  .complete-reading-paper h2 { font-size: 19px; margin: 8px 0; }
+  .original-book-text p { font-size: 14px; line-height: 1.65; }
+  .reader-side-panel {
+    bottom: 0;
+    height: 96px;
+    left: 0;
+    overflow-y: auto;
+    position: absolute;
+    width: 100%;
+  }
+  .reader-side-tabs { position: static; }
+  .reading-companion-card.embedded { padding: 7px 10px; }
+  .reading-companion-card.embedded .companion-card-heading img { display: none; }
+  .reading-companion-card.embedded .quiet-reading-note { margin-top: 5px; }
+  .knowledge-only-panel { padding: 9px 12px; }
+  .knowledge-only-panel h3,
+  .knowledge-only-panel dl { display: none; }
+  .knowledge-only-panel > p { margin: 5px 0; }
+  .book-loading-panel,
+  .licensed-content-panel { padding: 18px; }
+}

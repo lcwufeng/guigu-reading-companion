@@ -105,7 +105,18 @@ type Book = {
   prompts: { page: number; question: string; guide: string }[];
   summary: string;
   knowledge: string;
+  source?: {
+    url: string;
+    startHeading: string;
+    label: string;
+    language: string;
+  };
+  unavailableReason?: string;
 };
+
+type BookPage = { heading: string; body: string };
+type BookChapter = { id: string; title: string; pages: BookPage[] };
+type SavedReadingProgress = { chapter: number; page: number; completed: boolean };
 
 type Destination = {
   id: string;
@@ -188,7 +199,7 @@ const books: Book[] = [
     id: "scarecrow",
     title: "稻草人",
     author: "叶圣陶",
-    category: "名著导读 · 8分钟",
+    category: "原文待授权 · 导读已分离",
     coverMark: "稻",
     coverClass: "cover-scarecrow",
     pages: [
@@ -219,12 +230,13 @@ const books: Book[] = [
     ],
     summary: "从稻草人的视角理解同情、责任与无力感，并学会用细节读懂人物心情。",
     knowledge: "导读版为原创学习内容；完整原文需由读者使用合法版本阅读。",
+    unavailableReason: "项目中暂时没有《稻草人》的授权原文文件，因此这里不会再用导读内容冒充原文。获得出版社或版权方授权的 TXT/EPUB 后，可直接按章节接入。",
   },
   {
     id: "grimm",
     title: "格林童话",
     author: "格林兄弟",
-    category: "公版改写 · 10分钟",
+    category: "英文公版全文",
     coverMark: "格",
     coverClass: "cover-grimm",
     pages: [
@@ -255,12 +267,18 @@ const books: Book[] = [
     ],
     summary: "从《勇敢的小裁缝》和《青蛙王子》的伴读改写中，发现智慧、承诺与成长。",
     knowledge: "本书选篇根据公版故事重新改写，语言适合儿童独立阅读。",
+    source: {
+      url: `${BASE_PATH}/books/grimms-fairy-tales-en.txt`,
+      startHeading: "THE GOLDEN BIRD",
+      label: "Project Gutenberg #2591 · Edgar Taylor 与 Marian Edwardes 英译本",
+      language: "英文原文",
+    },
   },
   {
     id: "andersen",
     title: "安徒生童话",
     author: "安徒生",
-    category: "公版改写 · 10分钟",
+    category: "英文公版全文",
     coverMark: "安",
     coverClass: "cover-andersen",
     pages: [
@@ -291,8 +309,83 @@ const books: Book[] = [
     ],
     summary: "通过《丑小鸭》和《皇帝的新装》的伴读改写，理解自我认同、诚实与独立思考。",
     knowledge: "本书选篇根据公版故事重新改写，保留核心情节并加入阅读引导。",
+    source: {
+      url: `${BASE_PATH}/books/andersens-fairy-tales-en.txt`,
+      startHeading: "THE EMPEROR'S NEW CLOTHES",
+      label: "Project Gutenberg #1597 · 公版英译本",
+      language: "英文原文",
+    },
   },
 ];
+
+function readableTitle(title: string) {
+  return title.toLowerCase().replace(/(^|[\s[-])([a-z])/g, (_, prefix: string, letter: string) => `${prefix}${letter.toUpperCase()}`);
+}
+
+function paginateChapter(title: string, paragraphs: string[]): BookPage[] {
+  const pages: BookPage[] = [];
+  let current = "";
+  for (const paragraph of paragraphs) {
+    const next = current ? `${current}\n\n${paragraph}` : paragraph;
+    if (next.length > 1450 && current) {
+      pages.push({ heading: readableTitle(title), body: current });
+      current = paragraph;
+    } else {
+      current = next;
+    }
+  }
+  if (current) pages.push({ heading: readableTitle(title), body: current });
+  return pages.length ? pages : [{ heading: readableTitle(title), body: "本章没有可显示的正文。" }];
+}
+
+function parsePublicDomainBook(text: string, startHeading: string): BookChapter[] {
+  const normalized = text.replace(/\r/g, "");
+  const start = normalized.indexOf(`\n${startHeading}\n`);
+  const end = normalized.indexOf("*** END OF THE PROJECT GUTENBERG EBOOK");
+  if (start < 0) throw new Error("book start marker missing");
+  const lines = normalized.slice(start + 1, end > start ? end : undefined).split("\n");
+  const chapters: BookChapter[] = [];
+  let title = "";
+  let paragraphLines: string[] = [];
+  let paragraphs: string[] = [];
+
+  const flushParagraph = () => {
+    const paragraph = paragraphLines.join(" ").replace(/\s+/g, " ").trim();
+    if (paragraph) paragraphs.push(paragraph);
+    paragraphLines = [];
+  };
+  const flushChapter = () => {
+    flushParagraph();
+    if (title && paragraphs.length) {
+      chapters.push({ id: `${chapters.length + 1}`, title: readableTitle(title), pages: paginateChapter(title, paragraphs) });
+    }
+    paragraphs = [];
+  };
+
+  lines.forEach((raw, index) => {
+    const line = raw.trim();
+    const previousBlank = index === 0 || !lines[index - 1].trim();
+    const nextBlank = index === lines.length - 1 || !lines[index + 1].trim();
+    const heading = line.length > 2
+      && line.length < 95
+      && raw === line
+      && line === line.toUpperCase()
+      && /[A-Z]/.test(line)
+      && !line.startsWith("***")
+      && !line.startsWith("*")
+      && previousBlank
+      && nextBlank;
+    if (heading) {
+      flushChapter();
+      title = line;
+      return;
+    }
+    if (!line) flushParagraph();
+    else paragraphLines.push(line);
+  });
+  flushChapter();
+  return chapters;
+}
 
 const destinations: Destination[] = [
   {
@@ -659,8 +752,16 @@ export default function HomePage() {
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [selectedBook, setSelectedBook] = useState<Book>(books[0]);
+  const [selectedChapter, setSelectedChapter] = useState(0);
   const [bookPage, setBookPage] = useState(0);
-  const [answeredPromptPages, setAnsweredPromptPages] = useState<number[]>([]);
+  const [loadedBooks, setLoadedBooks] = useState<Record<string, BookChapter[]>>({});
+  const [bookLoading, setBookLoading] = useState(false);
+  const [bookLoadError, setBookLoadError] = useState("");
+  const [readingProgressByBook, setReadingProgressByBook] = useState<Record<string, SavedReadingProgress>>({});
+  const [readingProgressLoaded, setReadingProgressLoaded] = useState(false);
+  const [answeredPromptPages, setAnsweredPromptPages] = useState<string[]>([]);
+  const [readerSideTab, setReaderSideTab] = useState<"companion" | "knowledge">("companion");
+  const [chapterListOpen, setChapterListOpen] = useState(false);
   const [readingAnswer, setReadingAnswer] = useState("");
   const [readingFeedback, setReadingFeedback] = useState("");
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -688,6 +789,8 @@ export default function HomePage() {
   const voiceSessionRef = useRef<VoiceSession | null>(null);
   const autoFinishVoiceRef = useRef<() => void>(() => undefined);
   const voiceAbortRef = useRef<AbortController | null>(null);
+  const readerDeviceIdRef = useRef("");
+  const restoredBookRef = useRef<Record<string, boolean>>({});
   const submitChatRef = useRef<(message: string) => void>(() => undefined);
   const messageListRef = useRef<HTMLDivElement | null>(null);
 
@@ -768,6 +871,68 @@ export default function HomePage() {
       JSON.stringify({ ...game, lastSeen: Date.now() }),
     );
   }, [game, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    let deviceId = window.localStorage.getItem("guigu-reader-device-id") || "";
+    if (!deviceId) {
+      deviceId = window.crypto.randomUUID();
+      window.localStorage.setItem("guigu-reader-device-id", deviceId);
+    }
+    readerDeviceIdRef.current = deviceId;
+    const controller = new AbortController();
+    void fetch(`${BASE_PATH}/api/reading-progress?deviceId=${encodeURIComponent(deviceId)}`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("progress unavailable")))
+      .then((data: { progress?: Record<string, SavedReadingProgress> }) => setReadingProgressByBook(data.progress || {}))
+      .catch(() => undefined)
+      .finally(() => setReadingProgressLoaded(true));
+    return () => controller.abort();
+  }, [hydrated]);
+
+  useEffect(() => {
+    if (!selectedBook.source || loadedBooks[selectedBook.id]) return;
+    const controller = new AbortController();
+    void fetch(selectedBook.source.url, { signal: controller.signal })
+      .then((response) => response.ok ? response.text() : Promise.reject(new Error("book download failed")))
+      .then((text) => {
+        const chapters = parsePublicDomainBook(text, selectedBook.source!.startHeading);
+        if (!chapters.length) throw new Error("book chapters missing");
+        setLoadedBooks((current) => ({ ...current, [selectedBook.id]: chapters }));
+      })
+      .catch((error: Error) => {
+        if (error.name !== "AbortError") setBookLoadError("完整原文暂时没有加载成功，请稍后重试。");
+      })
+      .finally(() => setBookLoading(false));
+    return () => controller.abort();
+  }, [loadedBooks, selectedBook]);
+
+  useEffect(() => {
+    const chapters = loadedBooks[selectedBook.id];
+    if (!readingProgressLoaded || !chapters?.length || restoredBookRef.current[selectedBook.id]) return;
+    const saved = readingProgressByBook[selectedBook.id];
+    const chapter = Math.min(Math.max(0, saved?.chapter || 0), chapters.length - 1);
+    const page = Math.min(Math.max(0, saved?.page || 0), chapters[chapter].pages.length - 1);
+    setSelectedChapter(chapter);
+    setBookPage(page);
+    restoredBookRef.current[selectedBook.id] = true;
+  }, [loadedBooks, readingProgressByBook, readingProgressLoaded, selectedBook.id]);
+
+  useEffect(() => {
+    const chapters = loadedBooks[selectedBook.id];
+    const deviceId = readerDeviceIdRef.current;
+    if (!deviceId || !chapters?.length || !restoredBookRef.current[selectedBook.id]) return;
+    const timer = window.setTimeout(() => {
+      const completed = selectedChapter === chapters.length - 1 && bookPage === chapters[selectedChapter].pages.length - 1;
+      const progress = { chapter: selectedChapter, page: bookPage, completed };
+      setReadingProgressByBook((current) => ({ ...current, [selectedBook.id]: progress }));
+      void fetch(`${BASE_PATH}/api/reading-progress`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deviceId, bookId: selectedBook.id, ...progress }),
+      }).catch(() => undefined);
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [bookPage, loadedBooks, selectedBook.id, selectedChapter]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -955,6 +1120,24 @@ export default function HomePage() {
     }
   };
 
+  const selectedChapters = loadedBooks[selectedBook.id] || [];
+  const activeChapter = selectedChapters[selectedChapter];
+  const activePages = activeChapter?.pages || [];
+  const activePage = activePages[bookPage];
+  const totalBookPages = selectedChapters.reduce((total, chapter) => total + chapter.pages.length, 0);
+  const pagesBeforeChapter = selectedChapters.slice(0, selectedChapter).reduce((total, chapter) => total + chapter.pages.length, 0);
+  const overallPageNumber = totalBookPages ? pagesBeforeChapter + bookPage + 1 : 0;
+  const overallProgress = totalBookPages ? (overallPageNumber / totalBookPages) * 100 : 0;
+  const promptPageIndexes = activePages.length >= 6
+    ? [Math.floor(activePages.length * 0.35), Math.floor(activePages.length * 0.72)]
+    : activePages.length >= 2 ? [Math.floor(activePages.length / 2)] : [];
+  const currentPrompt = activeChapter && promptPageIndexes.includes(bookPage) ? {
+    question: `读到这里，《${activeChapter.title}》中哪一个细节最值得停下来想一想？为什么？`,
+    guide: "先回到原文找一句依据，再说说这句话让你想到什么。",
+  } : null;
+  const currentPromptKey = `${selectedBook.id}:${selectedChapter}:${bookPage}`;
+  const currentPromptAnswered = answeredPromptPages.includes(currentPromptKey);
+
   const saveName = () => {
     const cleaned = draftName.trim().slice(0, 8);
     if (!cleaned) return;
@@ -965,20 +1148,53 @@ export default function HomePage() {
 
   const chooseBook = (book: Book) => {
     setSelectedBook(book);
+    setBookLoading(Boolean(book.source && !loadedBooks[book.id]));
+    setBookLoadError("");
+    setSelectedChapter(0);
     setBookPage(0);
     setReadingAnswer("");
     setReadingFeedback("");
     setAnsweredPromptPages([]);
+    setReaderSideTab("companion");
+    setChapterListOpen(false);
+    restoredBookRef.current[book.id] = false;
   };
 
   const nextBookPage = () => {
-    if (bookPage < selectedBook.pages.length - 1) {
+    if (!activeChapter) return;
+    if (bookPage < activeChapter.pages.length - 1) {
       setBookPage((page) => page + 1);
       setReadingAnswer("");
       setReadingFeedback("");
+    } else if (selectedChapter < selectedChapters.length - 1) {
+      setSelectedChapter((chapter) => chapter + 1);
+      setBookPage(0);
+      setReadingAnswer("");
+      setReadingFeedback("");
+      showToast("已经进入下一章，进度自动保存啦");
     } else {
       finishReading();
     }
+  };
+
+  const previousBookPage = () => {
+    if (bookPage > 0) {
+      setBookPage((page) => page - 1);
+    } else if (selectedChapter > 0) {
+      const previousChapter = selectedChapters[selectedChapter - 1];
+      setSelectedChapter((chapter) => chapter - 1);
+      setBookPage(previousChapter.pages.length - 1);
+    }
+    setReadingAnswer("");
+    setReadingFeedback("");
+  };
+
+  const chooseChapter = (index: number) => {
+    setSelectedChapter(index);
+    setBookPage(0);
+    setReadingAnswer("");
+    setReadingFeedback("");
+    setChapterListOpen(false);
   };
 
   const submitReadingAnswer = async () => {
@@ -987,23 +1203,25 @@ export default function HomePage() {
       return;
     }
     setCompanionLoading(true);
-    const prompt = selectedBook.prompts.find((item) => item.page === bookPage);
-    if (!prompt) return;
+    if (!currentPrompt || !activePage) {
+      setCompanionLoading(false);
+      return;
+    }
     let feedback: string;
     try {
       feedback = await askCompanion({
         mode: "reading",
         name: game.name,
-        title: selectedBook.title,
-        excerpt: selectedBook.pages[bookPage].body,
-        question: prompt.question,
+        title: `${selectedBook.title} · ${activeChapter?.title || ""}`,
+        excerpt: activePage.body,
+        question: currentPrompt.question,
         answer: readingAnswer.trim().slice(0, 500),
       });
     } catch {
       feedback = "我听见你是这样想的。你还可以回到故事里找一句话，看看它能不能支持你的发现。";
     }
     setReadingFeedback(feedback);
-    setAnsweredPromptPages((pages) => pages.includes(bookPage) ? pages : [...pages, bookPage]);
+    setAnsweredPromptPages((pages) => pages.includes(currentPromptKey) ? pages : [...pages, currentPromptKey]);
     setGame((current) => ({
       ...current,
       boredom: clamp(current.boredom - 8),
@@ -1325,7 +1543,6 @@ export default function HomePage() {
     setAnsweredPromptPages([]);
     setReadingAnswer("");
     setReadingFeedback("");
-    setBookPage(0);
   };
 
   const dailyTaskItems: Array<{ key: DailyTaskKey; label: string; icon: string }> = [
@@ -1364,9 +1581,6 @@ export default function HomePage() {
   const navigationLocked = !!busy || !!hideTarget || !!traveling;
   const selectedDestinationUnlocked = game.stars >= selectedDestination.requiredStars;
   const selectedDestinationMissingStars = Math.max(0, selectedDestination.requiredStars - game.stars);
-  const currentPrompt = selectedBook.prompts.find((item) => item.page === bookPage);
-  const currentPromptAnswered = answeredPromptPages.includes(bookPage);
-
   return (
     <main
       className={`app view-${view}`}
@@ -1575,48 +1789,77 @@ export default function HomePage() {
               ))}
             </div>
 
-            <div className={`reading-workspace ${currentPrompt ? "has-companion-note" : ""}`}>
-              <article className="reading-paper">
-                <div className="reading-meta">
-                  <span>{selectedBook.title} · {selectedBook.author}</span>
-                  <span>第 {bookPage + 1} / {selectedBook.pages.length} 页</span>
+            <div className="reading-workspace complete-reader">
+              {bookLoading ? (
+                <div className="book-loading-panel" role="status"><BookOpen /><strong>正在装订完整原文…</strong><span>龟龟正在识别章节和分页</span></div>
+              ) : bookLoadError ? (
+                <div className="book-loading-panel error"><BookOpen /><strong>原文加载失败</strong><span>{bookLoadError}</span></div>
+              ) : selectedBook.unavailableReason ? (
+                <div className="licensed-content-panel">
+                  <div className="original-status"><Lock /><span><small>原文区 · 尚未接入</small><h2>《{selectedBook.title}》需要授权原文</h2><p>{selectedBook.unavailableReason}</p></span></div>
+                  <section className="separate-supplement" aria-label="独立导读区">
+                    <span className="content-type-label supplement">导读与知识补充 · 不属于原文</span>
+                    {selectedBook.pages.map((page) => <article key={page.heading}><h3>{page.heading}</h3><p>{page.body}</p></article>)}
+                  </section>
                 </div>
-                <div className="reading-progress"><i style={{ width: `${((bookPage + 1) / selectedBook.pages.length) * 100}%` }} /></div>
-                <h2>{selectedBook.pages[bookPage].heading}</h2>
-                <p>{selectedBook.pages[bookPage].body}</p>
-                <div className="reading-controls">
-                  <button className="icon-button" type="button" onClick={() => { setBookPage((page) => Math.max(0, page - 1)); setReadingAnswer(""); setReadingFeedback(""); }} disabled={bookPage === 0} title="上一页" aria-label="上一页"><ChevronLeft /></button>
-                  <span>{currentPromptAnswered ? "龟龟把这次思考收好啦" : "慢慢读，读懂比读快更重要"}</span>
-                  <button className="next-button" type="button" onClick={nextBookPage}>{bookPage === selectedBook.pages.length - 1 ? "完成阅读" : "下一页"}<ChevronRight /></button>
-                </div>
-              </article>
+              ) : activeChapter && activePage ? (
+                <>
+                  <nav className={`chapter-drawer ${chapterListOpen ? "open" : ""}`} aria-label="章节目录">
+                    <button className="chapter-drawer-toggle" type="button" onClick={() => setChapterListOpen((open) => !open)}><BookOpen /> 目录 <span>{selectedChapter + 1}/{selectedChapters.length}</span></button>
+                    <div className="chapter-list-scroll">
+                      {selectedChapters.map((chapter, index) => (
+                        <button key={chapter.id} type="button" className={index === selectedChapter ? "active" : ""} onClick={() => chooseChapter(index)}>
+                          <span>{String(index + 1).padStart(2, "0")}</span><strong>{chapter.title}</strong><small>{chapter.pages.length}页</small>
+                        </button>
+                      ))}
+                    </div>
+                  </nav>
 
-              {currentPrompt && (
-                <aside className="reading-companion-card" aria-label="龟龟伴读提问">
-                  <div className="companion-card-heading">
-                    <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪读的龟龟" />
-                    <div><small>{currentPromptAnswered ? "你的想法很有意思" : "读到这里，想一想"}</small><strong>{game.name}的小问题</strong></div>
-                  </div>
-                  {readingFeedback ? (
-                    <>
-                      <div className="inline-reading-feedback"><Sparkles /><p>{readingFeedback}</p></div>
-                      <button className="companion-continue" type="button" onClick={continueAfterAnswer}>收好发现，继续读</button>
-                    </>
-                  ) : currentPromptAnswered ? (
-                    <p className="answered-note"><Check /> 这一页已经认真想过啦。翻回其他页时，你仍然可以看看当时的发现。</p>
-                  ) : (
-                    <>
-                      <h3>{currentPrompt.question}</h3>
-                      <p className="reading-guide"><Lightbulb /> {currentPrompt.guide}</p>
-                      <textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得……" aria-label="回答龟龟的问题" maxLength={500} disabled={companionLoading} />
-                      <div className="companion-card-actions">
-                        <button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音</button>
-                        <button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在想…" : "讲给龟龟听"}</button>
+                  <article className="reading-paper complete-reading-paper">
+                    <div className="reading-meta">
+                      <span className="content-type-label original">原文</span>
+                      <span>{selectedBook.source?.language} · 第 {overallPageNumber} / {totalBookPages} 页</span>
+                    </div>
+                    <div className="reading-progress"><i style={{ width: `${overallProgress}%` }} /></div>
+                    <small className="chapter-position">第 {selectedChapter + 1} 章 · 本章 {bookPage + 1}/{activePages.length} 页</small>
+                    <h2>{activePage.heading}</h2>
+                    <div className="original-book-text">{activePage.body.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
+                    <div className="reading-controls">
+                      <button className="icon-button" type="button" onClick={previousBookPage} disabled={selectedChapter === 0 && bookPage === 0} title="上一页" aria-label="上一页"><ChevronLeft /></button>
+                      <span>{currentPromptAnswered ? "龟龟把这次思考收好啦" : "进度已自动保存"}</span>
+                      <button className="next-button" type="button" onClick={nextBookPage}>{selectedChapter === selectedChapters.length - 1 && bookPage === activePages.length - 1 ? "完成全书" : bookPage === activePages.length - 1 ? "下一章" : "下一页"}<ChevronRight /></button>
+                    </div>
+                  </article>
+
+                  <aside className="reader-side-panel" aria-label="伴读和知识补充">
+                    <div className="reader-side-tabs" role="tablist">
+                      <button type="button" role="tab" aria-selected={readerSideTab === "companion"} onClick={() => setReaderSideTab("companion")}>伴读</button>
+                      <button type="button" role="tab" aria-selected={readerSideTab === "knowledge"} onClick={() => setReaderSideTab("knowledge")}>知识补充</button>
+                    </div>
+                    {readerSideTab === "knowledge" ? (
+                      <div className="knowledge-only-panel">
+                        <span className="content-type-label supplement">补充内容 · 非原文</span>
+                        <h3>这一章之外的知识</h3>
+                        <p>{selectedBook.knowledge}</p>
+                        <dl><div><dt>原文版本</dt><dd>{selectedBook.source?.label}</dd></div><div><dt>全书进度</dt><dd>{Math.round(overallProgress)}%</dd></div></dl>
                       </div>
-                    </>
-                  )}
-                </aside>
-              )}
+                    ) : (
+                      <div className="reading-companion-card embedded">
+                        <div className="companion-card-heading"><img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪读的龟龟" /><div><small>伴读区 · 非原文</small><strong>{game.name}陪你读</strong></div></div>
+                        {!currentPrompt ? (
+                          <p className="quiet-reading-note"><BookOpen /> 先安静读一会儿。龟龟会在这一章的 1～2 个位置轻轻提问，不会挡住原文。</p>
+                        ) : readingFeedback ? (
+                          <><div className="inline-reading-feedback"><Sparkles /><p>{readingFeedback}</p></div><button className="companion-continue" type="button" onClick={continueAfterAnswer}>收好发现，继续读</button></>
+                        ) : currentPromptAnswered ? (
+                          <p className="answered-note"><Check /> 这一页已经认真想过啦。</p>
+                        ) : (
+                          <><h3>{currentPrompt.question}</h3><p className="reading-guide"><Lightbulb /> {currentPrompt.guide}</p><textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得……" aria-label="回答龟龟的问题" maxLength={500} disabled={companionLoading} /><div className="companion-card-actions"><button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音</button><button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在想…" : "讲给龟龟听"}</button></div></>
+                        )}
+                      </div>
+                    )}
+                  </aside>
+                </>
+              ) : null}
             </div>
 
             <img
