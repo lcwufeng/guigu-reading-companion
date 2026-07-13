@@ -87,6 +87,7 @@ type GameState = {
   tickets: number;
   lastSeen: number;
   readingRecords: ReadingRecord[];
+  readingRewards: string[];
   travelRecords: TravelRecord[];
   chatMessages: ChatMessage[];
   activeTravel: ActiveTravel | null;
@@ -144,6 +145,12 @@ type CompanionPayload = {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
 };
 
+type CompanionResponse = {
+  reply: string;
+  correct?: boolean;
+  source?: "deepseek" | "local" | "unavailable";
+};
+
 type VoiceTarget = "chat" | "reading";
 type VoicePhase = "idle" | "recording" | "recognizing";
 type VoiceSession = {
@@ -175,6 +182,7 @@ const initialState: GameState = {
   tickets: 3,
   lastSeen: Date.now(),
   readingRecords: [],
+  readingRewards: [],
   travelRecords: [],
   chatMessages: [
     {
@@ -652,9 +660,9 @@ async function askCompanion(payload: CompanionPayload) {
     body: JSON.stringify(payload),
   });
   if (!response.ok) throw new Error("companion unavailable");
-  const data = (await response.json()) as { reply?: string };
+  const data = (await response.json()) as Partial<CompanionResponse>;
   if (!data.reply) throw new Error("empty companion reply");
-  return data.reply;
+  return data as CompanionResponse;
 }
 
 function destinationForRecord(record: TravelRecord) {
@@ -764,6 +772,7 @@ export default function HomePage() {
   const [chapterListOpen, setChapterListOpen] = useState(false);
   const [readingAnswer, setReadingAnswer] = useState("");
   const [readingFeedback, setReadingFeedback] = useState("");
+  const [readingEvaluation, setReadingEvaluation] = useState<"correct" | "incorrect" | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatThinking, setChatThinking] = useState(false);
@@ -853,6 +862,7 @@ export default function HomePage() {
             hunger: clamp((parsed.hunger ?? initialState.hunger) + hours * 3),
             cleanliness: clamp((parsed.cleanliness ?? initialState.cleanliness) - hours),
             boredom: clamp((parsed.boredom ?? initialState.boredom) + hours * 2),
+            readingRewards: Array.isArray(parsed.readingRewards) ? parsed.readingRewards.slice(-500) : [],
             lastSeen: Date.now(),
           };
         } catch {
@@ -1162,6 +1172,7 @@ export default function HomePage() {
     setBookPage(0);
     setReadingAnswer("");
     setReadingFeedback("");
+    setReadingEvaluation(null);
     setAnsweredPromptPages([]);
     setReaderSideTab("companion");
     setChapterListOpen(false);
@@ -1174,11 +1185,13 @@ export default function HomePage() {
       setBookPage((page) => page + 1);
       setReadingAnswer("");
       setReadingFeedback("");
+      setReadingEvaluation(null);
     } else if (selectedChapter < selectedChapters.length - 1) {
       setSelectedChapter((chapter) => chapter + 1);
       setBookPage(0);
       setReadingAnswer("");
       setReadingFeedback("");
+      setReadingEvaluation(null);
       showToast("已经进入下一章，进度自动保存啦");
     } else {
       finishReading();
@@ -1195,6 +1208,7 @@ export default function HomePage() {
     }
     setReadingAnswer("");
     setReadingFeedback("");
+    setReadingEvaluation(null);
   };
 
   const chooseChapter = (index: number) => {
@@ -1202,6 +1216,7 @@ export default function HomePage() {
     setBookPage(0);
     setReadingAnswer("");
     setReadingFeedback("");
+    setReadingEvaluation(null);
     setChapterListOpen(false);
   };
 
@@ -1215,9 +1230,8 @@ export default function HomePage() {
       setCompanionLoading(false);
       return;
     }
-    let feedback: string;
     try {
-      feedback = await askCompanion({
+      const result = await askCompanion({
         mode: "reading",
         name: game.name,
         title: `${selectedBook.title} · ${activeChapter?.title || ""}`,
@@ -1225,21 +1239,35 @@ export default function HomePage() {
         question: currentPrompt.question,
         answer: readingAnswer.trim().slice(0, 500),
       });
+      if (typeof result.correct !== "boolean") throw new Error("reading evaluation missing");
+      setReadingFeedback(result.reply);
+      if (result.correct) {
+        setReadingEvaluation("correct");
+        setAnsweredPromptPages((pages) => pages.includes(currentPromptKey) ? pages : [...pages, currentPromptKey]);
+        const alreadyRewarded = game.readingRewards.includes(currentPromptKey);
+        if (!alreadyRewarded) {
+          setGame((current) => current.readingRewards.includes(currentPromptKey) ? current : ({
+            ...current,
+            boredom: clamp(current.boredom - 8),
+            stars: current.stars + 1,
+            readingRewards: [...current.readingRewards, currentPromptKey].slice(-500),
+          }));
+        }
+        showToast(alreadyRewarded ? "回答正确，这道题的星星已经领取过啦" : "回答正确，获得 1 颗成长星星！");
+      } else {
+        setReadingEvaluation("incorrect");
+        showToast("再根据龟龟的建议修改一下吧");
+      }
     } catch {
-      feedback = "我听见你是这样想的。你还可以回到故事里找一句话，看看它能不能支持你的发现。";
+      setReadingFeedback("AI 伴读暂时没有完成判断，这次不会发放星星。请稍后重新提交。");
+      setReadingEvaluation("incorrect");
     }
-    setReadingFeedback(feedback);
-    setAnsweredPromptPages((pages) => pages.includes(currentPromptKey) ? pages : [...pages, currentPromptKey]);
-    setGame((current) => ({
-      ...current,
-      boredom: clamp(current.boredom - 8),
-      stars: current.stars + 1,
-    }));
     setCompanionLoading(false);
   };
 
   const continueAfterAnswer = () => {
     setReadingFeedback("");
+    setReadingEvaluation(null);
     showToast("龟龟记住你的想法啦，继续慢慢读吧");
   };
 
@@ -1413,7 +1441,7 @@ export default function HomePage() {
     setChatThinking(true);
     let reply: string;
     try {
-      reply = await askCompanion({
+      reply = (await askCompanion({
         mode: "chat",
         name: game.name,
         message: message.slice(0, 500),
@@ -1421,7 +1449,7 @@ export default function HomePage() {
           role: item.role === "turtle" ? "assistant" : "user",
           content: item.text,
         })),
-      });
+      })).reply;
     } catch {
       reply = getLocalReply(message, game.name);
     }
@@ -1551,6 +1579,7 @@ export default function HomePage() {
     setAnsweredPromptPages([]);
     setReadingAnswer("");
     setReadingFeedback("");
+    setReadingEvaluation(null);
   };
 
   const dailyTaskItems: Array<{ key: DailyTaskKey; label: string; icon: string }> = [
@@ -1854,14 +1883,29 @@ export default function HomePage() {
                     ) : (
                       <div className="reading-companion-card embedded">
                         <div className="companion-card-heading"><img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪读的龟龟" /><div><small>伴读区 · 非原文</small><strong>{game.name}陪你读</strong></div></div>
+                        <div className="companion-reward-rule"><Star fill="currentColor" /><span>回答正确奖励 <strong>1 颗星</strong></span></div>
                         {!currentPrompt ? (
                           <p className="quiet-reading-note"><BookOpen /> 先安静读一会儿。龟龟会在这一章的 1～2 个位置轻轻提问，不会挡住原文。</p>
                         ) : readingFeedback ? (
-                          <><div className="inline-reading-feedback"><Sparkles /><p>{readingFeedback}</p></div><button className="companion-continue" type="button" onClick={continueAfterAnswer}>收好发现，继续读</button></>
+                          readingEvaluation === "correct" ? (
+                            <>
+                              <div className="inline-reading-feedback correct"><Star fill="currentColor" /><p><strong>判断正确 · 已领取 1 颗星</strong>{readingFeedback}</p></div>
+                              <button className="companion-continue" type="button" onClick={continueAfterAnswer}>收好鼓励，继续读</button>
+                            </>
+                          ) : (
+                            <>
+                              <div className="inline-reading-feedback incorrect"><Lightbulb /><p><strong>再修改一下</strong>{readingFeedback}</p></div>
+                              <textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="根据建议修改答案……" aria-label="修改后重新回答龟龟的问题" maxLength={500} disabled={companionLoading} />
+                              <div className="companion-card-actions">
+                                <button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音</button>
+                                <button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在判断…" : "修改后重新提交"}</button>
+                              </div>
+                            </>
+                          )
                         ) : currentPromptAnswered ? (
                           <p className="answered-note"><Check /> 这一页已经认真想过啦。</p>
                         ) : (
-                          <><h3>{currentPrompt.question}</h3><p className="reading-guide"><Lightbulb /> {currentPrompt.guide}</p><textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得……" aria-label="回答龟龟的问题" maxLength={500} disabled={companionLoading} /><div className="companion-card-actions"><button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音</button><button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在想…" : "讲给龟龟听"}</button></div></>
+                          <><h3>{currentPrompt.question}</h3><p className="reading-guide"><Lightbulb /> {currentPrompt.guide}</p><textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得……" aria-label="回答龟龟的问题" maxLength={500} disabled={companionLoading} /><div className="companion-card-actions"><button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音</button><button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在判断…" : "提交给 AI 判断"}</button></div></>
                         )}
                       </div>
                     )}

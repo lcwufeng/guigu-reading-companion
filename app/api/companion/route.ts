@@ -51,18 +51,34 @@ function localReply(body: CompanionRequest) {
   return "谢谢你讲给我听。发生这件事时，你有什么感受，又发现了什么呢？";
 }
 
+function parseReadingEvaluation(content: string) {
+  const normalized = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  const parsed = JSON.parse(normalized) as { correct?: unknown; feedback?: unknown };
+  if (typeof parsed.correct !== "boolean" || typeof parsed.feedback !== "string") {
+    throw new Error("invalid reading evaluation");
+  }
+  const feedback = clean(parsed.feedback, 240);
+  if (!feedback) throw new Error("empty reading feedback");
+  return { correct: parsed.correct, feedback };
+}
+
 function buildSystemPrompt(name: string, mode: CompanionRequest["mode"]) {
   const shared = [
     `你的名字是“${name}”，你必须始终使用这个名字自称。`,
     "你是一只面向小学生的电子宠物小乌龟，也是温暖、好奇、耐心、稍微俏皮的伴读伙伴。",
     "你喜欢听孩子分享今天学到的内容，并鼓励孩子复述、寻找证据、反思过程和表达感受。",
-    "你不是老师或评分者，不直接抛出标准答案；每次回复最多提出一个问题。",
+    "不要直接替孩子完成答案；日常对话每次回复最多提出一个问题。",
     "不要索取姓名、学校、地址、电话、账号、密码等个人信息，不邀请线下见面或转移到外部平台，也不让孩子保守秘密。",
     "遇到危险、自伤或求助内容，明确建议孩子立刻联系身边可信任的大人。",
     "不要声称自己是真人或能在现实中行动。不要写括号动作、舞台说明或冗长拟声词。",
   ];
   if (mode === "reading") {
-    shared.push("阅读回应控制在100个汉字以内：先具体肯定一个有效发现，再用一个启发式问题引导孩子回到文本找证据。");
+    shared.push(
+      "你现在是伴读答案判定器。必须同时依据本页原文、龟龟的问题和孩子的回答进行判断。",
+      "问题允许开放表达：只要回答切题、没有违背原文，并给出合理解释或文本依据，就判为正确；明显答非所问、与原文冲突、只有空泛短语或没有说明理由，判为不正确。",
+      "只输出一个JSON对象，不要Markdown，不要额外文字。格式必须是：{\"correct\":true或false,\"feedback\":\"中文反馈\"}。",
+      "正确时，feedback用80字以内具体指出答得好的地方并给一句鼓励，不再提问。错误时，feedback用100字以内指出需要修改的地方，给一个可操作提示，但不要直接代写完整答案。",
+    );
   } else {
     shared.push("日常聊天控制在80个汉字以内，先自然回应孩子说的内容，再根据需要提出一个简短问题。");
   }
@@ -92,11 +108,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ reply: "先告诉我一点你的想法吧。", source: "local" }, { status: 400 });
   }
   if (urgentSafetyPattern.test(input) || personalInfoPattern.test(input)) {
-    return NextResponse.json({ reply: localReply(body), source: "local" });
+    return NextResponse.json({ reply: localReply(body), correct: false, source: "local" });
   }
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
+    if (body.mode === "reading") {
+      return NextResponse.json({ reply: "AI 伴读暂时没有连接成功，这次不会扣除或发放星星，请稍后重新提交。", source: "unavailable" }, { status: 503 });
+    }
     return NextResponse.json({ reply: localReply(body), source: "local" });
   }
 
@@ -104,7 +123,7 @@ export async function POST(request: Request) {
   const userContext = body.mode === "reading"
     ? [
         `书名：${clean(body.title, 80)}`,
-        `片段：${clean(body.excerpt, 650)}`,
+        `本页完整原文：${clean(body.excerpt, 2200)}`,
         `龟龟的问题：${clean(body.question, 160)}`,
         `孩子的回答：${input}`,
       ].join("\n")
@@ -125,16 +144,24 @@ export async function POST(request: Request) {
           { role: "user", content: userContext },
         ],
         thinking: { type: "disabled" },
+        ...(body.mode === "reading" ? { response_format: { type: "json_object" } } : {}),
         max_tokens: 220,
         stream: false,
       }),
     });
     if (!response.ok) throw new Error(`deepseek api ${response.status}`);
     const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const reply = clean(data.choices?.[0]?.message?.content, 500);
-    if (!reply) throw new Error("empty response");
-    return NextResponse.json({ reply, source: "deepseek" });
+    const rawReply = clean(data.choices?.[0]?.message?.content, 500);
+    if (!rawReply) throw new Error("empty response");
+    if (body.mode === "reading") {
+      const evaluation = parseReadingEvaluation(rawReply);
+      return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "deepseek" });
+    }
+    return NextResponse.json({ reply: rawReply, source: "deepseek" });
   } catch {
+    if (body.mode === "reading") {
+      return NextResponse.json({ reply: "AI 伴读暂时没有完成判断，这次不会扣除或发放星星，请稍后重新提交。", source: "unavailable" }, { status: 503 });
+    }
     return NextResponse.json({ reply: localReply(body), source: "local" });
   }
 }

@@ -104,6 +104,10 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(page, /submitChatRef\.current\(data\.transcript\)/);
   assert.match(page, /在线陪你聊/);
   assert.match(page, /今天想聊什么/);
+  assert.match(page, /回答正确奖励/);
+  assert.match(page, /修改后重新提交/);
+  assert.match(page, /readingRewards/);
+  assert.match(page, /if \(result\.correct\)/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
@@ -113,6 +117,9 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(companionRoute, /https:\/\/api\.deepseek\.com\/chat\/completions/);
   assert.match(companionRoute, /deepseek-v4-flash/);
   assert.match(companionRoute, /thinking: \{ type: "disabled" \}/);
+  assert.match(companionRoute, /response_format: \{ type: "json_object" \}/);
+  assert.match(companionRoute, /parseReadingEvaluation/);
+  assert.match(companionRoute, /correct: evaluation\.correct/);
   assert.match(companionRoute, /DEEPSEEK_API_KEY/);
   assert.match(companionRoute, /cleanPetName/);
   assert.match(companionRoute, /function localReply/);
