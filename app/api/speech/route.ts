@@ -1,10 +1,7 @@
 import { gzipSync, gunzipSync } from "node:zlib";
 import { randomUUID } from "node:crypto";
-import { createRequire } from "node:module";
 import { NextResponse } from "next/server";
-import type WebSocketType from "ws";
-
-const runtimeRequire = createRequire(import.meta.url);
+import WebSocket from "ws";
 
 const MAX_AUDIO_BYTES = 2_500_000;
 const SPEECH_ENDPOINT = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_nostream";
@@ -48,7 +45,6 @@ function parseServerFrame(data: Buffer) {
 }
 
 async function recognizeSpeech(audio: Buffer) {
-  const WebSocket = runtimeRequire(`${process.cwd()}/node_modules/ws/index.js`) as typeof WebSocketType;
   const appId = process.env.VOLC_SPEECH_APP_ID;
   const accessToken = process.env.VOLC_SPEECH_ACCESS_TOKEN;
   if (!appId || !accessToken) throw new Error("speech credentials missing");
