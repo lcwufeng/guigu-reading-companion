@@ -5,10 +5,9 @@ import { KeyRound, LogIn, ShieldCheck, Sparkles } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const trialAccounts = ["同学一", "同学二", "同学三"];
 
 export default function LoginPanel({ mode, displayName = "" }: { mode: "login" | "reset"; displayName?: string }) {
-  const [username, setUsername] = useState(displayName || trialAccounts[0]);
+  const [username, setUsername] = useState(displayName);
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -45,28 +44,22 @@ export default function LoginPanel({ mode, displayName = "" }: { mode: "login" |
   };
 
   return (
-    <main className="login-screen">
-      <div className="login-sky" aria-hidden="true" />
+    <main className="login-screen" style={{ backgroundImage: `url("${BASE_PATH}/assets/ui/login/background.png")` }}>
       <section className="login-card" aria-labelledby="login-title">
         <img className="login-logo" src={`${BASE_PATH}/assets/ui/supplied/brand/logo.png`} alt="龟龟伴读" />
         <img className="login-turtle" src={`${BASE_PATH}/assets/characters/turtle/${mode === "reset" ? "turtle_thinking.png" : "turtle_waving.png"}`} alt="欢迎你的龟龟" />
         <div className="login-copy">
           <span><Sparkles aria-hidden="true" /> {mode === "reset" ? `欢迎你，${displayName}` : "内测学习屋"}</span>
           <h1 id="login-title">{mode === "reset" ? "第一次登录，请设置新密码" : "登录后，龟龟才能认出你"}</h1>
-          <p>{mode === "reset" ? "新密码设置完成后，你的阅读进度、星星、错题和聊天记忆都会只保存在自己的账户中。" : "请选择自己的内测账号并输入密码。每位同学的数据都会独立保存，互相看不到。"}</p>
+          <p>{mode === "reset" ? "新密码设置完成后，你的阅读进度、星星、错题和聊天记忆都会只保存在自己的账户中。" : "请输入自己的内测账号和密码。每位同学的数据都会独立保存，互相看不到。"}</p>
         </div>
 
         <form className="login-form" onSubmit={submit}>
           {mode === "login" ? (
             <>
-              <div className="trial-account-list" aria-label="选择内测账号">
-                {trialAccounts.map((account) => (
-                  <button type="button" className={username === account ? "selected" : ""} onClick={() => setUsername(account)} key={account}>{account}</button>
-                ))}
-              </div>
               <label>
                 <span>账号</span>
-                <input value={username} onChange={(event) => setUsername(event.target.value.slice(0, 12))} autoComplete="username" maxLength={12} required />
+                <input value={username} onChange={(event) => setUsername(event.target.value.slice(0, 12))} autoComplete="username" maxLength={12} placeholder="请输入账号" autoFocus required />
               </label>
               <label>
                 <span>密码</span>

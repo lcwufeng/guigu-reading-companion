@@ -45,9 +45,10 @@ test("server-renders the internal beta login before the reading companion", asyn
   const html = await response.text();
   assert.match(html, /<title>龟龟伴读/);
   assert.match(html, /内测学习屋/);
-  assert.match(html, /同学一/);
-  assert.match(html, /同学二/);
-  assert.match(html, /同学三/);
+  assert.match(html, /请输入账号/);
+  assert.match(html, /assets\/ui\/login\/background\.png/);
+  assert.doesNotMatch(html, /选择内测账号/);
+  assert.doesNotMatch(html, /同学一|同学二|同学三/);
   assert.doesNotMatch(html, /我的伙伴/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
@@ -334,6 +335,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/ui/supplied/nav/reading-20260714.png",
     "../public/assets/ui/supplied/nav/mistakes-20260714.png",
     "../public/assets/ui/supplied/nav/journal-20260714.png",
+    "../public/assets/ui/login/background.png",
     "../public/assets/ui/mistakes/background.webp",
     "../public/assets/ui/mistakes/title.png",
     "../public/assets/ui/mistakes/stats-panel.png",
