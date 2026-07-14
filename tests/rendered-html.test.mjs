@@ -99,9 +99,9 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(page, /ui\/home-refresh\/status\/panel\.png/);
   assert.match(page, /ui\/supplied\/brand\/logo\.png/);
   assert.match(page, /ui\/supplied\/nav\/home\.png/);
-  assert.match(page, /ui\/supplied\/nav\/reading-20260713\.png/);
-  assert.match(page, /ui\/supplied\/nav\/mistakes-20260713\.png/);
-  assert.match(page, /ui\/supplied\/nav\/journal-20260713\.png/);
+  assert.match(page, /ui\/supplied\/nav\/reading-20260714\.png/);
+  assert.match(page, /ui\/supplied\/nav\/mistakes-20260714\.png/);
+  assert.match(page, /ui\/supplied\/nav\/journal-20260714\.png/);
   assert.match(page, /ui\/mistakes\/title\.png/);
   assert.match(page, /ui\/mistakes\/stats-panel\.png/);
   assert.match(page, /ui\/mistakes\/empty-turtle\.png/);
@@ -220,9 +220,9 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
     "../public/assets/ui/supplied/nav/chat.png",
     "../public/assets/ui/supplied/nav/travel.png",
     "../public/assets/ui/supplied/nav/journal.png",
-    "../public/assets/ui/supplied/nav/reading-20260713.png",
-    "../public/assets/ui/supplied/nav/mistakes-20260713.png",
-    "../public/assets/ui/supplied/nav/journal-20260713.png",
+    "../public/assets/ui/supplied/nav/reading-20260714.png",
+    "../public/assets/ui/supplied/nav/mistakes-20260714.png",
+    "../public/assets/ui/supplied/nav/journal-20260714.png",
     "../public/assets/ui/mistakes/background.webp",
     "../public/assets/ui/mistakes/title.png",
     "../public/assets/ui/mistakes/stats-panel.png",
