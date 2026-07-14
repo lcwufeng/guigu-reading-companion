@@ -46,7 +46,7 @@ export default function LoginPanel({ mode, displayName = "" }: { mode: "login" |
   return (
     <main className="login-screen" style={{ backgroundImage: `url("${BASE_PATH}/assets/ui/login/background.png")` }}>
       <section className="login-card" aria-labelledby="login-title">
-        <img className="login-logo" src={`${BASE_PATH}/assets/ui/supplied/brand/logo.png`} alt="龟龟伴读" />
+        <img className="login-logo" src={`${BASE_PATH}/assets/ui/supplied/brand/logo-20260715.png`} alt="龟龟伴读" />
         <img className="login-turtle" src={`${BASE_PATH}/assets/characters/turtle/${mode === "reset" ? "turtle_thinking.png" : "turtle_waving.png"}`} alt="欢迎你的龟龟" />
         <div className="login-copy">
           <span><Sparkles aria-hidden="true" /> {mode === "reset" ? `欢迎你，${displayName}` : "内测学习屋"}</span>

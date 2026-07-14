@@ -13,7 +13,6 @@ import {
   Lightbulb,
   Lock,
   LogOut,
-  MapPinned,
   Mic,
   MicOff,
   RotateCcw,
@@ -1400,6 +1399,14 @@ export default function ReadingApp({
     setReadingEvaluation(null);
   };
 
+  const thinkAgainChapterQuestion = () => {
+    setChapterQuestionOpen(false);
+    setReadingAnswer("");
+    setReadingFeedback("");
+    setReadingEvaluation(null);
+    showToast("先回到这一章再读一读，想好了龟龟还在这里等你");
+  };
+
   const releaseVoiceSession = useCallback(() => {
     const session = voiceSessionRef.current;
     if (!session) return null;
@@ -1746,6 +1753,8 @@ export default function ReadingApp({
   const navigationLocked = !!busy || !!hideTarget || !!traveling;
   const selectedDestinationUnlocked = game.stars >= selectedDestination.requiredStars;
   const selectedDestinationMissingStars = Math.max(0, selectedDestination.requiredStars - game.stars);
+  const journalTravelItems = game.travelRecords.slice(0, 9);
+  const journalUnlockedItems = Math.min(12, 3 + journalTravelItems.length);
   return (
     <main
       className={`app view-${view}`}
@@ -1763,7 +1772,7 @@ export default function ReadingApp({
     >
       <header className="topbar">
         <div className="identity-cluster">
-          <img className="brand-logo" src={`${ASSET}/ui/supplied/brand/logo.png`} alt="龟龟伴读" />
+          <img className="brand-logo" src={`${ASSET}/ui/supplied/brand/logo-20260715.png`} alt="龟龟伴读" />
           <button
             className="pet-name"
             type="button"
@@ -2237,74 +2246,121 @@ export default function ReadingApp({
 
         {view === "journal" && (
           <section className="scene journal-scene">
-            <div className="journal-header">
-              <div>
-                <span className="eyebrow"><Backpack size={16} /> 成长手账</span>
-                <h1>我们一起留下的足迹</h1>
-              </div>
-              <div className="record-tabs" role="tablist" aria-label="手账分类">
-                <button type="button" role="tab" aria-selected={recordTab === "travel"} onClick={() => setRecordTab("travel")}>旅行手账</button>
-                <button type="button" role="tab" aria-selected={recordTab === "reading"} onClick={() => setRecordTab("reading")}>阅读记录</button>
-                <button type="button" role="tab" aria-selected={recordTab === "items"} onClick={() => setRecordTab("items")}>小背包</button>
-              </div>
-            </div>
+            <img className="journal-scene-background" src={`${ASSET}/ui/journal/background.png`} alt="" />
+            <div className="journal-board">
+              <img className="journal-board-frame" src={`${ASSET}/ui/journal/parchment-panel.png`} alt="" />
+              <img className="journal-side-decoration" src={`${ASSET}/ui/journal/side-decoration.png`} alt="" />
+              <header className="journal-header">
+                <div className="journal-title">
+                  <span className="eyebrow"><BookOpen size={20} /> 成长手账</span>
+                  <h1>我们一起留下的足迹</h1>
+                  <img src={`${ASSET}/ui/journal/title-vine.png`} alt="" />
+                </div>
+                <div className={`record-tabs tab-${recordTab}`} role="tablist" aria-label="手账分类">
+                  <img src={`${ASSET}/ui/journal/tabs-${recordTab === "items" ? "items" : recordTab}-active.png`} alt="" />
+                  <button type="button" role="tab" aria-selected={recordTab === "travel"} onClick={() => setRecordTab("travel")}>旅行手账</button>
+                  <button type="button" role="tab" aria-selected={recordTab === "reading"} onClick={() => setRecordTab("reading")}>阅读记录</button>
+                  <button type="button" role="tab" aria-selected={recordTab === "items"} onClick={() => setRecordTab("items")}>小背包</button>
+                </div>
+              </header>
 
-            <div className="journal-content">
-              {recordTab === "travel" && (
-                <div className="record-grid">
-                  {game.travelRecords.length ? game.travelRecords.map((record) => {
-                    const destination = destinationForRecord(record);
-                    return (
-                      <article className="travel-record" key={record.id}>
-                        <img src={record.photo} alt={`${record.destination}照片`} />
-                        <div>
-                          <small>{record.date}</small>
-                          <h2>{record.destination}</h2>
-                          <p>带回了：{record.reward}</p>
-                          {destination && (
-                            <button className="knowledge-link" type="button" onClick={() => setKnowledgeOpen(destination)}>
-                              <img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 查看知识卡
-                            </button>
-                          )}
+              <div className="journal-content">
+                {recordTab === "travel" && (
+                  journalTravelItems.length ? (
+                    <div className="journal-travel-layout">
+                      <div className="journal-travel-grid">
+                        {journalTravelItems.map((record, index) => {
+                          const destination = destinationForRecord(record);
+                          return (
+                            <article className="journal-travel-card" key={record.id}>
+                              <img className="journal-card-frame" src={`${ASSET}/ui/journal/travel-card-frame.png`} alt="" />
+                              <img className="journal-card-pin" src={`${ASSET}/ui/journal/pushpin.png`} alt="" />
+                              <img className="journal-card-sticker" src={`${ASSET}/ui/journal/location-sticker.png`} alt="" />
+                              <img className="journal-card-photo" src={record.photo} alt={`${record.destination}旅行照片`} />
+                              <div className="journal-card-copy">
+                                <small>{record.date}</small>
+                                <h2>{record.destination}</h2>
+                                <p>带回了：{record.reward}</p>
+                              </div>
+                              <img className="journal-card-stamp" src={`${ASSET}/ui/journal/${destination?.id === "beach" || index % 2 ? "shell" : "leaf"}-stamp.png`} alt="" />
+                              {destination && (
+                                <button className="journal-card-action" type="button" onClick={() => setKnowledgeOpen(destination)}>
+                                  <img src={`${ASSET}/ui/journal/card-action-button.png`} alt="" />
+                                  <span><Lightbulb /> 查看知识卡</span>
+                                </button>
+                              )}
+                            </article>
+                          );
+                        })}
+                      </div>
+                      <img className="journal-dotted-path" src={`${ASSET}/ui/journal/dotted-travel-path.png`} alt="" />
+                    </div>
+                  ) : (
+                    <div className="journal-empty-travel">
+                      <img className="journal-empty-path" src={`${ASSET}/ui/journal/travel-path-scene.png`} alt="" />
+                      <img className="journal-empty-turtle" src={`${ASSET}/ui/journal/traveler-turtle.png`} alt="背着行囊准备出发的龟龟" />
+                      <img className="journal-empty-signpost" src={`${ASSET}/ui/journal/signpost.png`} alt="森林小径和湖畔营地路牌" />
+                      <img className="journal-empty-photo" src={`${ASSET}/ui/journal/empty-photo.png`} alt="等待贴上旅行照片的相纸" />
+                      <div className="journal-empty-copy">
+                        <h2>第一张旅行照片正在等你</h2>
+                        <p>挑一个目的地，龟龟会把沿途的新发现带回来。</p>
+                        <button type="button" onClick={() => setView("travel")}><span>去旅行</span><ChevronRight /></button>
+                      </div>
+                    </div>
+                  )
+                )}
+
+                {recordTab === "reading" && (
+                  <div className="journal-reading-list">
+                    {game.readingRecords.length ? game.readingRecords.slice(0, 5).map((record) => (
+                      <article className="journal-reading-card" key={record.id}>
+                        <div className="journal-reading-visual">
+                          <img src={`${ASSET}/ui/journal/reading-record-book.png`} alt="记录故事的翻开书本" />
+                          <span><Star fill="currentColor" /></span>
+                        </div>
+                        <div className="journal-reading-copy">
+                          <small>{record.date} · 已读完</small>
+                          <h2>{record.title}</h2>
+                          <p>{record.summary}</p>
+                          <blockquote>“{record.answer}”</blockquote>
                         </div>
                       </article>
-                    );
-                  }) : <EmptyRecord type="travel" onAction={() => setView("travel")} />}
-                </div>
-              )}
-
-              {recordTab === "reading" && (
-                <div className="reading-records">
-                  {game.readingRecords.length ? game.readingRecords.map((record) => (
-                    <article className="reading-record" key={record.id}>
-                      <div className="record-icon"><BookOpen /></div>
-                      <div>
-                        <small>{record.date} · 已读完</small>
-                        <h2>{record.title}</h2>
-                        <p>{record.summary}</p>
-                        <blockquote>“{record.answer}”</blockquote>
+                    )) : (
+                      <div className="journal-empty-reading">
+                        <img src={`${ASSET}/ui/journal/reading-record-book.png`} alt="等待记录的故事书" />
+                        <div><h2>第一篇阅读小结正在等你</h2><p>选一本喜欢的书，和龟龟一起读完一个故事吧。</p><button type="button" onClick={() => setView("library")}>去书房 <ChevronRight /></button></div>
                       </div>
-                    </article>
-                  )) : <EmptyRecord type="reading" onAction={() => setView("library")} />}
-                </div>
-              )}
+                    )}
+                    {game.readingRecords.length > 0 && <div className="journal-reading-placeholder"><BookOpen /><span>下一次阅读记录会出现在这里</span></div>}
+                  </div>
+                )}
 
-              {recordTab === "items" && (
-                <div className="inventory-grid">
-                  <article><div className="item-art"><img src={`${ASSET}/objects/fruit_basket.png`} alt="果篮" /></div><strong>野外果子</strong><span>× {game.fruits}</span></article>
-                  <article><div className="item-art star-item"><Star /></div><strong>成长星星</strong><span>× {game.stars}</span></article>
-                  <article><div className="item-art ticket-item"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="旅行票" /></div><strong>旅行票</strong><span>× {game.tickets}</span></article>
-                  {game.travelRecords.map((record) => {
-                    const destination = destinationForRecord(record);
-                    return destination ? (
-                      <button className="inventory-card" type="button" key={record.id} onClick={() => setKnowledgeOpen(destination)}>
-                        <div className="item-art"><KnowledgeArt destination={destination} /></div>
-                        <strong>{record.reward}</strong><span>来自{record.destination}</span>
-                      </button>
-                    ) : null;
-                  })}
-                </div>
-              )}
+                {recordTab === "items" && (
+                  <>
+                    <div className="journal-inventory-heading"><Backpack /><strong>背包</strong><span>{journalUnlockedItems} / 12</span></div>
+                    <div className="inventory-grid journal-inventory-grid">
+                      <article><div className="item-art"><img src={`${ASSET}/objects/fruit_basket.png`} alt="果篮" /></div><strong>野外果子</strong><span>× {game.fruits}</span></article>
+                      <article><div className="item-art star-item"><Star /></div><strong>成长星星</strong><span>× {game.stars}</span></article>
+                      <article><div className="item-art ticket-item"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="旅行票" /></div><strong>旅行票</strong><span>× {game.tickets}</span></article>
+                      {journalTravelItems.map((record) => {
+                        const destination = destinationForRecord(record);
+                        return destination ? (
+                          <button className="inventory-card" type="button" key={record.id} onClick={() => setKnowledgeOpen(destination)}>
+                            <div className="item-art"><KnowledgeArt destination={destination} /></div>
+                            <strong>{record.reward}</strong><span>来自{record.destination}</span>
+                          </button>
+                        ) : null;
+                      })}
+                      {Array.from({ length: Math.max(0, 12 - journalUnlockedItems) }, (_, index) => (
+                        <article className="journal-locked-item" key={`locked-item-${index}`} aria-label="尚未解锁的背包格子">
+                          <Lock /><Sparkles />
+                          <strong>等待新发现</strong><span>去旅行解锁</span>
+                        </article>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </section>
         )}
@@ -2377,6 +2433,7 @@ export default function ReadingApp({
                   />
                 </label>
                 <div className="modal-actions chapter-question-actions">
+                  <button className="think-again-button" type="button" onClick={thinkAgainChapterQuestion} disabled={companionLoading}><BookOpen /> 我再想想</button>
                   <button className="skip-question-button" type="button" onClick={skipChapterQuestion} disabled={companionLoading}>这次先跳过</button>
                   <button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音回答</button>
                   <button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading || !readingAnswer.trim()}><Send /> {companionLoading ? "龟龟正在想…" : "发给龟龟看看"}</button>
@@ -2535,17 +2592,5 @@ export default function ReadingApp({
         </div>
       )}
     </main>
-  );
-}
-
-function EmptyRecord({ type, onAction }: { type: "travel" | "reading"; onAction: () => void }) {
-  const reading = type === "reading";
-  return (
-    <div className="empty-record">
-      {reading ? <BookOpen /> : <MapPinned />}
-      <h2>{reading ? "第一篇阅读小结正在等你" : "第一张旅行照片正在等你"}</h2>
-      <p>{reading ? "选一本喜欢的短篇，和龟龟一起读完吧。" : "挑一个目的地，龟龟会把沿途的新发现带回来。"}</p>
-      <button type="button" onClick={onAction}>{reading ? "去书房" : "去旅行"}<ChevronRight /></button>
-    </div>
   );
 }

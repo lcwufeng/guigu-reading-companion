@@ -1,6 +1,6 @@
 # 龟龟伴读 V1.2 美术资产使用对照
 
-页面优先加载 `optimized/` 下的 WebP；同名 PNG 作为原始美术源文件保留。顶部品牌使用 `legacy/brand/guigu_logo.png`。
+页面优先加载 `optimized/` 下的 WebP；同名 PNG 作为原始美术源文件保留。登录页和应用顶部统一使用 `ui/supplied/brand/logo-20260715.png`。
 
 ## 主场景
 
@@ -35,7 +35,8 @@
 - 场景动作按钮：`ui/home-refresh/actions/*.png`
 - 状态面板和状态图标：`ui/home-refresh/status/*.png`
 - 宠物身份与资源框：`ui/home-refresh/frames/top-frame.png`
-- 透明品牌 Logo：`ui/supplied/brand/logo.png`
+- 透明品牌 Logo：`ui/supplied/brand/logo-20260715.png`
+- 手账主背景、羊皮纸面板、分类页签、旅行卡片和阅读纪念物：`ui/journal/`
 - 六项底部导航完整按钮：`ui/supplied/nav/*.png`
 - 阅读、错题屋、手账使用版本化整图：`reading-20260713.png`、`mistakes-20260713.png`、`journal-20260713.png`
 - 补充素材预处理：`scripts/prepare_supplemental_assets.py`

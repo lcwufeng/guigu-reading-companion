@@ -47,6 +47,7 @@ test("server-renders the internal beta login before the reading companion", asyn
   assert.match(html, /内测学习屋/);
   assert.match(html, /请输入账号/);
   assert.match(html, /assets\/ui\/login\/background\.png/);
+  assert.match(html, /assets\/ui\/supplied\/brand\/logo-20260715\.png/);
   assert.doesNotMatch(html, /选择内测账号/);
   assert.doesNotMatch(html, /同学一|同学二|同学三/);
   assert.doesNotMatch(html, /我的伙伴/);
@@ -195,7 +196,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.turtle-wrap,\n\s+\.turtle-wrap\.spot-tree-shade \{[\s\S]*?left: 34%;/);
   assert.match(page, /ui\/home-refresh\/actions\/swim\.png/);
   assert.match(page, /ui\/home-refresh\/status\/panel\.png/);
-  assert.match(page, /ui\/supplied\/brand\/logo\.png/);
+  assert.match(page, /ui\/supplied\/brand\/logo-20260715\.png/);
   assert.match(page, /ui\/supplied\/nav\/home\.png/);
   assert.match(page, /ui\/supplied\/nav\/reading-20260714\.png/);
   assert.match(page, /ui\/supplied\/nav\/mistakes-20260714\.png/);
@@ -230,6 +231,8 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /发给龟龟看看/);
   assert.match(page, /龟龟的称赞/);
   assert.match(page, /龟龟的思考/);
+  assert.match(page, /我再想想/);
+  assert.match(page, /thinkAgainChapterQuestion/);
   assert.match(page, /chapterQuestionOpen/);
   assert.doesNotMatch(page, /提交给 AI 判断|修改后重新提交/);
   assert.match(page, /readingRewards/);
@@ -255,6 +258,18 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.reading-companion-card\.embedded \.companion-card-heading img \{[\s\S]*?height: 80px;[\s\S]*?width: 88px;/);
   assert.match(styles, /\.reading-companion-card\.embedded h3 \{[\s\S]*?font-size: 18px;/);
   assert.match(styles, /\.reading-companion-card\.embedded \.reading-guide,[\s\S]*?font-size: 14px;/);
+  assert.match(styles, /\.chapter-question-copy \{[\s\S]*?font-size: 22px;/);
+  assert.match(styles, /\.chapter-question-guide \{[\s\S]*?font-size: 18px;/);
+  assert.match(styles, /\.chapter-question-heading img \{[\s\S]*?height: 132px;/);
+  assert.match(page, /journal-scene-background/);
+  assert.match(page, /journal-board-frame/);
+  assert.match(page, /journal-travel-card/);
+  assert.match(page, /journal-reading-card/);
+  assert.match(page, /journal-inventory-grid/);
+  assert.match(page, /第一张旅行照片正在等你/);
+  assert.match(page, /下一次阅读记录会出现在这里/);
+  assert.match(page, /等待新发现/);
+  assert.match(styles, /Growth journal rebuilt from the supplied parchment and scrapbook assets/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
@@ -377,6 +392,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/ui/home-refresh/status/panel.png",
     "../public/assets/ui/home-refresh/status/turtle-head.png",
     "../public/assets/ui/supplied/brand/logo.png",
+    "../public/assets/ui/supplied/brand/logo-20260715.png",
     "../public/assets/ui/supplied/nav/home.png",
     "../public/assets/ui/supplied/nav/reading.png",
     "../public/assets/ui/supplied/nav/mistakes.png",
@@ -402,6 +418,26 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/ui/daily-tasks/mistake.png",
     "../public/assets/ui/daily-tasks/reading.png",
     "../public/assets/ui/daily-tasks/reward-star.png",
+    "../public/assets/ui/journal/background.png",
+    "../public/assets/ui/journal/parchment-panel.png",
+    "../public/assets/ui/journal/traveler-turtle.png",
+    "../public/assets/ui/journal/travel-path-scene.png",
+    "../public/assets/ui/journal/signpost.png",
+    "../public/assets/ui/journal/tabs-travel-active.png",
+    "../public/assets/ui/journal/tabs-reading-active.png",
+    "../public/assets/ui/journal/tabs-items-active.png",
+    "../public/assets/ui/journal/empty-photo.png",
+    "../public/assets/ui/journal/side-decoration.png",
+    "../public/assets/ui/journal/green-button.png",
+    "../public/assets/ui/journal/travel-card-frame.png",
+    "../public/assets/ui/journal/pushpin.png",
+    "../public/assets/ui/journal/location-sticker.png",
+    "../public/assets/ui/journal/leaf-stamp.png",
+    "../public/assets/ui/journal/shell-stamp.png",
+    "../public/assets/ui/journal/card-action-button.png",
+    "../public/assets/ui/journal/title-vine.png",
+    "../public/assets/ui/journal/dotted-travel-path.png",
+    "../public/assets/ui/journal/reading-record-book.png",
     "../public/books/scarecrow-zh.md",
     "../public/books/grimms-fairy-tales-zh.md",
     "../public/books/andersens-fairy-tales-zh.md",
