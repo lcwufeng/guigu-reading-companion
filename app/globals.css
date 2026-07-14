@@ -721,7 +721,7 @@ button:disabled {
   background-image: var(--chat-background);
   display: flex;
   justify-content: center;
-  padding: 112px max(4vw, 42px) 108px;
+  padding: clamp(92px, 10dvh, 116px) clamp(28px, 5vw, 96px) clamp(86px, 9dvh, 108px);
 }
 
 .travel-scene {
@@ -1475,10 +1475,10 @@ button:disabled {
   box-shadow: 0 18px 48px rgba(14, 51, 38, 0.24);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
-  height: min(640px, calc(100dvh - 180px));
-  min-height: 500px;
+  height: clamp(360px, calc(100dvh - 200px), 760px);
+  min-height: 0;
   overflow: hidden;
-  width: min(900px, 100%);
+  width: min(1180px, calc(100vw - clamp(56px, 10vw, 180px)));
 }
 
 .chat-panel-header {
@@ -4431,9 +4431,10 @@ button:disabled {
 /* Complete-book reader: original text, companion prompts and notes are deliberately separated. */
 .complete-reader {
   align-items: stretch;
-  height: min(620px, calc(100% - 140px));
+  gap: clamp(10px, 1.1vw, 20px);
+  height: clamp(360px, calc(100dvh - 190px), 760px);
   left: 58%;
-  width: min(1280px, 84vw);
+  width: min(1500px, 84vw);
 }
 
 .complete-reader .reading-paper {
@@ -4544,7 +4545,7 @@ button:disabled {
   border: 1px solid rgba(77, 99, 80, 0.24);
   box-shadow: 0 15px 38px rgba(31, 51, 37, 0.2);
   display: flex;
-  flex: 0 0 205px;
+  flex: 0 0 clamp(170px, 14vw, 220px);
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
@@ -4598,7 +4599,7 @@ button:disabled {
   background: rgba(255, 253, 244, 0.98);
   border: 2px solid #91bd7f;
   box-shadow: 0 15px 38px rgba(31, 65, 45, 0.24);
-  flex: 0 0 270px;
+  flex: 0 0 clamp(240px, 20vw, 320px);
   min-width: 0;
   overflow-y: auto;
 }

@@ -219,7 +219,8 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /今天想聊什么/);
   assert.doesNotMatch(page, /className="chat-companion"|turtle_talking\.png/);
   assert.match(styles, /\.chat-scene \{[\s\S]*?display: flex;[\s\S]*?justify-content: center;/);
-  assert.match(styles, /\.chat-panel \{[\s\S]*?width: min\(900px, 100%\);/);
+  assert.match(styles, /\.chat-panel \{[\s\S]*?height: clamp\(360px, calc\(100dvh - 200px\), 760px\);/);
+  assert.match(styles, /\.chat-panel \{[\s\S]*?width: min\(1180px, calc\(100vw - clamp\(56px, 10vw, 180px\)\)\);/);
   assert.match(styles, /\.message p \{[\s\S]*?font-size: 17px;/);
   assert.match(page, /回答正确奖励/);
   assert.match(page, /修改后重新提交/);
@@ -239,8 +240,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /label: "大"/);
   assert.match(styles, /\.reading-font-medium \.original-book-text p \{ font-size: 18px; \}/);
   assert.match(styles, /\.reading-font-large \.original-book-text p \{ font-size: 20px; \}/);
-  assert.match(styles, /height: min\(620px, calc\(100% - 140px\)\)/);
-  assert.match(styles, /width: min\(1280px, 84vw\)/);
+  assert.match(styles, /height: clamp\(360px, calc\(100dvh - 190px\), 760px\)/);
+  assert.match(styles, /width: min\(1500px, 84vw\)/);
+  assert.match(styles, /flex: 0 0 clamp\(170px, 14vw, 220px\)/);
+  assert.match(styles, /flex: 0 0 clamp\(240px, 20vw, 320px\)/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
