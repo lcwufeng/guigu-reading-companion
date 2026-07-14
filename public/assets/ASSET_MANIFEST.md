@@ -102,6 +102,8 @@
 | `ui/supplied/nav/` | 底部一级导航 | 补充素材中的 6 张完整透明按钮原图，保留原图文字，不做裁切加工。 |
 | `ui/supplied/brand/logo-20260715.png` | 全站品牌 | 登录页和应用顶栏共用的新“龟龟伴读”Logo。 |
 | `ui/journal/` | 成长手账 | 旅行手账、阅读记录和小背包界面使用的像素风背景、面板、卡片和装饰素材。 |
+| `ui/journal/growth-journal-emblem.png` | 手账标识 | 皮革手账、新芽、星星和脚印组成的成长手账徽章。 |
+| `ui/journal/books/` | 阅读记录 | 为《稻草人》《格林童话》《安徒生童话》分别绘制的专属展开书本图标。 |
 | `ui/home-refresh/frames/top-frame.png` | 顶部与导航框体 | 用于宠物身份、资源库存和底部导航的可拉伸像素框。 |
 
 动作和状态资源由 `scripts/prepare_supplemental_assets.py` 从设计素材目录裁切和压缩生成；Logo 与底部导航按钮直接复制原始透明 PNG，不做裁切或重绘。

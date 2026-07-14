@@ -262,7 +262,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.chapter-question-guide \{[\s\S]*?font-size: 18px;/);
   assert.match(styles, /\.chapter-question-heading img \{[\s\S]*?height: 132px;/);
   assert.match(page, /journal-scene-background/);
-  assert.match(page, /journal-board-frame/);
+  assert.match(page, /growth-journal-emblem\.png/);
+  assert.match(page, /scarecrow-reading-book\.png/);
+  assert.match(page, /grimm-reading-book\.png/);
+  assert.match(page, /andersen-reading-book\.png/);
   assert.match(page, /journal-travel-card/);
   assert.match(page, /journal-reading-card/);
   assert.match(page, /journal-inventory-grid/);
@@ -270,6 +273,9 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /下一次阅读记录会出现在这里/);
   assert.match(page, /等待新发现/);
   assert.match(styles, /Growth journal rebuilt from the supplied parchment and scrapbook assets/);
+  assert.match(styles, /border-image-source: var\(--journal-frame-image\)/);
+  assert.match(styles, /\.journal-reading-copy p \{[\s\S]*?font-size: 18px;/);
+  assert.match(styles, /\.journal-card-copy p \{[\s\S]*?font-size: 17px;/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
@@ -438,6 +444,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/ui/journal/title-vine.png",
     "../public/assets/ui/journal/dotted-travel-path.png",
     "../public/assets/ui/journal/reading-record-book.png",
+    "../public/assets/ui/journal/growth-journal-emblem.png",
+    "../public/assets/ui/journal/books/scarecrow-reading-book.png",
+    "../public/assets/ui/journal/books/grimm-reading-book.png",
+    "../public/assets/ui/journal/books/andersen-reading-book.png",
     "../public/books/scarecrow-zh.md",
     "../public/books/grimms-fairy-tales-zh.md",
     "../public/books/andersens-fairy-tales-zh.md",

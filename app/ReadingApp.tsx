@@ -240,6 +240,16 @@ const readingFontOptions: Array<{ value: ReadingFontSize; label: string; hint: s
   { value: "large", label: "大", hint: "原文字号放大 4 像素" },
 ];
 
+const journalReadingArtByTitle: Record<string, string> = {
+  "稻草人": "ui/journal/books/scarecrow-reading-book.png",
+  "格林童话": "ui/journal/books/grimm-reading-book.png",
+  "安徒生童话": "ui/journal/books/andersen-reading-book.png",
+};
+
+function journalReadingArtFor(title: string) {
+  return journalReadingArtByTitle[title] || "ui/journal/reading-record-book.png";
+}
+
 function isReadingFontSize(value: unknown): value is ReadingFontSize {
   return value === "small" || value === "medium" || value === "large";
 }
@@ -2247,12 +2257,17 @@ export default function ReadingApp({
         {view === "journal" && (
           <section className="scene journal-scene">
             <img className="journal-scene-background" src={`${ASSET}/ui/journal/background.png`} alt="" />
-            <div className="journal-board">
-              <img className="journal-board-frame" src={`${ASSET}/ui/journal/parchment-panel.png`} alt="" />
+            <div
+              className="journal-board"
+              style={{ "--journal-frame-image": `url("${ASSET}/ui/journal/parchment-panel.png")` } as React.CSSProperties}
+            >
               <img className="journal-side-decoration" src={`${ASSET}/ui/journal/side-decoration.png`} alt="" />
               <header className="journal-header">
                 <div className="journal-title">
-                  <span className="eyebrow"><BookOpen size={20} /> 成长手账</span>
+                  <div className="journal-title-badge">
+                    <img src={`${ASSET}/ui/journal/growth-journal-emblem.png`} alt="成长手账徽章" />
+                    <strong>成长手账</strong>
+                  </div>
                   <h1>我们一起留下的足迹</h1>
                   <img src={`${ASSET}/ui/journal/title-vine.png`} alt="" />
                 </div>
@@ -2315,7 +2330,7 @@ export default function ReadingApp({
                     {game.readingRecords.length ? game.readingRecords.slice(0, 5).map((record) => (
                       <article className="journal-reading-card" key={record.id}>
                         <div className="journal-reading-visual">
-                          <img src={`${ASSET}/ui/journal/reading-record-book.png`} alt="记录故事的翻开书本" />
+                          <img src={`${ASSET}/${journalReadingArtFor(record.title)}`} alt={`《${record.title}》主题阅读记录书本`} />
                           <span><Star fill="currentColor" /></span>
                         </div>
                         <div className="journal-reading-copy">
