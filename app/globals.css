@@ -1216,9 +1216,11 @@ button:disabled {
 }
 
 .reading-meta {
+  align-items: center;
   color: #718078;
   display: flex;
   font-size: 12px;
+  gap: 10px;
   justify-content: space-between;
   margin-bottom: 10px;
 }
@@ -4429,9 +4431,9 @@ button:disabled {
 /* Complete-book reader: original text, companion prompts and notes are deliberately separated. */
 .complete-reader {
   align-items: stretch;
-  height: min(525px, calc(100% - 190px));
+  height: min(620px, calc(100% - 140px));
   left: 58%;
-  width: min(1160px, 80vw);
+  width: min(1280px, 84vw);
 }
 
 .complete-reader .reading-paper {
@@ -4492,6 +4494,44 @@ button:disabled {
   text-align: justify;
   text-indent: 2em;
   text-justify: inter-ideograph;
+}
+
+.reading-font-medium .original-book-text p { font-size: 18px; }
+.reading-font-large .original-book-text p { font-size: 20px; }
+
+.reading-font-controls {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+}
+
+.reading-font-controls > span {
+  color: #7b887f;
+  font-size: 10px;
+  font-weight: 800;
+  margin-right: 2px;
+}
+
+.reading-font-controls button {
+  align-items: center;
+  background: #f1f4ef;
+  border: 1px solid #cdd7cf;
+  color: #59675e;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 850;
+  height: 28px;
+  justify-content: center;
+  min-width: 30px;
+  padding: 0 7px;
+}
+
+.reading-font-controls button:hover,
+.reading-font-controls button[aria-pressed="true"] {
+  background: #405c49;
+  border-color: #405c49;
+  color: #fff;
 }
 
 .complete-reading-paper .reading-controls {
@@ -4688,6 +4728,8 @@ button:disabled {
   }
   .complete-reading-paper h2 { font-size: 19px; margin: 8px 0; }
   .original-book-text p { font-size: 14px; line-height: 1.65; }
+  .reading-font-medium .original-book-text p { font-size: 16px; }
+  .reading-font-large .original-book-text p { font-size: 18px; }
   .reader-side-panel {
     bottom: 0;
     height: 96px;
@@ -4990,6 +5032,14 @@ button:disabled {
     margin-bottom: 7px;
   }
 
+  .reading-page-meta {
+    margin-right: auto;
+  }
+
+  .reading-font-controls > span {
+    display: none;
+  }
+
   .chapter-position {
     margin-top: 6px;
   }
@@ -5008,6 +5058,9 @@ button:disabled {
     line-height: 1.72;
     margin-bottom: 0.8em;
   }
+
+  .reading-font-medium .original-book-text p { font-size: 17px; }
+  .reading-font-large .original-book-text p { font-size: 19px; }
 
   .complete-reading-paper .reading-controls {
     gap: 6px;
@@ -5156,13 +5209,16 @@ button:disabled {
     padding-inline: 11px;
   }
 
-  .reading-meta > span:last-child {
+  .reading-page-meta {
     font-size: 9px;
   }
 
   .original-book-text p {
     font-size: 14px;
   }
+
+  .reading-font-medium .original-book-text p { font-size: 16px; }
+  .reading-font-large .original-book-text p { font-size: 18px; }
 
   .reading-controls > span {
     font-size: 9px;

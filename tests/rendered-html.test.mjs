@@ -119,13 +119,15 @@ test("forces first-login password reset and isolates every student's data", asyn
 });
 
 test("keeps the product loops, account safeguards, and required art assets", async () => {
-  const [page, styles, layout, nextConfig, companionRoute, speechRoute, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, hosting] = await Promise.all([
+  const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, hosting] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../next.config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/companion/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/speech/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/volc-speech.ts", import.meta.url), "utf8"),
+    readFile(new URL("../dist/server/index.js", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mistake-scan/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/student-memory/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/student-memory.ts", import.meta.url), "utf8"),
@@ -230,6 +232,15 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.doesNotMatch(page, /grimms-fairy-tales-en\.txt|andersens-fairy-tales-en\.txt/);
   assert.match(styles, /text-indent: 2em/);
   assert.match(styles, /text-align: justify/);
+  assert.match(page, /readingFontSize: "medium"/);
+  assert.match(page, /选择原文字号/);
+  assert.match(page, /label: "小"/);
+  assert.match(page, /label: "中"/);
+  assert.match(page, /label: "大"/);
+  assert.match(styles, /\.reading-font-medium \.original-book-text p \{ font-size: 18px; \}/);
+  assert.match(styles, /\.reading-font-large \.original-book-text p \{ font-size: 20px; \}/);
+  assert.match(styles, /height: min\(620px, calc\(100% - 140px\)\)/);
+  assert.match(styles, /width: min\(1280px, 84vw\)/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
@@ -260,11 +271,16 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /fruitPickingRemaining/);
   assert.match(page, /今天已经摘满 5 个果子/);
   assert.match(await readFile(new URL("../db/reading-progress.ts", import.meta.url), "utf8"), /READING_PROGRESS_FILE/);
-  assert.match(speechRoute, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
-  assert.match(speechRoute, /VOLC_SPEECH_APP_ID/);
-  assert.match(speechRoute, /VOLC_SPEECH_ACCESS_TOKEN/);
-  assert.match(speechRoute, /volc\.bigasr\.sauc\.duration/);
+  assert.match(speechRoute, /recognizeVolcSpeech/);
   assert.match(speechRoute, /MAX_AUDIO_BYTES/);
+  assert.match(speechClient, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
+  assert.match(speechClient, /VOLC_SPEECH_APP_ID/);
+  assert.match(speechClient, /VOLC_SPEECH_ACCESS_TOKEN/);
+  assert.match(speechClient, /volc\.bigasr\.sauc\.duration/);
+  assert.match(speechClient, /@vite-ignore/);
+  assert.doesNotMatch(speechClient, /import WebSocket from "ws"/);
+  assert.match(serverBundle, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
+  assert.doesNotMatch(serverBundle, /ws does not work in the browser|node_modules\/ws\/browser\.js/);
   assert.match(mistakeScanRoute, /api\.xiaomimimo\.com\/v1\/chat\/completions/);
   assert.match(mistakeScanRoute, /MIMO_API_KEY/);
   assert.match(mistakeScanRoute, /mimo-v2\.5/);

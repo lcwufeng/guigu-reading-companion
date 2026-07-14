@@ -78,6 +78,7 @@ type DailyPlan = {
   rewardClaimed: boolean;
 };
 type DailyFruitPicking = { dateKey: string; picked: number };
+type ReadingFontSize = "small" | "medium" | "large";
 type StudentMemoryEvent = {
   type: "reading" | "learning" | "activity";
   title?: string;
@@ -104,6 +105,7 @@ type GameState = {
   mistakes: MistakeRecord[];
   dailyPlan: DailyPlan;
   fruitPicking: DailyFruitPicking;
+  readingFontSize: ReadingFontSize;
 };
 
 type Book = {
@@ -229,7 +231,18 @@ const initialState: GameState = {
     rewardClaimed: false,
   },
   fruitPicking: { dateKey: "", picked: 0 },
+  readingFontSize: "medium",
 };
+
+const readingFontOptions: Array<{ value: ReadingFontSize; label: string; hint: string }> = [
+  { value: "small", label: "小", hint: "当前原文字号" },
+  { value: "medium", label: "中", hint: "原文字号放大 2 像素" },
+  { value: "large", label: "大", hint: "原文字号放大 4 像素" },
+];
+
+function isReadingFontSize(value: unknown): value is ReadingFontSize {
+  return value === "small" || value === "medium" || value === "large";
+}
 
 const books: Book[] = [
   {
@@ -886,6 +899,7 @@ export default function ReadingApp({
               cleanliness: clamp((parsed.cleanliness ?? initialState.cleanliness) - hours),
               boredom: clamp((parsed.boredom ?? initialState.boredom) + hours * 2),
               readingRewards: Array.isArray(parsed.readingRewards) ? parsed.readingRewards.slice(-500) : [],
+              readingFontSize: isReadingFontSize(parsed.readingFontSize) ? parsed.readingFontSize : "medium",
               lastSeen: Date.now(),
             };
           } catch {
@@ -1951,10 +1965,24 @@ export default function ReadingApp({
                     </div>
                   </nav>
 
-                  <article className="reading-paper complete-reading-paper">
+                  <article className={`reading-paper complete-reading-paper reading-font-${game.readingFontSize}`}>
                     <div className="reading-meta">
                       <span className="content-type-label original">原文</span>
-                      <span>{selectedBook.source?.language} · 第 {overallPageNumber} / {totalBookPages} 页</span>
+                      <span className="reading-page-meta">{selectedBook.source?.language} · 第 {overallPageNumber} / {totalBookPages} 页</span>
+                      <div className="reading-font-controls" role="group" aria-label="选择原文字号">
+                        <span>字号</span>
+                        {readingFontOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            aria-pressed={game.readingFontSize === option.value}
+                            title={option.hint}
+                            onClick={() => setGame((current) => ({ ...current, readingFontSize: option.value }))}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <div className="reading-progress"><i style={{ width: `${overallProgress}%` }} /></div>
                     <small className="chapter-position">第 {selectedChapter + 1} 章 · 本章 {bookPage + 1}/{activePages.length} 页</small>
