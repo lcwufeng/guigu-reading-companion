@@ -717,10 +717,10 @@ button:disabled {
 }
 
 .chat-scene {
+  align-items: center;
   background-image: var(--chat-background);
-  display: grid;
-  gap: 4vw;
-  grid-template-columns: minmax(290px, 0.68fr) minmax(560px, 1.22fr);
+  display: flex;
+  justify-content: center;
   padding: 112px max(4vw, 42px) 108px;
 }
 
@@ -755,8 +755,7 @@ button:disabled {
 }
 
 .scene-title small,
-.page-heading p,
-.companion-speech p {
+.page-heading p {
   color: #4f6960;
 }
 
@@ -1084,15 +1083,13 @@ button:disabled {
 }
 
 .page-heading h1,
-.companion-speech h1,
 .journal-header h1 {
   font-size: 30px;
   line-height: 1.18;
   margin: 8px 0 6px;
 }
 
-.page-heading p,
-.companion-speech p {
+.page-heading p {
   font-size: 14px;
   margin: 0;
 }
@@ -1461,79 +1458,6 @@ button:disabled {
   padding: 4px 0;
 }
 
-.chat-companion {
-  align-self: stretch;
-  min-height: 0;
-  position: relative;
-}
-
-.companion-speech {
-  background: rgba(255, 255, 255, 0.94);
-  border-left: 6px solid var(--sun);
-  box-shadow: 0 12px 30px rgba(24, 63, 48, 0.16);
-  max-width: 390px;
-  padding: 20px 22px;
-  position: relative;
-  z-index: 2;
-}
-
-.companion-speech::after {
-  border-left: 18px solid transparent;
-  border-top: 18px solid rgba(255, 255, 255, 0.94);
-  bottom: -18px;
-  content: "";
-  left: 42px;
-  position: absolute;
-}
-
-.companion-speech > span {
-  align-items: center;
-  color: var(--leaf-dark);
-  display: flex;
-  font-size: 12px;
-  font-weight: 850;
-  gap: 6px;
-}
-
-.companion-speech h1 {
-  font-size: 31px;
-  line-height: 1.16;
-  margin: 8px 0;
-}
-
-.companion-speech p {
-  color: #4f6960;
-  font-size: 13px;
-  line-height: 1.65;
-  margin: 0;
-}
-
-.chat-companion > img {
-  bottom: 30px;
-  filter: drop-shadow(0 14px 7px rgba(20, 58, 42, 0.22));
-  height: min(350px, 47vh);
-  image-rendering: pixelated;
-  object-fit: contain;
-  position: absolute;
-  right: 0;
-  width: min(330px, 28vw);
-}
-
-.companion-ready {
-  align-items: center;
-  background: #fff2b5;
-  bottom: 22px;
-  box-shadow: 0 7px 18px rgba(56, 71, 33, 0.15);
-  display: flex;
-  font-size: 12px;
-  gap: 7px;
-  padding: 8px 12px;
-  position: absolute;
-  right: 20px;
-  z-index: 3;
-}
-
-.companion-ready i,
 .chat-panel-header > span i {
   background: #38a96b;
   border-radius: 50%;
@@ -1552,6 +1476,7 @@ button:disabled {
   height: min(640px, calc(100dvh - 180px));
   min-height: 500px;
   overflow: hidden;
+  width: min(900px, 100%);
 }
 
 .chat-panel-header {
@@ -1582,19 +1507,19 @@ button:disabled {
 
 .chat-panel-header small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 13px;
   margin-bottom: 2px;
 }
 
 .chat-panel-header strong {
-  font-size: 17px;
+  font-size: 20px;
 }
 
 .chat-panel-header > span {
   align-items: center;
   color: #327153;
   display: flex;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   gap: 6px;
 }
@@ -1608,7 +1533,7 @@ button:disabled {
 .prompt-area > small {
   color: #745e28;
   display: block;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
   margin-bottom: 7px;
 }
@@ -1627,7 +1552,7 @@ button:disabled {
   color: #624f1f;
   cursor: pointer;
   display: flex;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
   gap: 6px;
   justify-content: center;
@@ -1689,7 +1614,7 @@ button:disabled {
 .message-content > small {
   color: #658077;
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   margin: 0 0 4px 3px;
 }
 
@@ -1697,8 +1622,8 @@ button:disabled {
   background: #f1f6f3;
   border: 1px solid #dce8e0;
   border-radius: 7px 7px 7px 2px;
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: 17px;
+  line-height: 1.65;
   margin: 0;
   padding: 10px 13px;
 }
@@ -1757,6 +1682,7 @@ button:disabled {
 .chat-composer input {
   background: white;
   border-radius: 7px;
+  font-size: 17px;
   height: 48px;
 }
 
@@ -3464,8 +3390,6 @@ button:disabled {
   }
 
   .chat-scene {
-    gap: 24px;
-    grid-template-columns: minmax(240px, 0.56fr) minmax(520px, 1fr);
     padding-inline: 28px;
   }
 
@@ -3969,10 +3893,6 @@ button:disabled {
     padding: 76px 0;
   }
 
-  .chat-companion {
-    display: none;
-  }
-
   .chat-panel {
     border: 0;
     height: 100%;
@@ -4023,7 +3943,7 @@ button:disabled {
   }
 
   .message p {
-    font-size: 13px;
+    font-size: 16px;
   }
 
   .chat-composer {
@@ -5156,6 +5076,7 @@ button:disabled {
 
   .chat-panel {
     height: calc(100dvh - var(--mobile-topbar) - var(--mobile-nav));
+    width: 100%;
   }
 
   .mistake-scene {

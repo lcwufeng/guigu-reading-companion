@@ -215,6 +215,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /submitChatRef\.current\(data\.transcript\)/);
   assert.match(page, /在线陪你聊/);
   assert.match(page, /今天想聊什么/);
+  assert.doesNotMatch(page, /className="chat-companion"|turtle_talking\.png/);
+  assert.match(styles, /\.chat-scene \{[\s\S]*?display: flex;[\s\S]*?justify-content: center;/);
+  assert.match(styles, /\.chat-panel \{[\s\S]*?width: min\(900px, 100%\);/);
+  assert.match(styles, /\.message p \{[\s\S]*?font-size: 17px;/);
   assert.match(page, /回答正确奖励/);
   assert.match(page, /修改后重新提交/);
   assert.match(page, /readingRewards/);

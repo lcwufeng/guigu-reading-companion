@@ -14,7 +14,6 @@ import {
   Lock,
   LogOut,
   MapPinned,
-  MessageCircle,
   Mic,
   MicOff,
   RotateCcw,
@@ -2091,20 +2090,10 @@ export default function ReadingApp({
 
         {view === "chat" && (
           <section className="scene chat-scene">
-            <div className="chat-companion">
-              <div className="companion-speech">
-                <span><MessageCircle size={16} /> 今日悄悄话</span>
-                <h1>把今天讲给<br />{game.name}听</h1>
-                <p>开心的、好奇的、没想明白的，都可以说给我听。</p>
-              </div>
-              <img src={`${ASSET}/characters/turtle/turtle_talking.png`} alt="说话的龟龟" />
-              <strong className="companion-ready"><i /> 耳朵准备好啦</strong>
-            </div>
-
             <div className="chat-panel">
               <header className="chat-panel-header">
                 <img src={`${ASSET}/characters/turtle/turtle_waving.png`} alt="" />
-                <div><small>我的陪伴伙伴</small><strong>{game.name}</strong></div>
+                <div><small>今日悄悄话 · 我的陪伴伙伴</small><strong>{game.name}</strong></div>
                 <span><i /> 在线陪你聊</span>
               </header>
               <div className="prompt-area">
