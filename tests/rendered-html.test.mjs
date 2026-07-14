@@ -197,6 +197,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /ui\/supplied\/nav\/reading-20260714\.png/);
   assert.match(page, /ui\/supplied\/nav\/mistakes-20260714\.png/);
   assert.match(page, /ui\/supplied\/nav\/journal-20260714\.png/);
+  assert.match(page, /className="logout-button"/);
+  assert.match(page, /aria-label="退出登录"/);
+  assert.doesNotMatch(page, /<LogOut[^>]*\/>退出/);
+  assert.doesNotMatch(page, /className="student-account"/);
+  assert.match(styles, /grid-template-columns: minmax\(420px, 1fr\) auto 52px/);
+  assert.match(styles, /\.logout-button \{/);
   assert.match(page, /ui\/mistakes\/title\.png/);
   assert.match(page, /ui\/mistakes\/stats-panel\.png/);
   assert.match(page, /ui\/mistakes\/empty-turtle\.png/);

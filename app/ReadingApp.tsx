@@ -1755,16 +1755,15 @@ export default function ReadingApp({
         </div>
 
         <div className="wallet-group">
-          <div className="student-account" title={`当前登录：${student.displayName}`}>
-            <span>{student.displayName}</span>
-            <button type="button" onClick={logout} aria-label="退出登录"><LogOut aria-hidden="true" />退出</button>
-          </div>
           <div className="wallet" aria-label={`${game.stars}颗星星，${game.fruits}个果子，${game.tickets}张旅行票`}>
             <span><Star className="wallet-star" fill="currentColor" aria-hidden="true" /> {game.stars}</span>
             <span><img className="wallet-icon" src={`${ASSET}/objects/fruit_orange.png`} alt="" /> {game.fruits}</span>
             <span className="wallet-ticket"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="" /> {game.tickets}</span>
           </div>
         </div>
+        <button className="logout-button" type="button" onClick={logout} aria-label="退出登录" title={`退出 ${student.displayName} 的账号`}>
+          <LogOut aria-hidden="true" />
+        </button>
       </header>
 
       <section className="scene-shell">
