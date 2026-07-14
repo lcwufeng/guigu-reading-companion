@@ -14,6 +14,7 @@ type CompanionRequest = {
   title?: string;
   excerpt?: string;
   question?: string;
+  referenceAnswer?: string;
   answer?: string;
   history?: CompanionMessage[];
 };
@@ -88,10 +89,10 @@ function buildSystemPrompt(name: string, mode: CompanionRequest["mode"], memory:
   ];
   if (mode === "reading") {
     shared.push(
-      "你现在是伴读答案判定器。必须同时依据本页原文、龟龟的问题和孩子的回答进行判断。",
-      "问题允许开放表达：只要回答切题、没有违背原文，并给出合理解释或文本依据，就判为正确；明显答非所问、与原文冲突、只有空泛短语或没有说明理由，判为不正确。",
+      "你现在是章节伴读答案判定器。必须同时依据本章完整原文、龟龟的问题、参考判断要点和孩子的回答进行判断。",
+      "问题允许开放表达：孩子不必逐字复述参考答案。只要回答切题、没有违背原文，并给出合理解释或文本依据，就判为正确；明显答非所问、与原文冲突、只有空泛短语或没有说明理由，判为不正确。",
       "只输出一个JSON对象，不要Markdown，不要额外文字。格式必须是：{\"correct\":true或false,\"feedback\":\"中文反馈\"}。",
-      "正确时，feedback用80字以内具体指出答得好的地方并给一句鼓励，不再提问。错误时，feedback用100字以内指出需要修改的地方，给一个可操作提示，但不要直接代写完整答案。",
+      "正确时，feedback用100字以内具体指出答得好的地方并给一句真诚称赞，不再提问。错误时，feedback用140字以内温和指出答案哪里与原文不符或不够完整，并直接给出基于原文的正确思路或参考答案，帮助孩子读懂这一章。",
     );
   } else {
     shared.push(
@@ -140,21 +141,51 @@ export async function POST(request: Request) {
       studentMemory = null;
     }
   }
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
-    if (body.mode === "reading") {
-      return NextResponse.json({ reply: "AI 伴读暂时没有连接成功，这次不会扣除或发放星星，请稍后重新提交。", source: "unavailable" }, { status: 503 });
+  if (body.mode === "reading") {
+    const apiKey = process.env.MIMO_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ reply: "龟龟暂时没能想好这次回答。这次不会扣除或发放星星，请稍后再发一次。", source: "unavailable" }, { status: 503 });
     }
-    return NextResponse.json({ reply: localReply(body), source: "local" });
+    const userContext = [
+      `书名与章节：${clean(body.title, 80)}`,
+      `本章完整原文：${clean(body.excerpt, 16_000)}`,
+      `龟龟的问题：${clean(body.question, 240)}`,
+      `参考判断要点：${clean(body.referenceAnswer, 1_000)}`,
+      `孩子的回答：${input}`,
+    ].join("\n");
+
+    try {
+      const response = await fetch("https://api.xiaomimimo.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "api-key": apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: process.env.MIMO_MODEL || "mimo-v2.5",
+          messages: [
+            { role: "system", content: buildSystemPrompt(name, "reading") },
+            { role: "user", content: userContext },
+          ],
+          thinking: { type: "disabled" },
+          response_format: { type: "json_object" },
+          max_completion_tokens: 360,
+          stream: false,
+        }),
+      });
+      if (!response.ok) throw new Error(`mimo api ${response.status}`);
+      const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      const rawReply = clean(data.choices?.[0]?.message?.content, 800);
+      if (!rawReply) throw new Error("empty response");
+      const evaluation = parseReadingEvaluation(rawReply);
+      return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "mimo" });
+    } catch {
+      return NextResponse.json({ reply: "龟龟暂时没能完成判断。这次不会扣除或发放星星，你可以重新发送或先跳过。", source: "unavailable" }, { status: 503 });
+    }
   }
-  const userContext = body.mode === "reading"
-    ? [
-        `书名：${clean(body.title, 80)}`,
-        `本页完整原文：${clean(body.excerpt, 2200)}`,
-        `龟龟的问题：${clean(body.question, 160)}`,
-        `孩子的回答：${input}`,
-      ].join("\n")
-    : input;
+
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) return NextResponse.json({ reply: localReply(body), source: "local" });
 
   try {
     const response = await fetch("https://api.deepseek.com/chat/completions", {
@@ -166,12 +197,11 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
         messages: [
-          { role: "system", content: buildSystemPrompt(name, body.mode, studentMemory) },
-          ...(body.mode === "chat" ? safeHistory(body.history) : []),
-          { role: "user", content: userContext },
+          { role: "system", content: buildSystemPrompt(name, "chat", studentMemory) },
+          ...safeHistory(body.history),
+          { role: "user", content: input },
         ],
         thinking: { type: "disabled" },
-        ...(body.mode === "reading" ? { response_format: { type: "json_object" } } : {}),
         max_tokens: 220,
         stream: false,
       }),
@@ -180,15 +210,8 @@ export async function POST(request: Request) {
     const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const rawReply = clean(data.choices?.[0]?.message?.content, 500);
     if (!rawReply) throw new Error("empty response");
-    if (body.mode === "reading") {
-      const evaluation = parseReadingEvaluation(rawReply);
-      return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "deepseek" });
-    }
     return NextResponse.json({ reply: rawReply, source: "deepseek" });
   } catch {
-    if (body.mode === "reading") {
-      return NextResponse.json({ reply: "AI 伴读暂时没有完成判断，这次不会扣除或发放星星，请稍后重新提交。", source: "unavailable" }, { status: 503 });
-    }
     return NextResponse.json({ reply: localReply(body), source: "local" });
   }
 }

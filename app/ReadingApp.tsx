@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { chapterKnowledge } from "./book-knowledge";
+import { chapterPrompts } from "./book-prompts";
 
 type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal";
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
@@ -116,7 +117,6 @@ type Book = {
   coverMark: string;
   coverClass: string;
   pages: { heading: string; body: string }[];
-  prompts: { page: number; question: string; guide: string }[];
   summary: string;
   knowledge: string;
   memoryCategory: string;
@@ -156,6 +156,7 @@ type CompanionPayload = {
   title?: string;
   excerpt?: string;
   question?: string;
+  referenceAnswer?: string;
   answer?: string;
   history?: Array<{ role: "user" | "assistant"; content: string }>;
 };
@@ -163,7 +164,7 @@ type CompanionPayload = {
 type CompanionResponse = {
   reply: string;
   correct?: boolean;
-  source?: "deepseek" | "local" | "unavailable";
+  source?: "deepseek" | "mimo" | "local" | "unavailable";
 };
 
 type VoiceTarget = "chat" | "reading";
@@ -253,7 +254,6 @@ const books: Book[] = [
     coverMark: "稻",
     coverClass: "cover-scarecrow",
     pages: [],
-    prompts: [],
     summary: "收录《稻草人》《小白船》《一粒种子》等 13 篇童话，按篇章完整阅读。",
     knowledge: "叶圣陶是中国现代童话创作的重要作家。《稻草人》通过童话人物的所见所感，引导读者观察生活并体会他人的处境。",
     memoryCategory: "中国儿童文学·童话",
@@ -272,7 +272,6 @@ const books: Book[] = [
     coverMark: "格",
     coverClass: "cover-grimm",
     pages: [],
-    prompts: [],
     summary: "收录《青蛙王子》《小红帽》《白雪公主》等 22 篇童话，按篇章完整阅读。",
     knowledge: "格林兄弟整理的童话常以森林、城堡、考验与魔法展开。阅读时可以留意人物如何在选择中展现勇气、智慧与责任。",
     memoryCategory: "欧洲民间童话",
@@ -291,7 +290,6 @@ const books: Book[] = [
     coverMark: "安",
     coverClass: "cover-andersen",
     pages: [],
-    prompts: [],
     summary: "收录《丑小鸭》《拇指姑娘》《野天鹅》等 10 篇童话，按篇章完整阅读。",
     knowledge: "安徒生童话常把温柔、幻想和现实感受放在一起。阅读时可以从人物的选择、愿望和变化中理解勇气、诚实与自我认同。",
     memoryCategory: "丹麦文学·童话",
@@ -787,12 +785,13 @@ export default function ReadingApp({
   const [bookLoadError, setBookLoadError] = useState("");
   const [readingProgressByBook, setReadingProgressByBook] = useState<Record<string, SavedReadingProgress>>({});
   const [readingProgressLoaded, setReadingProgressLoaded] = useState(false);
-  const [answeredPromptPages, setAnsweredPromptPages] = useState<string[]>([]);
+  const [answeredChapterQuestions, setAnsweredChapterQuestions] = useState<string[]>([]);
   const [readerSideTab, setReaderSideTab] = useState<"companion" | "knowledge">("companion");
   const [chapterListOpen, setChapterListOpen] = useState(false);
+  const [chapterQuestionOpen, setChapterQuestionOpen] = useState(false);
   const [readingAnswer, setReadingAnswer] = useState("");
   const [readingFeedback, setReadingFeedback] = useState("");
-  const [readingEvaluation, setReadingEvaluation] = useState<"correct" | "incorrect" | null>(null);
+  const [readingEvaluation, setReadingEvaluation] = useState<"correct" | "incorrect" | "error" | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatThinking, setChatThinking] = useState(false);
@@ -1219,15 +1218,11 @@ export default function ReadingApp({
   const pagesBeforeChapter = selectedChapters.slice(0, selectedChapter).reduce((total, chapter) => total + chapter.pages.length, 0);
   const overallPageNumber = totalBookPages ? pagesBeforeChapter + bookPage + 1 : 0;
   const overallProgress = totalBookPages ? (overallPageNumber / totalBookPages) * 100 : 0;
-  const promptPageIndexes = activePages.length >= 6
-    ? [Math.floor(activePages.length * 0.35), Math.floor(activePages.length * 0.72)]
-    : activePages.length >= 2 ? [Math.floor(activePages.length / 2)] : [];
-  const currentPrompt = activeChapter && promptPageIndexes.includes(bookPage) ? {
-    question: `读到这里，《${activeChapter.title}》中哪一个细节最值得停下来想一想？为什么？`,
-    guide: "先回到原文找一句依据，再说说这句话让你想到什么。",
-  } : null;
-  const currentPromptKey = `${selectedBook.id}:${selectedChapter}:${bookPage}`;
-  const currentPromptAnswered = answeredPromptPages.includes(currentPromptKey);
+  const activeChapterPrompt = activeChapter ? chapterPrompts[selectedBook.id]?.[activeChapter.title] : null;
+  const activeChapterText = activePages.map((page) => page.body).join("\n\n");
+  const currentChapterQuestionKey = activeChapter ? `chapter:${selectedBook.id}:${activeChapter.title}` : "";
+  const currentChapterQuestionAnswered = Boolean(currentChapterQuestionKey)
+    && (answeredChapterQuestions.includes(currentChapterQuestionKey) || game.readingRewards.includes(currentChapterQuestionKey));
   const activeChapterKnowledge = activeChapter
     ? chapterKnowledge[selectedBook.id]?.[activeChapter.title] || selectedBook.knowledge
     : selectedBook.knowledge;
@@ -1259,7 +1254,8 @@ export default function ReadingApp({
     setReadingAnswer("");
     setReadingFeedback("");
     setReadingEvaluation(null);
-    setAnsweredPromptPages([]);
+    setAnsweredChapterQuestions([]);
+    setChapterQuestionOpen(false);
     setReaderSideTab("companion");
     setChapterListOpen(false);
     restoredBookRef.current[book.id] = false;
@@ -1272,15 +1268,13 @@ export default function ReadingApp({
       setReadingAnswer("");
       setReadingFeedback("");
       setReadingEvaluation(null);
-    } else if (selectedChapter < selectedChapters.length - 1) {
-      setSelectedChapter((chapter) => chapter + 1);
-      setBookPage(0);
+    } else if (activeChapterPrompt) {
       setReadingAnswer("");
       setReadingFeedback("");
       setReadingEvaluation(null);
-      showToast("已经进入下一章，进度自动保存啦");
+      setChapterQuestionOpen(true);
     } else {
-      finishReading();
+      showToast("这一章的伴读问题正在整理，请稍后再试");
     }
   };
 
@@ -1295,6 +1289,7 @@ export default function ReadingApp({
     setReadingAnswer("");
     setReadingFeedback("");
     setReadingEvaluation(null);
+    setChapterQuestionOpen(false);
   };
 
   const chooseChapter = (index: number) => {
@@ -1303,6 +1298,7 @@ export default function ReadingApp({
     setReadingAnswer("");
     setReadingFeedback("");
     setReadingEvaluation(null);
+    setChapterQuestionOpen(false);
     setChapterListOpen(false);
   };
 
@@ -1312,7 +1308,7 @@ export default function ReadingApp({
       return;
     }
     setCompanionLoading(true);
-    if (!currentPrompt || !activePage) {
+    if (!activeChapterPrompt || !activeChapter) {
       setCompanionLoading(false);
       return;
     }
@@ -1321,22 +1317,23 @@ export default function ReadingApp({
         mode: "reading",
         name: game.name,
         title: `${selectedBook.title} · ${activeChapter?.title || ""}`,
-        excerpt: activePage.body,
-        question: currentPrompt.question,
+        excerpt: activeChapterText,
+        question: activeChapterPrompt.question,
+        referenceAnswer: activeChapterPrompt.referenceAnswer,
         answer: readingAnswer.trim().slice(0, 500),
       });
       if (typeof result.correct !== "boolean") throw new Error("reading evaluation missing");
       setReadingFeedback(result.reply);
       if (result.correct) {
         setReadingEvaluation("correct");
-        setAnsweredPromptPages((pages) => pages.includes(currentPromptKey) ? pages : [...pages, currentPromptKey]);
-        const alreadyRewarded = game.readingRewards.includes(currentPromptKey);
+        setAnsweredChapterQuestions((questions) => questions.includes(currentChapterQuestionKey) ? questions : [...questions, currentChapterQuestionKey]);
+        const alreadyRewarded = game.readingRewards.includes(currentChapterQuestionKey);
         if (!alreadyRewarded) {
-          setGame((current) => current.readingRewards.includes(currentPromptKey) ? current : ({
+          setGame((current) => current.readingRewards.includes(currentChapterQuestionKey) ? current : ({
             ...current,
             boredom: clamp(current.boredom - 8),
             stars: current.stars + 1,
-            readingRewards: [...current.readingRewards, currentPromptKey].slice(-500),
+            readingRewards: [...current.readingRewards, currentChapterQuestionKey].slice(-500),
           }));
         }
         showToast(alreadyRewarded ? "回答正确，这道题的星星已经领取过啦" : "回答正确，获得 1 颗成长星星！");
@@ -1346,19 +1343,13 @@ export default function ReadingApp({
         });
       } else {
         setReadingEvaluation("incorrect");
-        showToast("再根据龟龟的建议修改一下吧");
+        showToast("龟龟把这一章的思考整理给你啦");
       }
     } catch {
-      setReadingFeedback("AI 伴读暂时没有完成判断，这次不会发放星星。请稍后重新提交。");
-      setReadingEvaluation("incorrect");
+      setReadingFeedback("龟龟暂时没有听懂这次回答。这次不会发放星星，你可以重新发送或先跳过。");
+      setReadingEvaluation("error");
     }
     setCompanionLoading(false);
-  };
-
-  const continueAfterAnswer = () => {
-    setReadingFeedback("");
-    setReadingEvaluation(null);
-    showToast("龟龟记住你的想法啦，继续慢慢读吧");
   };
 
   const finishReading = () => {
@@ -1382,6 +1373,31 @@ export default function ReadingApp({
       detail: `完成《${selectedBook.title}》全书阅读`,
     });
     setSummaryOpen(true);
+  };
+
+  const continueAfterChapterQuestion = () => {
+    const hasNextChapter = selectedChapter < selectedChapters.length - 1;
+    setChapterQuestionOpen(false);
+    setReadingAnswer("");
+    setReadingFeedback("");
+    setReadingEvaluation(null);
+    if (hasNextChapter) {
+      setSelectedChapter((chapter) => chapter + 1);
+      setBookPage(0);
+      showToast("已经进入下一章，进度自动保存啦");
+    } else {
+      finishReading();
+    }
+  };
+
+  const skipChapterQuestion = () => {
+    showToast("这次先跳过，之后回来还可以再想一想");
+    continueAfterChapterQuestion();
+  };
+
+  const retryChapterQuestion = () => {
+    setReadingFeedback("");
+    setReadingEvaluation(null);
   };
 
   const releaseVoiceSession = useCallback(() => {
@@ -1688,7 +1704,8 @@ export default function ReadingApp({
 
   const resetReading = () => {
     setSummaryOpen(false);
-    setAnsweredPromptPages([]);
+    setChapterQuestionOpen(false);
+    setAnsweredChapterQuestions([]);
     setReadingAnswer("");
     setReadingFeedback("");
     setReadingEvaluation(null);
@@ -1990,8 +2007,8 @@ export default function ReadingApp({
                     <div className="original-book-text" ref={readerTextRef}>{activePage.body.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
                     <div className="reading-controls">
                       <button className="icon-button" type="button" onClick={previousBookPage} disabled={selectedChapter === 0 && bookPage === 0} title="上一页" aria-label="上一页"><ChevronLeft /></button>
-                      <span>{currentPromptAnswered ? "龟龟把这次思考收好啦" : "进度已自动保存"}</span>
-                      <button className="next-button" type="button" onClick={nextBookPage}>{selectedChapter === selectedChapters.length - 1 && bookPage === activePages.length - 1 ? "完成全书" : bookPage === activePages.length - 1 ? "下一章" : "下一页"}<ChevronRight /></button>
+                      <span>{currentChapterQuestionAnswered ? "龟龟把这一章的思考收好啦" : "进度已自动保存"}</span>
+                      <button className="next-button" type="button" onClick={nextBookPage}>{selectedChapter === selectedChapters.length - 1 && bookPage === activePages.length - 1 ? "读完全书" : bookPage === activePages.length - 1 ? "读完本章" : "下一页"}<ChevronRight /></button>
                     </div>
                   </article>
 
@@ -2011,28 +2028,12 @@ export default function ReadingApp({
                       <div className="reading-companion-card embedded">
                         <div className="companion-card-heading"><img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪读的龟龟" /><div><small>伴读区 · 非原文</small><strong>{game.name}陪你读</strong></div></div>
                         <div className="companion-reward-rule"><Star fill="currentColor" /><span>回答正确奖励 <strong>1 颗星</strong></span></div>
-                        {!currentPrompt ? (
-                          <p className="quiet-reading-note"><BookOpen /> 先安静读一会儿。龟龟会在这一章的 1～2 个位置轻轻提问，不会挡住原文。</p>
-                        ) : readingFeedback ? (
-                          readingEvaluation === "correct" ? (
-                            <>
-                              <div className="inline-reading-feedback correct"><Star fill="currentColor" /><p><strong>判断正确 · 已领取 1 颗星</strong>{readingFeedback}</p></div>
-                              <button className="companion-continue" type="button" onClick={continueAfterAnswer}>收好鼓励，继续读</button>
-                            </>
-                          ) : (
-                            <>
-                              <div className="inline-reading-feedback incorrect"><Lightbulb /><p><strong>再修改一下</strong>{readingFeedback}</p></div>
-                              <textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="根据建议修改答案……" aria-label="修改后重新回答龟龟的问题" maxLength={500} disabled={companionLoading} />
-                              <div className="companion-card-actions">
-                                <button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音</button>
-                                <button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在判断…" : "修改后重新提交"}</button>
-                              </div>
-                            </>
-                          )
-                        ) : currentPromptAnswered ? (
-                          <p className="answered-note"><Check /> 这一页已经认真想过啦。</p>
+                        <h3>这一章，龟龟陪你留心</h3>
+                        {activeChapterPrompt ? <p className="reading-guide"><Lightbulb /> {activeChapterPrompt.guide}</p> : null}
+                        {currentChapterQuestionAnswered ? (
+                          <p className="answered-note"><Check /> 这一章已经认真想过啦，星星也收好啦。</p>
                         ) : (
-                          <><h3>{currentPrompt.question}</h3><p className="reading-guide"><Lightbulb /> {currentPrompt.guide}</p><textarea value={readingAnswer} onChange={(event) => setReadingAnswer(event.target.value)} placeholder="我觉得……" aria-label="回答龟龟的问题" maxLength={500} disabled={companionLoading} /><div className="companion-card-actions"><button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音</button><button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading}><Send /> {companionLoading ? "龟龟在判断…" : "提交给 AI 判断"}</button></div></>
+                          <p className="quiet-reading-note"><BookOpen /> 慢慢读到本章最后一页，龟龟会带着一个只属于这个故事的问题来找你。</p>
                         )}
                       </div>
                     )}
@@ -2043,7 +2044,7 @@ export default function ReadingApp({
 
             <img
               className="reading-turtle"
-              src={`${ASSET}/characters/turtle/${currentPrompt ? "turtle_reading_question.png" : "turtle_reading.png"}`}
+              src={`${ASSET}/characters/turtle/${activePage && bookPage === activePages.length - 1 ? "turtle_reading_question.png" : "turtle_reading.png"}`}
               alt={`${game.name}正在陪你读书`}
             />
           </section>
@@ -2344,6 +2345,64 @@ export default function ReadingApp({
                 <button type="button" onClick={cancelVoiceInput}><X /> 取消</button>
                 <button type="button" onClick={() => void finishVoiceInput()}><Check /> 完成</button>
               </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {chapterQuestionOpen && activeChapter && activeChapterPrompt && (
+        <div className="modal-backdrop chapter-question-backdrop" role="presentation">
+          <section className="modal question-modal chapter-question-modal" role="dialog" aria-modal="true" aria-labelledby="chapter-question-title">
+            <div className="chapter-question-heading">
+              <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="正在提问的龟龟" />
+              <div>
+                <span className="modal-kicker">读完第 {selectedChapter + 1} 章 · 《{activeChapter.title}》</span>
+                <h2 id="chapter-question-title">龟龟的问题</h2>
+              </div>
+            </div>
+            <p className="chapter-question-copy">{activeChapterPrompt.question}</p>
+
+            {!readingFeedback ? (
+              <>
+                <p className="chapter-question-guide"><Lightbulb /> <span><strong>想一想</strong>{activeChapterPrompt.guide}</span></p>
+                <label className="chapter-answer-field">
+                  <span>把你的想法告诉龟龟</span>
+                  <textarea
+                    value={readingAnswer}
+                    onChange={(event) => setReadingAnswer(event.target.value)}
+                    maxLength={500}
+                    placeholder="可以联系故事里的细节，说说你为什么这样想……"
+                    disabled={companionLoading}
+                    autoFocus
+                  />
+                </label>
+                <div className="modal-actions chapter-question-actions">
+                  <button className="skip-question-button" type="button" onClick={skipChapterQuestion} disabled={companionLoading}>这次先跳过</button>
+                  <button className="voice-button" type="button" onClick={() => void beginVoiceInput("reading")} disabled={companionLoading || voicePhase !== "idle"}><Mic /> 语音回答</button>
+                  <button className="primary-button" type="button" onClick={() => void submitReadingAnswer()} disabled={companionLoading || !readingAnswer.trim()}><Send /> {companionLoading ? "龟龟正在想…" : "发给龟龟看看"}</button>
+                </div>
+              </>
+            ) : readingEvaluation === "error" ? (
+              <>
+                <div className="chapter-reading-feedback error" role="alert"><Lightbulb /><p><strong>龟龟暂时没听清</strong>{readingFeedback}</p></div>
+                <div className="modal-actions chapter-feedback-actions">
+                  <button className="skip-question-button" type="button" onClick={skipChapterQuestion}>这次先跳过</button>
+                  <button className="primary-button" type="button" onClick={retryChapterQuestion}><RotateCcw /> 重新发送</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={`chapter-reading-feedback ${readingEvaluation}`} role="status">
+                  {readingEvaluation === "correct" ? <Star fill="currentColor" /> : <Lightbulb />}
+                  <p><strong>{readingEvaluation === "correct" ? "龟龟的称赞" : "龟龟的思考"}</strong>{readingFeedback}</p>
+                </div>
+                <div className="modal-actions chapter-feedback-actions">
+                  {readingEvaluation === "incorrect" && <button className="skip-question-button" type="button" onClick={retryChapterQuestion}><RotateCcw /> 再想一次</button>}
+                  <button className="primary-button" type="button" onClick={continueAfterChapterQuestion}>
+                    {selectedChapter === selectedChapters.length - 1 ? "收下这份思考，看看阅读小结" : "收下这份思考，进入下一章"}<ChevronRight />
+                  </button>
+                </div>
+              </>
             )}
           </section>
         </div>

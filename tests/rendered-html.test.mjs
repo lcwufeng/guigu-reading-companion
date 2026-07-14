@@ -119,7 +119,7 @@ test("forces first-login password reset and isolates every student's data", asyn
 });
 
 test("keeps the product loops, account safeguards, and required art assets", async () => {
-  const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, hosting] = await Promise.all([
+  const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, bookPrompts, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, hosting] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -132,6 +132,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../app/api/student-memory/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/student-memory.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/book-knowledge.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/book-prompts.ts", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../db/auth.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/auth-user.ts", import.meta.url), "utf8"),
@@ -223,7 +224,14 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.chat-panel \{[\s\S]*?width: min\(1180px, calc\(100vw - clamp\(56px, 10vw, 180px\)\)\);/);
   assert.match(styles, /\.message p \{[\s\S]*?font-size: 17px;/);
   assert.match(page, /回答正确奖励/);
-  assert.match(page, /修改后重新提交/);
+  assert.match(page, /龟龟的问题/);
+  assert.match(page, /这次先跳过/);
+  assert.match(page, /语音回答/);
+  assert.match(page, /发给龟龟看看/);
+  assert.match(page, /龟龟的称赞/);
+  assert.match(page, /龟龟的思考/);
+  assert.match(page, /chapterQuestionOpen/);
+  assert.doesNotMatch(page, /提交给 AI 判断|修改后重新提交/);
   assert.match(page, /readingRewards/);
   assert.match(page, /if \(result\.correct\)/);
   assert.match(page, /scarecrow-zh\.md/);
@@ -243,7 +251,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /height: clamp\(360px, calc\(100dvh - 190px\), 760px\)/);
   assert.match(styles, /width: min\(1500px, 84vw\)/);
   assert.match(styles, /flex: 0 0 clamp\(170px, 14vw, 220px\)/);
-  assert.match(styles, /flex: 0 0 clamp\(240px, 20vw, 320px\)/);
+  assert.match(styles, /flex: 0 0 clamp\(280px, 21vw, 360px\)/);
+  assert.match(styles, /\.reading-companion-card\.embedded \.companion-card-heading img \{[\s\S]*?height: 80px;[\s\S]*?width: 88px;/);
+  assert.match(styles, /\.reading-companion-card\.embedded h3 \{[\s\S]*?font-size: 18px;/);
+  assert.match(styles, /\.reading-companion-card\.embedded \.reading-guide,[\s\S]*?font-size: 14px;/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
@@ -258,6 +269,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.doesNotMatch(styles, /url\(["']?\/assets\//);
   assert.match(companionRoute, /https:\/\/api\.deepseek\.com\/chat\/completions/);
   assert.match(companionRoute, /deepseek-v4-flash/);
+  assert.match(companionRoute, /https:\/\/api\.xiaomimimo\.com\/v1\/chat\/completions/);
+  assert.match(companionRoute, /MIMO_API_KEY/);
+  assert.match(companionRoute, /mimo-v2\.5/);
+  assert.match(companionRoute, /source: "mimo"/);
+  assert.match(companionRoute, /本章完整原文/);
+  assert.match(companionRoute, /referenceAnswer/);
   assert.match(companionRoute, /thinking: \{ type: "disabled" \}/);
   assert.match(companionRoute, /response_format: \{ type: "json_object" \}/);
   assert.match(companionRoute, /parseReadingEvaluation/);
@@ -314,12 +331,16 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../public/books/andersens-fairy-tales-zh.md", import.meta.url), "utf8"),
   ]);
   const paragraphEnding = /[。！？!?…：；”’」』）】〞"']$/;
+  let promptChapterCount = 0;
   for (const book of formattedBooks) {
     const divider = book.search(/^---\s*$/m);
     const body = book.slice(divider).replace(/^---\s*$/m, "");
     const chapters = [...body.matchAll(/^#\s+(.+)\s*$/gm)];
+    promptChapterCount += chapters.length;
     for (let chapter = 0; chapter < chapters.length; chapter += 1) {
-      assert.match(bookKnowledge, new RegExp(`"${chapters[chapter][1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"\\s*:`));
+      const escapedTitle = chapters[chapter][1].trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      assert.match(bookKnowledge, new RegExp(`"${escapedTitle}"\\s*:`));
+      assert.match(bookPrompts, new RegExp(`"${escapedTitle}"\\s*:`));
       const start = chapters[chapter].index + chapters[chapter][0].length;
       const end = chapters[chapter + 1]?.index ?? body.length;
       const paragraphs = body.slice(start, end)
@@ -329,6 +350,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
       paragraphs.slice(0, -1).forEach((paragraph) => assert.match(paragraph, paragraphEnding));
     }
   }
+  assert.equal(promptChapterCount, 45, "每个真实故事章节都应有一条专属伴读问题");
   assert.doesNotMatch(formattedBooks[1], /^(?:L0怎|40wv|≤H］)$/m);
 
   for (const path of [
