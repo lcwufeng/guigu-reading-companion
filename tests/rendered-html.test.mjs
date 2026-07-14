@@ -89,6 +89,10 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
   assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus"\]/);
+  assert.match(page, /landHomeSpots: HomeSpot\[\] = \["center", "tree-shade", "cave-door"\]/);
+  assert.doesNotMatch(page, /HomeSpot = [^;]*pond-edge/);
+  assert.match(styles, /width: clamp\(106px, 10\.5vw, 165px\)/);
+  assert.match(styles, /height: clamp\(155px, 25vh, 270px\)/);
   assert.match(page, /ui\/home-refresh\/actions\/swim\.png/);
   assert.match(page, /ui\/home-refresh\/status\/panel\.png/);
   assert.match(page, /ui\/supplied\/brand\/logo\.png/);

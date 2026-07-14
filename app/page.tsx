@@ -467,7 +467,9 @@ const destinations: Destination[] = [
 
 const hidePlaces = ["water", "tree", "behind", "lotus"] as const;
 type HidePlace = (typeof hidePlaces)[number];
-type HomeSpot = "center" | "pond-edge" | "tree-shade" | "cave-door";
+type HomeSpot = "center" | "tree-shade" | "cave-door";
+
+const landHomeSpots: HomeSpot[] = ["center", "tree-shade", "cave-door"];
 
 const hideLabels: Record<HidePlace, string> = {
   water: "水波里",
@@ -830,7 +832,6 @@ export default function HomePage() {
     if (game.cleanliness < 38) return "turtle_dirty.png";
     if (game.boredom > 70) return "turtle_bored_sitting.png";
     if (mood < 55) return "turtle_low_mood.png";
-    if (homeSpot === "pond-edge") return "turtle_idle_standing.png";
     if (homeSpot === "tree-shade") return "turtle_thinking.png";
     if (homeSpot === "cave-door") return "turtle_waving.png";
     return "turtle_idle_front.png";
@@ -986,11 +987,10 @@ export default function HomePage() {
 
   useEffect(() => {
     if (view !== "home" || busy || hideTarget || traveling) return;
-    const spots: HomeSpot[] = ["center", "pond-edge", "tree-shade", "cave-door"];
     const interval = window.setInterval(() => {
       setHomeSpot((current) => {
-        const choices = spots.filter((spot) => spot !== current);
-        return choices[Math.floor(Math.random() * choices.length)];
+        const currentIndex = landHomeSpots.indexOf(current);
+        return landHomeSpots[(currentIndex + 1) % landHomeSpots.length];
       });
     }, 14_000);
     return () => window.clearInterval(interval);

@@ -569,7 +569,7 @@ button:disabled {
   padding: 0;
   position: absolute;
   transition: filter 160ms ease, transform 160ms ease;
-  width: clamp(132px, 13vw, 205px);
+  width: clamp(106px, 10.5vw, 165px);
   z-index: 12;
 }
 
@@ -712,10 +712,10 @@ button:disabled {
 
 .turtle-sprite {
   filter: drop-shadow(0 12px 5px rgba(39, 58, 38, 0.28));
-  height: clamp(180px, 29vh, 320px);
+  height: clamp(155px, 25vh, 270px);
   image-rendering: auto;
   object-fit: contain;
-  width: clamp(185px, 25vw, 340px);
+  width: clamp(160px, 21vw, 290px);
 }
 
 .speech-tag {
@@ -3562,8 +3562,8 @@ button:disabled {
   .turtle-wrap.spot-cave-door { bottom: 25%; left: 78%; }
 
   .turtle-sprite {
-    height: clamp(155px, 26vh, 240px);
-    width: clamp(160px, 42vw, 250px);
+    height: clamp(136px, 22vh, 210px);
+    width: clamp(140px, 36vw, 216px);
   }
 
   .speech-tag {
@@ -3589,7 +3589,7 @@ button:disabled {
   .cave-hotspot { left: 82%; top: 48%; }
 
   .scene-action {
-    width: clamp(106px, 29vw, 132px);
+    width: clamp(86px, 24vw, 108px);
   }
 
   .pond-action { left: 3%; top: 42%; }
@@ -4624,7 +4624,7 @@ button:disabled {
   }
 
   .scene-action {
-    width: clamp(102px, 28vw, 122px);
+    width: clamp(84px, 23vw, 102px);
   }
 
   .pond-action { left: 2%; top: 39%; }
@@ -4651,8 +4651,8 @@ button:disabled {
   }
 
   .turtle-sprite {
-    height: clamp(145px, 23vh, 198px);
-    width: clamp(148px, 38vw, 184px);
+    height: clamp(126px, 19.5vh, 168px);
+    width: clamp(130px, 33vw, 158px);
   }
 
   .speech-tag {
