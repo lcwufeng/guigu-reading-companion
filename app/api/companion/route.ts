@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getActiveStudent } from "../../auth-user";
 import { rememberStudentEvent, type StudentMemory } from "../../../db/student-memory";
 
 type CompanionMessage = {
@@ -9,7 +10,6 @@ type CompanionMessage = {
 type CompanionRequest = {
   mode?: "chat" | "reading";
   name?: string;
-  deviceId?: string;
   message?: string;
   title?: string;
   excerpt?: string;
@@ -20,7 +20,6 @@ type CompanionRequest = {
 
 const personalInfoPattern = /(?:身份证|家庭住址|住在|手机号|电话号码|微信号|QQ号|学校.*班|1[3-9]\d{9})/i;
 const urgentSafetyPattern = /(?:想死|自杀|伤害自己|不想活|杀了我)/i;
-const devicePattern = /^[a-zA-Z0-9-]{16,80}$/;
 
 function clean(value: unknown, limit = 500) {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
@@ -115,6 +114,8 @@ function safeHistory(history: unknown) {
 }
 
 export async function POST(request: Request) {
+  const student = await getActiveStudent();
+  if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   let body: CompanionRequest;
   try {
     body = (await request.json()) as CompanionRequest;
@@ -132,9 +133,9 @@ export async function POST(request: Request) {
 
   const name = cleanPetName(body.name);
   let studentMemory: StudentMemory | null = null;
-  if (body.mode === "chat" && devicePattern.test(body.deviceId || "")) {
+  if (body.mode === "chat") {
     try {
-      studentMemory = await rememberStudentEvent(body.deviceId!, { type: "chat", message: input });
+      studentMemory = await rememberStudentEvent(student.id, { type: "chat", message: input });
     } catch {
       studentMemory = null;
     }

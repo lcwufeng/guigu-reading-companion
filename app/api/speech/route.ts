@@ -2,6 +2,7 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import WebSocket from "ws";
+import { getActiveStudent } from "../../auth-user";
 
 const MAX_AUDIO_BYTES = 2_500_000;
 const SPEECH_ENDPOINT = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_nostream";
@@ -107,6 +108,7 @@ async function recognizeSpeech(audio: Buffer) {
 }
 
 export async function POST(request: Request) {
+  if (!await getActiveStudent()) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   if (rateLimited(request)) {
     return NextResponse.json({ error: "语音使用得有点频繁，请休息一会再试" }, { status: 429 });
   }

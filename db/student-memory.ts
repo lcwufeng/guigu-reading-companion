@@ -131,8 +131,8 @@ async function readyDatabase() {
     return null;
   }
   if (!database) return null;
-  await database.prepare(`CREATE TABLE IF NOT EXISTS student_memory (
-    device_id TEXT PRIMARY KEY NOT NULL,
+  await database.prepare(`CREATE TABLE IF NOT EXISTS user_student_memory (
+    user_id TEXT PRIMARY KEY NOT NULL,
     memory_json TEXT NOT NULL,
     updated_at INTEGER NOT NULL
   )`).run();
@@ -171,11 +171,11 @@ async function withLocalStore<T>(update: (store: LocalMemoryStore) => { result: 
   }
 }
 
-export async function getStudentMemory(deviceId: string): Promise<StudentMemory> {
+export async function getStudentMemory(userId: string): Promise<StudentMemory> {
   const database = await readyDatabase();
   if (database) {
-    const row = await database.prepare("SELECT memory_json FROM student_memory WHERE device_id = ?")
-      .bind(deviceId)
+    const row = await database.prepare("SELECT memory_json FROM user_student_memory WHERE user_id = ?")
+      .bind(userId)
       .first<{ memory_json: string }>();
     if (!row?.memory_json) return emptyMemory();
     try {
@@ -184,24 +184,24 @@ export async function getStudentMemory(deviceId: string): Promise<StudentMemory>
       return emptyMemory();
     }
   }
-  return withLocalStore((store) => ({ result: safeMemory(store[deviceId]), changed: false }));
+  return withLocalStore((store) => ({ result: safeMemory(store[userId]), changed: false }));
 }
 
-export async function rememberStudentEvent(deviceId: string, event: StudentMemoryEvent): Promise<StudentMemory> {
+export async function rememberStudentEvent(userId: string, event: StudentMemoryEvent): Promise<StudentMemory> {
   const database = await readyDatabase();
   if (database) {
-    const current = await getStudentMemory(deviceId);
+    const current = await getStudentMemory(userId);
     const memory = mergeEvent(current, event);
-    await database.prepare(`INSERT INTO student_memory (device_id, memory_json, updated_at)
+    await database.prepare(`INSERT INTO user_student_memory (user_id, memory_json, updated_at)
       VALUES (?, ?, ?)
-      ON CONFLICT(device_id) DO UPDATE SET memory_json = excluded.memory_json, updated_at = excluded.updated_at`)
-      .bind(deviceId, JSON.stringify(memory), memory.updatedAt)
+      ON CONFLICT(user_id) DO UPDATE SET memory_json = excluded.memory_json, updated_at = excluded.updated_at`)
+      .bind(userId, JSON.stringify(memory), memory.updatedAt)
       .run();
     return memory;
   }
   return withLocalStore((store) => {
-    const memory = mergeEvent(safeMemory(store[deviceId]), event);
-    store[deviceId] = memory;
+    const memory = mergeEvent(safeMemory(store[userId]), event);
+    store[userId] = memory;
     return { result: memory, changed: true };
   });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getActiveStudent } from "../../auth-user";
 
 type ScanRequest = { imageData?: string };
 type MiMoResponse = { choices?: Array<{ message?: { content?: string } }> };
@@ -17,6 +18,7 @@ function enumValue<T extends readonly string[]>(value: unknown, options: T, fall
 }
 
 export async function POST(request: Request) {
+  if (!await getActiveStudent()) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   let body: ScanRequest;
   try {
     body = (await request.json()) as ScanRequest;

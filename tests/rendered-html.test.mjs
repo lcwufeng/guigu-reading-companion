@@ -1,38 +1,125 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
-import test from "node:test";
+import { access, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test, { after } from "node:test";
 
-async function render() {
+const testRoot = join(tmpdir(), `guigu-account-tests-${process.pid}-${Date.now()}`);
+process.env.AUTH_STORE_FILE = join(testRoot, "auth.json");
+process.env.USER_STATE_FILE = join(testRoot, "user-state.json");
+process.env.READING_PROGRESS_FILE = join(testRoot, "reading-progress.json");
+process.env.STUDENT_MEMORY_FILE = join(testRoot, "student-memory.json");
+process.env.MISTAKE_IMAGE_DIR = join(testRoot, "mistake-images");
+
+let workerPromise;
+async function getWorker() {
+  if (workerPromise) return workerPromise;
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
+  workerPromise = import(workerUrl.href).then((module) => module.default);
+  return workerPromise;
+}
 
+async function fetchApp(path = "/", init = {}) {
+  const worker = await getWorker();
   return worker.fetch(
-    new Request("http://localhost/", { headers: { accept: "text/html" } }),
+    new Request(`http://localhost${path}`, init),
     { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
     { waitUntil() {}, passThroughOnException() {} },
   );
 }
 
-test("server-renders the Guigui reading companion", async () => {
-  const response = await render();
+function cookieFrom(response) {
+  return (response.headers.get("set-cookie") || "").split(";")[0];
+}
+
+after(async () => {
+  await rm(testRoot, { recursive: true, force: true });
+});
+
+test("server-renders the internal beta login before the reading companion", async () => {
+  const response = await fetchApp("/", { headers: { accept: "text/html" } });
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
   assert.match(html, /<title>龟龟伴读/);
-  assert.match(html, /我的伙伴/);
-  assert.match(html, /今天想和/);
-  assert.match(html, /家园/);
-  assert.match(html, /读书/);
-  assert.match(html, /聊天/);
-  assert.match(html, /旅行/);
+  assert.match(html, /内测学习屋/);
+  assert.match(html, /同学一/);
+  assert.match(html, /同学二/);
+  assert.match(html, /同学三/);
+  assert.doesNotMatch(html, /我的伙伴/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
 
-test("keeps the V1.4 product loops, safeguards, and required art assets", async () => {
-  const [page, styles, layout, nextConfig, companionRoute, speechRoute, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, packageJson] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+test("forces first-login password reset and isolates every student's data", async () => {
+  const unauthorized = await fetchApp("/api/user-state");
+  assert.equal(unauthorized.status, 401);
+
+  const login = await fetchApp("/api/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username: "同学一", password: "123456" }),
+  });
+  assert.equal(login.status, 200);
+  assert.equal((await login.json()).mustResetPassword, true);
+  const firstCookie = cookieFrom(login);
+  assert.match(firstCookie, /^guigu_session=/);
+
+  const resetPage = await fetchApp("/", { headers: { accept: "text/html", cookie: firstCookie } });
+  assert.equal(resetPage.status, 200);
+  assert.match(await resetPage.text(), /第一次登录，请设置新密码/);
+  const blockedBeforeReset = await fetchApp("/api/user-state", { headers: { cookie: firstCookie } });
+  assert.equal(blockedBeforeReset.status, 401);
+
+  const reset = await fetchApp("/api/auth/reset-password", {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: firstCookie },
+    body: JSON.stringify({ newPassword: "demo1789", confirmPassword: "demo1789" }),
+  });
+  assert.equal(reset.status, 200);
+  const activeCookie = cookieFrom(reset);
+  assert.match(activeCookie, /^guigu_session=/);
+
+  const appPage = await fetchApp("/", { headers: { accept: "text/html", cookie: activeCookie } });
+  assert.equal(appPage.status, 200);
+  assert.match(await appPage.text(), /我的伙伴/);
+
+  const marker = { stars: 17, currentBook: "scarecrow", testOwner: "同学一" };
+  const saveState = await fetchApp("/api/user-state", {
+    method: "PUT",
+    headers: { "content-type": "application/json", cookie: activeCookie },
+    body: JSON.stringify({ state: marker, updatedAt: Date.now() }),
+  });
+  assert.equal(saveState.status, 200);
+  const ownState = await fetchApp("/api/user-state", { headers: { cookie: activeCookie } });
+  assert.deepEqual((await ownState.json()).state, marker);
+
+  const secondLogin = await fetchApp("/api/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username: "同学二", password: "123456" }),
+  });
+  assert.equal(secondLogin.status, 200);
+  const secondCookie = cookieFrom(secondLogin);
+  const blockedSecondState = await fetchApp("/api/user-state", { headers: { cookie: secondCookie } });
+  assert.equal(blockedSecondState.status, 401, "a student must reset the initial password before any data API is available");
+  const secondReset = await fetchApp("/api/auth/reset-password", {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: secondCookie },
+    body: JSON.stringify({ newPassword: "demo2789", confirmPassword: "demo2789" }),
+  });
+  assert.equal(secondReset.status, 200);
+  const secondActiveCookie = cookieFrom(secondReset);
+  const secondState = await fetchApp("/api/user-state", { headers: { cookie: secondActiveCookie } });
+  assert.equal(secondState.status, 200);
+  assert.equal((await secondState.json()).state, null, "同学二不能看到同学一保存的数据");
+  assert.notEqual(secondCookie, activeCookie);
+});
+
+test("keeps the product loops, account safeguards, and required art assets", async () => {
+  const [page, styles, layout, nextConfig, companionRoute, speechRoute, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, hosting] = await Promise.all([
+    readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../next.config.ts", import.meta.url), "utf8"),
@@ -43,6 +130,13 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
     readFile(new URL("../db/student-memory.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/book-knowledge.ts", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../db/auth.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/auth-user.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/auth/login/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/auth/reset-password/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/user-state/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
 
   for (const feature of [
@@ -64,7 +158,7 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
     assert.match(page, new RegExp(destination));
   }
 
-  assert.match(page, /guigu-v1-state/);
+  assert.doesNotMatch(page, /localStorage|guigu-reader-device-id|guigu-v1-state/);
   assert.match(page, /activeTravel/);
   assert.match(page, /tickets: 3/);
   assert.match(page, /mistakes: \[\]/);
@@ -150,6 +244,7 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(companionRoute, /rememberStudentEvent/);
   assert.match(studentMemoryRoute, /rememberStudentEvent/);
   assert.match(studentMemoryDb, /STUDENT_MEMORY_FILE/);
+  assert.match(studentMemoryDb, /user_id/);
   assert.match(studentMemoryDb, /recentActivities/);
   assert.match(page, /fruitPickingRemaining/);
   assert.match(page, /今天已经摘满 5 个果子/);
@@ -164,6 +259,22 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.match(mistakeScanRoute, /mimo-v2\.5/);
   assert.match(mistakeScanRoute, /response_format: \{ type: "json_object" \}/);
   assert.match(mistakeScanRoute, /MAX_IMAGE_DATA_LENGTH/);
+  for (const account of ["同学一", "同学二", "同学三"]) assert.match(authDb, new RegExp(account));
+  assert.match(authDb, /initialPassword = "123456"/);
+  assert.match(authDb, /PBKDF2/);
+  assert.match(authDb, /passwordIterations = 210_000/);
+  assert.match(authDb, /app_sessions/);
+  assert.match(authUser, /httpOnly: true/);
+  assert.match(authUser, /sameSite: "lax"/);
+  assert.match(loginRoute, /mustResetPassword/);
+  assert.match(loginRoute, /current\.count >= 8/);
+  assert.match(loginRoute, /recordFailedAttempt/);
+  assert.match(resetRoute, /newPassword === "123456"/);
+  assert.match(resetRoute, /resetPassword/);
+  assert.match(userStateRoute, /getActiveStudent/);
+  assert.match(userStateDb, /user_id TEXT PRIMARY KEY/);
+  assert.match(hosting, /"d1": "DB"/);
+  assert.match(hosting, /"r2": "UPLOADS"/);
   assert.match(packageJson, /"ws"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 

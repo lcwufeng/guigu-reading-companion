@@ -15,6 +15,13 @@
       "when": 1783961908831,
       "tag": "0001_rainy_bloodscream",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784026239364,
+      "tag": "0002_striped_micromacro",
+      "breakpoints": true
     }
   ]
 }

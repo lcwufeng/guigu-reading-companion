@@ -21,16 +21,16 @@ async function readyDatabase() {
   }
   if (!database) return null;
   await database.batch([
-    database.prepare(`CREATE TABLE IF NOT EXISTS reading_progress (
-      device_id TEXT NOT NULL,
+    database.prepare(`CREATE TABLE IF NOT EXISTS user_reading_progress (
+      user_id TEXT NOT NULL,
       book_id TEXT NOT NULL,
       chapter_index INTEGER NOT NULL DEFAULT 0,
       page_index INTEGER NOT NULL DEFAULT 0,
       completed INTEGER NOT NULL DEFAULT 0,
       updated_at INTEGER NOT NULL,
-      PRIMARY KEY (device_id, book_id)
+      PRIMARY KEY (user_id, book_id)
     )`),
-    database.prepare("CREATE INDEX IF NOT EXISTS reading_progress_updated_idx ON reading_progress(updated_at)"),
+    database.prepare("CREATE INDEX IF NOT EXISTS user_reading_progress_updated_idx ON user_reading_progress(updated_at)"),
   ]);
   return database;
 }
@@ -70,21 +70,21 @@ async function withLocalStore<T>(update: (store: LocalProgressStore) => { result
   }
 }
 
-export async function listReadingProgress(deviceId: string) {
+export async function listReadingProgress(userId: string) {
   const database = await readyDatabase();
   if (database) {
-    return database.prepare("SELECT book_id, chapter_index, page_index, completed FROM reading_progress WHERE device_id = ?")
-      .bind(deviceId)
+    return database.prepare("SELECT book_id, chapter_index, page_index, completed FROM user_reading_progress WHERE user_id = ?")
+      .bind(userId)
       .all<ReadingProgressRow>();
   }
   return withLocalStore((store) => ({
-    result: { results: Object.values(store[deviceId] || {}) },
+    result: { results: Object.values(store[userId] || {}) },
     changed: false,
   }));
 }
 
 export async function saveReadingProgress(input: {
-  deviceId: string;
+  userId: string;
   bookId: string;
   chapter: number;
   page: number;
@@ -92,21 +92,21 @@ export async function saveReadingProgress(input: {
 }) {
   const database = await readyDatabase();
   if (database) {
-    await database.prepare(`INSERT INTO reading_progress
-      (device_id, book_id, chapter_index, page_index, completed, updated_at)
+    await database.prepare(`INSERT INTO user_reading_progress
+      (user_id, book_id, chapter_index, page_index, completed, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(device_id, book_id) DO UPDATE SET
+      ON CONFLICT(user_id, book_id) DO UPDATE SET
         chapter_index = excluded.chapter_index,
         page_index = excluded.page_index,
         completed = excluded.completed,
         updated_at = excluded.updated_at`)
-      .bind(input.deviceId, input.bookId, input.chapter, input.page, input.completed ? 1 : 0, Date.now())
+      .bind(input.userId, input.bookId, input.chapter, input.page, input.completed ? 1 : 0, Date.now())
       .run();
     return;
   }
   await withLocalStore((store) => {
-    store[input.deviceId] ||= {};
-    store[input.deviceId][input.bookId] = {
+    store[input.userId] ||= {};
+    store[input.userId][input.bookId] = {
       book_id: input.bookId,
       chapter_index: input.chapter,
       page_index: input.page,
