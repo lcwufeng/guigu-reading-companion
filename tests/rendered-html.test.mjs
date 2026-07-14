@@ -93,6 +93,8 @@ test("keeps the V1.4 product loops, safeguards, and required art assets", async 
   assert.doesNotMatch(page, /HomeSpot = [^;]*pond-edge/);
   assert.match(styles, /width: clamp\(106px, 10\.5vw, 165px\)/);
   assert.match(styles, /height: clamp\(155px, 25vh, 270px\)/);
+  assert.match(styles, /\.turtle-wrap \{[\s\S]*?left: 50%;/);
+  assert.match(styles, /\.turtle-wrap,\n\s+\.turtle-wrap\.spot-tree-shade \{[\s\S]*?left: 34%;/);
   assert.match(page, /ui\/home-refresh\/actions\/swim\.png/);
   assert.match(page, /ui\/home-refresh\/status\/panel\.png/);
   assert.match(page, /ui\/supplied\/brand\/logo\.png/);

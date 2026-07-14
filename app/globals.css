@@ -677,7 +677,7 @@ button:disabled {
   bottom: 14%;
   display: flex;
   flex-direction: column;
-  left: 55%;
+  left: 50%;
   max-height: 52%;
   position: absolute;
   transform: translateX(-50%);
@@ -4635,7 +4635,7 @@ button:disabled {
   .turtle-wrap,
   .turtle-wrap.spot-tree-shade {
     bottom: calc(var(--mobile-nav) + 2%);
-    left: 38%;
+    left: 34%;
   }
 
   .turtle-wrap.spot-pond-edge,
