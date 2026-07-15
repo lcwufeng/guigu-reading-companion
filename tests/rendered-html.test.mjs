@@ -299,6 +299,14 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /label: "小"/);
   assert.match(page, /label: "中"/);
   assert.match(page, /label: "大"/);
+  assert.match(page, /HIDE_TOTAL_ROUNDS = 3/);
+  assert.match(page, /三轮都找到会有额外星星/);
+  assert.match(page, /warmerHideClue/);
+  assert.match(page, /25 秒后新线索|秒后新线索/);
+  assert.match(page, /完成三轮奖励 3～6 颗星/);
+  assert.match(styles, /\.hide-game-hud \{/);
+  assert.match(styles, /\.world-hotspot\.strong-clue/);
+  assert.match(styles, /@keyframes turtlePeek/);
   assert.match(styles, /\.reading-font-medium \.original-book-text p \{ font-size: 18px; \}/);
   assert.match(styles, /\.reading-font-large \.original-book-text p \{ font-size: 20px; \}/);
   assert.match(styles, /height: clamp\(360px, calc\(100dvh - 190px\), 760px\)/);

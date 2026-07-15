@@ -501,6 +501,8 @@ const destinations: Destination[] = [
 const hidePlaces = ["water", "tree", "behind", "lotus"] as const;
 type HidePlace = (typeof hidePlaces)[number];
 type HomeSpot = "center" | "tree-shade" | "cave-door";
+const HIDE_TOTAL_ROUNDS = 3;
+const HIDE_ROUND_SECONDS = 25;
 
 const landHomeSpots: HomeSpot[] = ["center", "tree-shade", "cave-door"];
 
@@ -510,6 +512,36 @@ const hideLabels: Record<HidePlace, string> = {
   behind: "树干后",
   lotus: "荷叶下",
 };
+
+const hideCoordinates: Record<HidePlace, { x: number; y: number }> = {
+  water: { x: 19, y: 50 },
+  tree: { x: 49, y: 17 },
+  behind: { x: 50, y: 43 },
+  lotus: { x: 29, y: 69 },
+};
+
+const hideSceneClues: Record<HidePlace, { soft: string; strong: string }> = {
+  water: { soft: "好像听见了轻轻的水声。", strong: "池塘的水波忽然晃了一下！" },
+  tree: { soft: "高高的地方有叶子在沙沙响。", strong: "树梢上露出了一点绿色！" },
+  behind: { soft: "大树附近传来窸窸窣窣的声音。", strong: "树干后面好像有小脚动了一下！" },
+  lotus: { soft: "池塘边有一片叶子轻轻抖了抖。", strong: "荷叶下面冒出了一串小泡泡！" },
+};
+
+function randomHidePlace(previous?: HidePlace) {
+  const choices = previous ? hidePlaces.filter((place) => place !== previous) : hidePlaces;
+  return choices[Math.floor(Math.random() * choices.length)];
+}
+
+function warmerHideClue(guess: HidePlace, target: HidePlace) {
+  const from = hideCoordinates[guess];
+  const to = hideCoordinates[target];
+  const distance = Math.hypot(to.x - from.x, to.y - from.y);
+  const warmth = distance < 25 ? "暖暖的，已经很近啦！" : distance < 43 ? "有一点点动静，再靠近些。" : "凉凉的，龟龟离这里有点远。";
+  const horizontal = to.x > from.x ? "往右边" : "往左边";
+  const vertical = to.y > from.y ? "往下面" : "往上面";
+  const direction = Math.abs(to.x - from.x) > Math.abs(to.y - from.y) ? horizontal : vertical;
+  return `${warmth}${direction}找找看。`;
+}
 
 function clamp(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -797,7 +829,12 @@ export default function ReadingApp({
   const [toast, setToast] = useState("");
   const [fruitPicker, setFruitPicker] = useState(false);
   const [hideTarget, setHideTarget] = useState<HidePlace | null>(null);
-  const [hideTries, setHideTries] = useState(0);
+  const [hideRound, setHideRound] = useState(0);
+  const [hideSeconds, setHideSeconds] = useState(HIDE_ROUND_SECONDS);
+  const [hideGuesses, setHideGuesses] = useState<HidePlace[]>([]);
+  const [hideHint, setHideHint] = useState("");
+  const [hidePerfectRounds, setHidePerfectRounds] = useState(0);
+  const [hideFound, setHideFound] = useState<HidePlace | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [selectedBook, setSelectedBook] = useState<Book>(books[0]);
@@ -843,6 +880,7 @@ export default function ReadingApp({
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
   const dailyTasksExpanded = mobileLayout ? dailyTasksOpen : true;
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceSessionRef = useRef<VoiceSession | null>(null);
   const autoFinishVoiceRef = useRef<() => void>(() => undefined);
   const voiceAbortRef = useRef<AbortController | null>(null);
@@ -1060,8 +1098,17 @@ export default function ReadingApp({
   useEffect(() => {
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
+      if (hideAdvanceTimerRef.current) clearTimeout(hideAdvanceTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!hideTarget || hideFound) return;
+    const interval = window.setInterval(() => {
+      setHideSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [hideFound, hideTarget]);
 
   useEffect(() => {
     if (view !== "home" || busy || hideTarget || traveling) return;
@@ -1232,29 +1279,70 @@ export default function ReadingApp({
 
   const startHideAndSeek = () => {
     if (busy || traveling) return;
-    const target = hidePlaces[Math.floor(Math.random() * hidePlaces.length)];
-    setHideTarget(target);
-    setHideTries(0);
-    showToast(`${game.name}藏好啦！留心看看会动的地方`);
+    if (hideAdvanceTimerRef.current) clearTimeout(hideAdvanceTimerRef.current);
+    setHideTarget(randomHidePlace());
+    setHideRound(1);
+    setHideSeconds(HIDE_ROUND_SECONDS);
+    setHideGuesses([]);
+    setHideHint("");
+    setHidePerfectRounds(0);
+    setHideFound(null);
+    showToast(`${game.name}藏好啦！三轮都找到会有额外星星`);
+  };
+
+  const cancelHideAndSeek = () => {
+    if (hideAdvanceTimerRef.current) clearTimeout(hideAdvanceTimerRef.current);
+    hideAdvanceTimerRef.current = null;
+    setHideTarget(null);
+    setHideRound(0);
+    setHideGuesses([]);
+    setHideHint("");
+    setHideFound(null);
+    showToast("先休息一下，下次再继续找龟龟");
   };
 
   const guessHidePlace = (place: HidePlace) => {
-    if (!hideTarget) return;
+    if (!hideTarget || hideFound || hideGuesses.includes(place)) return;
     if (place === hideTarget) {
-      setHideTarget(null);
-      setHideTries(0);
-      setTurtleSprite("turtle_excited.png");
-      setGame((current) => ({
-        ...current,
-        boredom: clamp(current.boredom - 24),
-        stars: current.stars + 2,
-      }));
-      showToast(`找到啦！原来藏在${hideLabels[place]}`);
-      void remember({ type: "activity", activity: "捉迷藏", detail: `在${hideLabels[place]}找到了龟龟` });
-      window.setTimeout(() => setTurtleSprite(null), 2200);
+      const nextPerfectRounds = hidePerfectRounds + (hideGuesses.length === 0 ? 1 : 0);
+      const completedRound = hideRound;
+      setHidePerfectRounds(nextPerfectRounds);
+      setHideFound(place);
+      setHideHint(hideGuesses.length === 0 ? "一次就找到啦，观察力满分！" : "找到了！龟龟正在开心地挥手。对啦");
+      showToast(`第 ${completedRound} 轮找到啦！龟龟藏在${hideLabels[place]}`);
+      hideAdvanceTimerRef.current = window.setTimeout(() => {
+        if (completedRound < HIDE_TOTAL_ROUNDS) {
+          setHideTarget(randomHidePlace(place));
+          setHideRound(completedRound + 1);
+          setHideSeconds(HIDE_ROUND_SECONDS);
+          setHideGuesses([]);
+          setHideHint("");
+          setHideFound(null);
+          showToast(`第 ${completedRound + 1} 轮开始，龟龟又藏好啦！`);
+          return;
+        }
+        const starReward = HIDE_TOTAL_ROUNDS + nextPerfectRounds;
+        setHideTarget(null);
+        setHideRound(0);
+        setHideSeconds(HIDE_ROUND_SECONDS);
+        setHideGuesses([]);
+        setHideHint("");
+        setHideFound(null);
+        setTurtleSprite("turtle_excited.png");
+        setGame((current) => ({
+          ...current,
+          boredom: clamp(current.boredom - 30),
+          stars: current.stars + starReward,
+        }));
+        showToast(`三轮全找到！奖励 ${starReward} 颗星星`);
+        void remember({ type: "activity", activity: "捉迷藏", detail: `完成三轮捉迷藏，${nextPerfectRounds}轮一次找到，获得${starReward}颗星星` });
+        window.setTimeout(() => setTurtleSprite(null), 2400);
+      }, 1200);
     } else {
-      setHideTries((tries) => tries + 1);
-      showToast(`这里没有，再找找看${hideTries >= 1 ? "，注意小小的动静" : ""}`);
+      const clue = warmerHideClue(place, hideTarget);
+      setHideGuesses((guesses) => [...guesses, place]);
+      setHideHint(clue);
+      showToast(clue);
     }
   };
 
@@ -1274,6 +1362,13 @@ export default function ReadingApp({
   const activeChapterKnowledge = activeChapter
     ? chapterKnowledge[selectedBook.id]?.[activeChapter.title] || selectedBook.knowledge
     : selectedBook.knowledge;
+  const activeHideHint = hideTarget
+    ? hideFound
+      ? hideHint
+      : hideSeconds <= 8
+        ? hideSceneClues[hideTarget].strong
+        : hideHint || (hideSeconds <= 15 ? hideSceneClues[hideTarget].soft : "仔细看一看：哪里的叶子、水波或树枝在轻轻动？")
+    : "";
   const activeBookAudioKey = activeChapter ? `${selectedBook.id}:${selectedChapter}` : "";
   const currentBookAudio = bookAudio?.bookId === selectedBook.id && bookAudio.chapterIndex === selectedChapter
     ? bookAudio
@@ -2019,16 +2114,34 @@ export default function ReadingApp({
             )}
             {hideTarget && (
               <>
-                <button className="world-hotspot pond-hotspot" type="button" onClick={() => guessHidePlace("water")} aria-label="找找水里" title="找找水里"><Search /></button>
-                <button className="world-hotspot tree-hotspot" type="button" onClick={() => guessHidePlace("tree")} aria-label="找找树梢" title="找找树梢"><Search /></button>
-                <button className="world-hotspot trunk-hotspot" type="button" onClick={() => guessHidePlace("behind")} aria-label="找找树干后面" title="找找树干后面"><Search /></button>
-                <button className="world-hotspot lotus-hotspot" type="button" onClick={() => guessHidePlace("lotus")} aria-label="找找荷叶下面" title="找找荷叶下面"><Search /></button>
+                <section className={`hide-game-hud ${hideFound ? "round-found" : ""}`} aria-live="polite">
+                  <div className="hide-game-topline">
+                    <strong>龟龟捉迷藏</strong>
+                    <div className="hide-round-pips" aria-label={`第${hideRound}轮，共${HIDE_TOTAL_ROUNDS}轮`}>
+                      {Array.from({ length: HIDE_TOTAL_ROUNDS }, (_, index) => (
+                        <i key={index} className={index + 1 < hideRound ? "done" : index + 1 === hideRound ? "current" : ""}>{index + 1}</i>
+                      ))}
+                    </div>
+                    <span className={`hide-timer ${hideSeconds <= 8 ? "urgent" : ""}`}><Search /> {hideSeconds > 0 ? `${hideSeconds} 秒后新线索` : "龟龟动了一下"}</span>
+                    <button className="hide-cancel" type="button" onClick={cancelHideAndSeek} aria-label="结束捉迷藏"><X /></button>
+                  </div>
+                  <p className="hide-live-clue">{activeHideHint}</p>
+                  <div className="hide-game-score"><Star /> 一次找到：{hidePerfectRounds} 轮 <span>完成三轮奖励 3～6 颗星</span></div>
+                </section>
+                {!hideFound && (
+                  <>
+                    <button className={`world-hotspot pond-hotspot ${hideGuesses.includes("water") ? "searched" : ""} ${hideSeconds === 0 && hideTarget === "water" ? "strong-clue" : ""}`} type="button" onClick={() => guessHidePlace("water")} aria-label="找找水波里" title="找找水波里" disabled={hideGuesses.includes("water")}><Search /><span>水波里</span></button>
+                    <button className={`world-hotspot tree-hotspot ${hideGuesses.includes("tree") ? "searched" : ""} ${hideSeconds === 0 && hideTarget === "tree" ? "strong-clue" : ""}`} type="button" onClick={() => guessHidePlace("tree")} aria-label="找找树梢上" title="找找树梢上" disabled={hideGuesses.includes("tree")}><Search /><span>树梢上</span></button>
+                    <button className={`world-hotspot trunk-hotspot ${hideGuesses.includes("behind") ? "searched" : ""} ${hideSeconds === 0 && hideTarget === "behind" ? "strong-clue" : ""}`} type="button" onClick={() => guessHidePlace("behind")} aria-label="找找树干后" title="找找树干后" disabled={hideGuesses.includes("behind")}><Search /><span>树干后</span></button>
+                    <button className={`world-hotspot lotus-hotspot ${hideGuesses.includes("lotus") ? "searched" : ""} ${hideSeconds === 0 && hideTarget === "lotus" ? "strong-clue" : ""}`} type="button" onClick={() => guessHidePlace("lotus")} aria-label="找找荷叶下" title="找找荷叶下" disabled={hideGuesses.includes("lotus")}><Search /><span>荷叶下</span></button>
+                  </>
+                )}
               </>
             )}
 
             {hideTarget && (
               <img
-                className={`hidden-turtle hidden-${hideTarget}`}
+                className={`hidden-turtle hidden-${hideTarget} ${hideFound ? "is-found" : hideSeconds <= 8 ? "is-peeking" : ""}`}
                 src={`${ASSET}/characters/turtle/${
                   hideTarget === "water"
                     ? "turtle_hide_water.png"
@@ -2041,6 +2154,8 @@ export default function ReadingApp({
                 alt="藏起来的龟龟"
               />
             )}
+
+            {hideFound && <div className="hide-celebration" aria-hidden="true"><Sparkles /><Star /><Sparkles /></div>}
 
             {!hideTarget && !traveling && (
               <div className={`turtle-wrap ${homeTurtleClass}`}>

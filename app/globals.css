@@ -904,6 +904,191 @@ button:disabled {
   left: 23%;
 }
 
+.hide-game-hud {
+  background: linear-gradient(180deg, rgba(255, 253, 225, 0.97), rgba(242, 251, 218, 0.96));
+  border: 3px solid #e7b64a;
+  border-radius: 18px;
+  box-shadow: 0 9px 0 rgba(114, 91, 35, 0.2), 0 16px 28px rgba(37, 73, 48, 0.2);
+  color: #314a32;
+  left: 50%;
+  max-width: min(560px, 56vw);
+  padding: 10px 14px 9px;
+  position: absolute;
+  top: 108px;
+  transform: translateX(-50%);
+  width: 520px;
+  z-index: 24;
+}
+
+.hide-game-hud.round-found {
+  animation: hideFoundBounce 520ms ease both;
+  border-color: #70a84e;
+}
+
+.hide-game-topline {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto auto 1fr auto;
+}
+
+.hide-game-topline > strong {
+  color: #6e4117;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+.hide-round-pips {
+  display: flex;
+  gap: 4px;
+}
+
+.hide-round-pips i {
+  align-items: center;
+  background: #e6dfbf;
+  border: 2px solid rgba(128, 115, 69, 0.22);
+  border-radius: 50%;
+  color: #7f795f;
+  display: flex;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.hide-round-pips i.current { background: #ffd25c; border-color: #df9f28; color: #764516; transform: scale(1.08); }
+.hide-round-pips i.done { background: #72ad52; border-color: #4b873e; color: white; }
+
+.hide-timer {
+  align-items: center;
+  color: #61705d;
+  display: flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.hide-timer svg { height: 15px; width: 15px; }
+.hide-timer.urgent { color: #b6562f; }
+
+.hide-cancel {
+  align-items: center;
+  background: #fff9e5;
+  border: 1px solid #c9b986;
+  border-radius: 50%;
+  color: #6f684f;
+  cursor: pointer;
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  width: 28px;
+}
+
+.hide-cancel svg { height: 16px; width: 16px; }
+
+.hide-live-clue {
+  background: rgba(255, 255, 255, 0.72);
+  border-left: 4px solid #76a953;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.45;
+  margin: 8px 0 6px;
+  min-height: 30px;
+  padding: 5px 9px;
+}
+
+.hide-game-score {
+  align-items: center;
+  color: #79531f;
+  display: flex;
+  font-size: 11px;
+  font-weight: 850;
+  gap: 5px;
+}
+
+.hide-game-score svg { color: #eaa81d; height: 15px; width: 15px; }
+.hide-game-score span { color: #71806c; margin-left: auto; }
+
+.home-scene:has(.hide-game-hud) .world-hotspot {
+  border-radius: 999px;
+  gap: 5px;
+  height: 42px;
+  padding: 0 10px;
+  width: auto;
+}
+
+.home-scene:has(.hide-game-hud) .world-hotspot span {
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.home-scene:has(.hide-game-hud) .world-hotspot.searched {
+  background: rgba(113, 119, 104, 0.7);
+  color: white;
+  opacity: 0.55;
+  transform: scale(0.92);
+}
+
+.home-scene:has(.hide-game-hud) .world-hotspot.strong-clue {
+  animation: strongHideClue 700ms ease-in-out infinite alternate;
+  background: #fff2a2;
+  border-color: #ffd341;
+}
+
+.hidden-turtle.is-peeking { animation: turtlePeek 900ms ease-in-out infinite alternate; }
+.hidden-turtle.is-found { animation: turtleFoundBounce 520ms ease both; filter: drop-shadow(0 0 14px #fff3a0); z-index: 18; }
+
+.hide-celebration {
+  align-items: center;
+  animation: hideCelebration 900ms ease both;
+  color: #ffd341;
+  display: flex;
+  gap: 9px;
+  left: 50%;
+  pointer-events: none;
+  position: absolute;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  z-index: 22;
+}
+
+.hide-celebration svg { filter: drop-shadow(0 3px 2px rgba(102, 70, 12, 0.3)); height: 42px; width: 42px; }
+.hide-celebration svg:nth-child(2) { height: 64px; width: 64px; }
+
+@keyframes strongHideClue {
+  from { box-shadow: 0 0 0 5px rgba(255, 218, 65, 0.2), 0 6px 16px rgba(15, 51, 37, 0.2); transform: translateY(-1px) scale(1); }
+  to { box-shadow: 0 0 0 16px rgba(255, 218, 65, 0.08), 0 9px 22px rgba(15, 51, 37, 0.25); transform: translateY(-5px) scale(1.08); }
+}
+
+@keyframes turtlePeek {
+  from { transform: translateY(0) rotate(-2deg); }
+  to { transform: translateY(-7px) rotate(3deg); }
+}
+
+@keyframes hideFoundBounce {
+  0% { transform: translateX(-50%) scale(0.84); }
+  65% { transform: translateX(-50%) scale(1.08); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+@keyframes turtleFoundBounce {
+  0% { transform: scale(0.78) rotate(-4deg); }
+  65% { transform: scale(1.14) rotate(5deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+@keyframes hideCelebration {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.5); }
+  55% { opacity: 1; transform: translate(-50%, -60%) scale(1.16); }
+  100% { opacity: 0; transform: translate(-50%, -85%) scale(1); }
+}
+
 .turtle-wrap {
   align-items: center;
   bottom: 14%;
@@ -6635,5 +6820,52 @@ button:disabled {
 
   .chapter-question-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+/* The hide-and-seek panel stays compact on phones without moving the desktop scene. */
+@media (max-width: 820px) {
+  .hide-game-hud {
+    left: 8px;
+    max-width: none;
+    padding: 8px 9px 7px;
+    right: 8px;
+    top: calc(var(--mobile-topbar) + 76px);
+    transform: none;
+    width: auto;
+  }
+
+  .hide-game-topline {
+    gap: 6px;
+    grid-template-columns: auto auto 1fr auto;
+  }
+
+  .hide-game-topline > strong { font-size: 13px; }
+  .hide-round-pips { gap: 2px; }
+  .hide-round-pips i { border-width: 1px; font-size: 9px; height: 20px; width: 20px; }
+  .hide-timer { font-size: 10px; }
+  .hide-live-clue { font-size: 12px; margin-block: 6px 4px; min-height: 27px; padding: 4px 7px; }
+  .hide-game-score { font-size: 10px; }
+  .hide-game-score span { display: none; }
+
+  .home-scene:has(.hide-game-hud) .world-hotspot {
+    height: 36px;
+    padding-inline: 7px;
+  }
+
+  .home-scene:has(.hide-game-hud) .world-hotspot span { font-size: 10px; }
+  .home-scene:has(.hide-game-hud) .world-hotspot svg { height: 16px; width: 16px; }
+
+  .pond-hotspot { left: 7%; top: 53%; }
+  .tree-hotspot { left: 43%; top: 23%; }
+  .trunk-hotspot { left: 48%; top: 44%; }
+  .lotus-hotspot { left: 14%; top: 70%; }
+
+  .hide-game-hud.round-found { animation-name: hideFoundBounceMobile; }
+
+  @keyframes hideFoundBounceMobile {
+    0% { transform: scale(0.9); }
+    65% { transform: scale(1.03); }
+    100% { transform: scale(1); }
   }
 }
