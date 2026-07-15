@@ -15,6 +15,8 @@ import {
   LogOut,
   Mic,
   MicOff,
+  Pause,
+  Play,
   RotateCcw,
   Search,
   Send,
@@ -23,6 +25,7 @@ import {
   Trash2,
   Upload,
   Users,
+  Volume2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -132,6 +135,17 @@ type Book = {
 type BookPage = { heading: string; body: string };
 type BookChapter = { id: string; title: string; pages: BookPage[] };
 type SavedReadingProgress = { chapter: number; page: number; completed: boolean };
+type BookAudioInfo = {
+  ready: true;
+  audioUrl: string;
+  bookId: string;
+  chapterIndex: number;
+  chapterTitle: string;
+  pageTimings: Array<{ startMs: number; endMs: number }>;
+  voiceType: string;
+  voiceLabel: string;
+};
+type BookAudioPhase = "idle" | "loading" | "ready" | "playing" | "paused" | "unavailable";
 
 type Destination = {
   id: string;
@@ -794,6 +808,10 @@ export default function ReadingApp({
   const [bookLoadError, setBookLoadError] = useState("");
   const [readingProgressByBook, setReadingProgressByBook] = useState<Record<string, SavedReadingProgress>>({});
   const [readingProgressLoaded, setReadingProgressLoaded] = useState(false);
+  const [bookAudio, setBookAudio] = useState<BookAudioInfo | null>(null);
+  const [bookAudioResultKey, setBookAudioResultKey] = useState("");
+  const [bookAudioPhase, setBookAudioPhase] = useState<BookAudioPhase>("idle");
+  const [bookAudioRate, setBookAudioRate] = useState(1);
   const [answeredChapterQuestions, setAnsweredChapterQuestions] = useState<string[]>([]);
   const [readerSideTab, setReaderSideTab] = useState<"companion" | "knowledge">("companion");
   const [chapterListOpen, setChapterListOpen] = useState(false);
@@ -831,6 +849,9 @@ export default function ReadingApp({
   const accountStateLoadedRef = useRef(false);
   const restoredBookRef = useRef<Record<string, boolean>>({});
   const readerTextRef = useRef<HTMLDivElement | null>(null);
+  const bookAudioRef = useRef<HTMLAudioElement | null>(null);
+  const bookAudioPageStartRef = useRef(0);
+  const bookAudioPageEndRef = useRef(0);
   const submitChatRef = useRef<(message: string) => void>(() => undefined);
   const messageListRef = useRef<HTMLDivElement | null>(null);
 
@@ -876,6 +897,20 @@ export default function ReadingApp({
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 3600);
   }, []);
+
+  const stopBookAudio = useCallback((reset = true) => {
+    const audio = bookAudioRef.current;
+    if (audio) {
+      audio.pause();
+      if (reset) audio.currentTime = 0;
+    }
+    setBookAudioPhase((phase) => phase === "playing" || phase === "paused" ? "ready" : phase);
+  }, []);
+
+  const navigateTo = useCallback((nextView: View) => {
+    if (nextView !== "library") stopBookAudio();
+    setView(nextView);
+  }, [stopBookAudio]);
 
   const remember = useCallback((event: StudentMemoryEvent) => {
     return fetch(`${BASE_PATH}/api/student-memory`, {
@@ -1002,6 +1037,10 @@ export default function ReadingApp({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [bookPage, selectedChapter]);
+
+  useEffect(() => () => {
+    bookAudioRef.current?.pause();
+  }, []);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1235,6 +1274,48 @@ export default function ReadingApp({
   const activeChapterKnowledge = activeChapter
     ? chapterKnowledge[selectedBook.id]?.[activeChapter.title] || selectedBook.knowledge
     : selectedBook.knowledge;
+  const activeBookAudioKey = activeChapter ? `${selectedBook.id}:${selectedChapter}` : "";
+  const currentBookAudio = bookAudio?.bookId === selectedBook.id && bookAudio.chapterIndex === selectedChapter
+    ? bookAudio
+    : null;
+  const currentBookAudioPhase: BookAudioPhase = view !== "library" || !activeChapter
+    ? "idle"
+    : bookAudioResultKey === activeBookAudioKey
+      ? bookAudioPhase
+      : "loading";
+
+  useEffect(() => {
+    const audio = bookAudioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    if (view !== "library" || !activeChapter) return;
+    const controller = new AbortController();
+    const resultKey = `${selectedBook.id}:${selectedChapter}`;
+    const url = new URL(`${window.location.origin}${BASE_PATH}/api/book-audio`);
+    url.searchParams.set("bookId", selectedBook.id);
+    url.searchParams.set("chapter", String(selectedChapter));
+    void fetch(url, { signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null) as BookAudioInfo | null;
+        if (!response.ok || !data?.ready) throw new Error("audio unavailable");
+        return data;
+      })
+      .then((data) => {
+        setBookAudio(data);
+        setBookAudioResultKey(resultKey);
+        setBookAudioPhase("ready");
+      })
+      .catch((error: Error) => {
+        if (error.name !== "AbortError") {
+          setBookAudio(null);
+          setBookAudioResultKey(resultKey);
+          setBookAudioPhase("unavailable");
+        }
+      });
+    return () => controller.abort();
+  }, [activeChapter, selectedBook.id, selectedChapter, view]);
 
   useEffect(() => {
     if (view !== "library" || !activeChapter) return;
@@ -1255,6 +1336,7 @@ export default function ReadingApp({
   };
 
   const chooseBook = (book: Book) => {
+    stopBookAudio();
     setSelectedBook(book);
     setBookLoading(Boolean(book.source && !loadedBooks[book.id]));
     setBookLoadError("");
@@ -1272,6 +1354,7 @@ export default function ReadingApp({
 
   const nextBookPage = () => {
     if (!activeChapter) return;
+    stopBookAudio();
     if (bookPage < activeChapter.pages.length - 1) {
       setBookPage((page) => page + 1);
       setReadingAnswer("");
@@ -1288,6 +1371,7 @@ export default function ReadingApp({
   };
 
   const previousBookPage = () => {
+    stopBookAudio();
     if (bookPage > 0) {
       setBookPage((page) => page - 1);
     } else if (selectedChapter > 0) {
@@ -1302,6 +1386,7 @@ export default function ReadingApp({
   };
 
   const chooseChapter = (index: number) => {
+    stopBookAudio();
     setSelectedChapter(index);
     setBookPage(0);
     setReadingAnswer("");
@@ -1309,6 +1394,44 @@ export default function ReadingApp({
     setReadingEvaluation(null);
     setChapterQuestionOpen(false);
     setChapterListOpen(false);
+  };
+
+  const toggleBookAudio = async () => {
+    const audio = bookAudioRef.current;
+    const timing = currentBookAudio?.pageTimings[bookPage];
+    if (!audio || !currentBookAudio || !timing) {
+      showToast("本章的温柔女声音频还在提前生成，请稍后再来听");
+      return;
+    }
+    if (currentBookAudioPhase === "playing") {
+      audio.pause();
+      setBookAudioPhase("paused");
+      return;
+    }
+    try {
+      audio.playbackRate = bookAudioRate;
+      if (currentBookAudioPhase !== "paused") audio.currentTime = timing.startMs / 1000;
+      bookAudioPageStartRef.current = timing.startMs / 1000;
+      bookAudioPageEndRef.current = timing.endMs / 1000;
+      await audio.play();
+      setBookAudioPhase("playing");
+    } catch {
+      setBookAudioPhase("unavailable");
+      showToast("这段朗读暂时没能播放，请稍后再试");
+    }
+  };
+
+  const updateBookAudioRate = (rate: number) => {
+    setBookAudioRate(rate);
+    if (bookAudioRef.current) bookAudioRef.current.playbackRate = rate;
+  };
+
+  const finishBookAudioPage = () => {
+    const audio = bookAudioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = bookAudioPageStartRef.current;
+    setBookAudioPhase("ready");
   };
 
   const submitReadingAnswer = async () => {
@@ -1748,7 +1871,7 @@ export default function ReadingApp({
       return;
     }
     if (task === "reading") {
-      setView("library");
+      navigateTo("library");
       return;
     }
     if (dailyPlan.mistakeMode === "add") {
@@ -1756,7 +1879,7 @@ export default function ReadingApp({
       return;
     }
     setMistakeFilter("review");
-    setView("mistakes");
+    navigateTo("mistakes");
   };
 
   const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
@@ -2024,6 +2147,42 @@ export default function ReadingApp({
                     <small className="chapter-position">第 {selectedChapter + 1} 章 · 本章 {bookPage + 1}/{activePages.length} 页</small>
                     <h2>{activePage.heading}</h2>
                     <div className="original-book-text" ref={readerTextRef}>{activePage.body.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
+                    <div className={`book-audio-bar phase-${currentBookAudioPhase}`} aria-label="原文朗读控制">
+                      <button
+                        className="book-audio-toggle"
+                        type="button"
+                        onClick={() => void toggleBookAudio()}
+                        disabled={currentBookAudioPhase === "loading" || currentBookAudioPhase === "unavailable" || !currentBookAudio}
+                      >
+                        {currentBookAudioPhase === "playing" ? <Pause /> : <Play />}
+                        <span>{currentBookAudioPhase === "playing" ? "暂停朗读" : currentBookAudioPhase === "paused" ? "继续听" : "听这一页"}</span>
+                      </button>
+                      <span className="book-audio-status">
+                        <Volume2 />
+                        {currentBookAudioPhase === "loading"
+                          ? "正在检查预生成音频…"
+                          : currentBookAudioPhase === "unavailable"
+                            ? "本章温柔女声正在提前生成"
+                            : `${currentBookAudio?.voiceLabel || "温柔女声"} · 已提前录制`}
+                      </span>
+                      <div className="book-audio-rates" role="group" aria-label="选择朗读速度">
+                        {[0.8, 1, 1.2].map((rate) => (
+                          <button key={rate} type="button" aria-pressed={bookAudioRate === rate} onClick={() => updateBookAudioRate(rate)}>{rate}×</button>
+                        ))}
+                      </div>
+                      {currentBookAudio && (
+                        <audio
+                          ref={bookAudioRef}
+                          src={currentBookAudio.audioUrl}
+                          preload="metadata"
+                          onEnded={finishBookAudioPage}
+                          onTimeUpdate={(event) => {
+                            if (currentBookAudioPhase === "playing" && event.currentTarget.currentTime >= bookAudioPageEndRef.current - 0.08) finishBookAudioPage();
+                          }}
+                          onError={() => setBookAudioPhase("unavailable")}
+                        />
+                      )}
+                    </div>
                     <div className="reading-controls">
                       <button className="icon-button" type="button" onClick={previousBookPage} disabled={selectedChapter === 0 && bookPage === 0} title="上一页" aria-label="上一页"><ChevronLeft /></button>
                       <span>{currentChapterQuestionAnswered ? "龟龟把这一章的思考收好啦" : "进度已自动保存"}</span>
@@ -2318,7 +2477,7 @@ export default function ReadingApp({
                       <div className="journal-empty-copy">
                         <h2>第一张旅行照片正在等你</h2>
                         <p>挑一个目的地，龟龟会把沿途的新发现带回来。</p>
-                        <button type="button" onClick={() => setView("travel")}><span>去旅行</span><ChevronRight /></button>
+                        <button type="button" onClick={() => navigateTo("travel")}><span>去旅行</span><ChevronRight /></button>
                       </div>
                     </div>
                   )
@@ -2342,7 +2501,7 @@ export default function ReadingApp({
                     )) : (
                       <div className="journal-empty-reading">
                         <img src={`${ASSET}/ui/journal/reading-record-book.png`} alt="等待记录的故事书" />
-                        <div><h2>第一篇阅读小结正在等你</h2><p>选一本喜欢的书，和龟龟一起读完一个故事吧。</p><button type="button" onClick={() => setView("library")}>去书房 <ChevronRight /></button></div>
+                        <div><h2>第一篇阅读小结正在等你</h2><p>选一本喜欢的书，和龟龟一起读完一个故事吧。</p><button type="button" onClick={() => navigateTo("library")}>去书房 <ChevronRight /></button></div>
                       </div>
                     )}
                     {game.readingRecords.length > 0 && <div className="journal-reading-placeholder"><BookOpen /><span>下一次阅读记录会出现在这里</span></div>}
@@ -2381,12 +2540,12 @@ export default function ReadingApp({
       </section>
 
       <nav className="bottom-nav" aria-label="主要功能">
-        <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" art={`${ASSET}/ui/supplied/nav/home.png`} onClick={() => setView("home")} />
-        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/supplied/nav/reading-20260714.png`} maskBackground onClick={() => setView("library")} />
-        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/supplied/nav/mistakes-20260714.png`} maskBackground onClick={() => setView("mistakes")} />
-        <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/supplied/nav/chat.png`} onClick={() => setView("chat")} />
-        <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/supplied/nav/travel.png`} onClick={() => setView("travel")} />
-        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/supplied/nav/journal-20260714.png`} maskBackground onClick={() => setView("journal")} />
+        <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" art={`${ASSET}/ui/supplied/nav/home.png`} onClick={() => navigateTo("home")} />
+        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/supplied/nav/reading-20260714.png`} maskBackground onClick={() => navigateTo("library")} />
+        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/supplied/nav/mistakes-20260714.png`} maskBackground onClick={() => navigateTo("mistakes")} />
+        <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/supplied/nav/chat.png`} onClick={() => navigateTo("chat")} />
+        <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/supplied/nav/travel.png`} onClick={() => navigateTo("travel")} />
+        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/supplied/nav/journal-20260714.png`} maskBackground onClick={() => navigateTo("journal")} />
       </nav>
 
       {toast && <div className={`toast ${view === "chat" ? "chat-toast" : ""}`} role="status"><Sparkles /> {toast}</div>}
@@ -2567,7 +2726,7 @@ export default function ReadingApp({
             <div className="summary-block"><small>故事讲了</small><p>{selectedBook.summary}</p></div>
             <div className="summary-block"><small>我学到</small><p>{selectedBook.knowledge}</p></div>
             <div className="turtle-note"><Sparkles /> 你愿意停下来想一想、讲一讲，这就是很棒的阅读！</div>
-            <button className="primary-button full-button" type="button" onClick={() => { resetReading(); setView("journal"); setRecordTab("reading"); }}><BookOpen /> 收进成长手账</button>
+            <button className="primary-button full-button" type="button" onClick={() => { resetReading(); navigateTo("journal"); setRecordTab("reading"); }}><BookOpen /> 收进成长手账</button>
           </section>
         </div>
       )}
@@ -2586,7 +2745,7 @@ export default function ReadingApp({
                 <button className="knowledge-link" type="button" onClick={() => setKnowledgeOpen(travelReward)}><img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 先看看知识卡</button>
               </div>
             </div>
-            <button className="primary-button full-button" type="button" onClick={() => { setTravelReward(null); setView("journal"); setRecordTab("travel"); }}><Backpack /> 放进旅行手账</button>
+            <button className="primary-button full-button" type="button" onClick={() => { setTravelReward(null); navigateTo("journal"); setRecordTab("travel"); }}><Backpack /> 放进旅行手账</button>
           </section>
         </div>
       )}

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile, rm } from "node:fs/promises";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { after } from "node:test";
@@ -10,6 +10,7 @@ process.env.USER_STATE_FILE = join(testRoot, "user-state.json");
 process.env.READING_PROGRESS_FILE = join(testRoot, "reading-progress.json");
 process.env.STUDENT_MEMORY_FILE = join(testRoot, "student-memory.json");
 process.env.MISTAKE_IMAGE_DIR = join(testRoot, "mistake-images");
+process.env.BOOK_AUDIO_DIR = join(testRoot, "book-audio");
 
 let workerPromise;
 async function getWorker() {
@@ -57,6 +58,8 @@ test("server-renders the internal beta login before the reading companion", asyn
 test("forces first-login password reset and isolates every student's data", async () => {
   const unauthorized = await fetchApp("/api/user-state");
   assert.equal(unauthorized.status, 401);
+  const unauthorizedAudio = await fetchApp("/api/book-audio?bookId=scarecrow-zh&chapter=0");
+  assert.equal(unauthorizedAudio.status, 401);
 
   const login = await fetchApp("/api/auth/login", {
     method: "POST",
@@ -86,6 +89,30 @@ test("forces first-login password reset and isolates every student's data", asyn
   const appPage = await fetchApp("/", { headers: { accept: "text/html", cookie: activeCookie } });
   assert.equal(appPage.status, 200);
   assert.match(await appPage.text(), /我的伙伴/);
+
+  const audioDirectory = join(testRoot, "book-audio", "scarecrow-zh");
+  await mkdir(audioDirectory, { recursive: true });
+  await writeFile(join(audioDirectory, "chapter-001.mp3"), new Uint8Array([1, 2, 3, 4, 5, 6]));
+  await writeFile(join(audioDirectory, "chapter-001.json"), JSON.stringify({
+    bookId: "scarecrow-zh",
+    chapterIndex: 0,
+    chapterTitle: "小白船",
+    audioFile: "chapter-001.mp3",
+    pageTimings: [{ startMs: 0, endMs: 1200 }],
+    voiceType: "BV104_streaming",
+    voiceLabel: "温柔女声（温柔淑女）",
+    generatedAt: new Date().toISOString(),
+    textDigest: "test-digest",
+  }));
+  const audioInfo = await fetchApp("/api/book-audio?bookId=scarecrow-zh&chapter=0", { headers: { cookie: activeCookie } });
+  assert.equal(audioInfo.status, 200);
+  assert.equal((await audioInfo.json()).voiceType, "BV104_streaming");
+  const audioRange = await fetchApp("/api/book-audio/file?bookId=scarecrow-zh&chapter=0", {
+    headers: { cookie: activeCookie, range: "bytes=1-3" },
+  });
+  assert.equal(audioRange.status, 206);
+  assert.equal(audioRange.headers.get("content-range"), "bytes 1-3/6");
+  assert.deepEqual(new Uint8Array(await audioRange.arrayBuffer()), new Uint8Array([2, 3, 4]));
 
   const marker = { stars: 17, currentBook: "scarecrow", testOwner: "同学一" };
   const saveState = await fetchApp("/api/user-state", {
@@ -142,6 +169,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../app/api/user-state/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+  ]);
+  const [bookAudioRoute, bookAudioFileRoute, bookAudioStore, bookAudioGenerator] = await Promise.all([
+    readFile(new URL("../app/api/book-audio/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/book-audio/file/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/book-audio-store.ts", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/pregenerate-book-audio.mjs", import.meta.url), "utf8"),
   ]);
 
   for (const feature of [
@@ -246,6 +279,23 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /text-align: justify/);
   assert.match(page, /readingFontSize: "medium"/);
   assert.match(page, /选择原文字号/);
+  assert.match(page, /听这一页/);
+  assert.match(page, /温柔女声/);
+  assert.match(page, /api\/book-audio/);
+  assert.match(page, /bookAudioPageEndRef/);
+  assert.match(styles, /\.book-audio-bar \{/);
+  assert.match(styles, /\.book-audio-rates button\[aria-pressed="true"\]/);
+  assert.match(bookAudioRoute, /ready: false/);
+  assert.match(bookAudioRoute, /audioUrl/);
+  assert.match(bookAudioFileRoute, /status: 206/);
+  assert.match(bookAudioFileRoute, /content-range/);
+  assert.match(bookAudioStore, /BOOK_AUDIO_DIR/);
+  assert.match(bookAudioStore, /env\.UPLOADS/);
+  assert.match(bookAudioGenerator, /tts_async\/submit/);
+  assert.match(bookAudioGenerator, /tts_async\/query/);
+  assert.match(bookAudioGenerator, /VOICE_TYPE = "BV104_streaming"/);
+  assert.match(bookAudioGenerator, /VOICE_LABEL = "温柔女声（温柔淑女）"/);
+  assert.doesNotMatch(bookAudioGenerator, /SpeechSynthesis|speechSynthesis/);
   assert.match(page, /label: "小"/);
   assert.match(page, /label: "中"/);
   assert.match(page, /label: "大"/);

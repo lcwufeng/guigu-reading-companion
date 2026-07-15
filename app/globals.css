@@ -5314,6 +5314,93 @@ button:disabled {
 .reading-font-medium .original-book-text p { font-size: 18px; }
 .reading-font-large .original-book-text p { font-size: 20px; }
 
+.book-audio-bar {
+  align-items: center;
+  background: #edf6e9;
+  border: 1px solid #bdcfb9;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  display: grid;
+  flex: 0 0 auto;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin-top: 8px;
+  min-height: 48px;
+  padding: 6px 8px;
+}
+
+.book-audio-bar.phase-playing {
+  background: #e3f3de;
+  border-color: #8eb183;
+}
+
+.book-audio-bar.phase-unavailable {
+  background: #f7f2e3;
+  border-color: #d9c99d;
+}
+
+.book-audio-toggle {
+  align-items: center;
+  background: #3f7650;
+  border: 0;
+  border-radius: 999px;
+  color: white;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 6px;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 112px;
+  padding: 6px 13px;
+}
+
+.book-audio-toggle:hover:not(:disabled) { background: #2f6541; }
+.book-audio-toggle:disabled { background: #a7ad9f; }
+.book-audio-toggle svg { height: 16px; width: 16px; }
+
+.book-audio-status {
+  align-items: center;
+  color: #526357;
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+  min-width: 0;
+}
+
+.book-audio-status svg {
+  color: #568766;
+  flex: 0 0 auto;
+  height: 17px;
+  width: 17px;
+}
+
+.book-audio-rates {
+  display: flex;
+  gap: 3px;
+}
+
+.book-audio-rates button {
+  background: #fffdf6;
+  border: 1px solid #c5d1c4;
+  color: #59675e;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 850;
+  height: 28px;
+  min-width: 34px;
+  padding: 0 5px;
+}
+
+.book-audio-rates button[aria-pressed="true"] {
+  background: #405c49;
+  border-color: #405c49;
+  color: #fff;
+}
+
+.book-audio-bar audio { display: none; }
+
 .reading-font-controls {
   align-items: center;
   display: flex;
@@ -5947,6 +6034,33 @@ button:disabled {
     padding-top: 8px;
   }
 
+  .book-audio-bar {
+    gap: 6px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    margin-top: 6px;
+    min-height: 44px;
+    padding: 5px 6px;
+  }
+
+  .book-audio-toggle {
+    font-size: 12px;
+    min-height: 32px;
+    min-width: 94px;
+    padding-inline: 10px;
+  }
+
+  .book-audio-status {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .book-audio-rates button {
+    font-size: 9px;
+    height: 27px;
+    min-width: 29px;
+    padding-inline: 3px;
+  }
+
   .complete-reading-paper .reading-controls .icon-button,
   .complete-reading-paper .reading-controls .next-button {
     min-height: 44px;
@@ -6156,6 +6270,20 @@ button:disabled {
 
   .reading-controls > span {
     font-size: 9px;
+  }
+
+  .book-audio-status {
+    font-size: 0;
+    justify-content: center;
+  }
+
+  .book-audio-status svg {
+    height: 18px;
+    width: 18px;
+  }
+
+  .book-audio-toggle {
+    min-width: 86px;
   }
 }
 
