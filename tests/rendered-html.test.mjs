@@ -276,6 +276,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /border-image-source: var\(--journal-frame-image\)/);
   assert.match(styles, /\.journal-reading-copy p \{[\s\S]*?font-size: 18px;/);
   assert.match(styles, /\.journal-card-copy p \{[\s\S]*?font-size: 17px;/);
+  assert.match(page, /knowledge-card-background\.png/);
+  assert.match(styles, /border-image-source: var\(--knowledge-card-background\)/);
+  assert.match(styles, /\.knowledge-copy > p \{[\s\S]*?font-size: 19px;/);
+  assert.match(styles, /\.knowledge-copy h2 \{[\s\S]*?font-size: 32px;/);
   assert.doesNotMatch(page, /SpeechRecognition/);
   assert.match(layout, /lang="zh-CN"/);
   assert.match(layout, /width: "device-width"/);
@@ -445,6 +449,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/ui/journal/dotted-travel-path.png",
     "../public/assets/ui/journal/reading-record-book.png",
     "../public/assets/ui/journal/growth-journal-emblem.png",
+    "../public/assets/ui/journal/knowledge-card-background.png",
     "../public/assets/ui/journal/books/scarecrow-reading-book.png",
     "../public/assets/ui/journal/books/grimm-reading-book.png",
     "../public/assets/ui/journal/books/andersen-reading-book.png",

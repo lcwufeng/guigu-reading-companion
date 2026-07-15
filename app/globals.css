@@ -4028,62 +4028,124 @@ button:disabled {
 }
 
 .knowledge-backdrop {
+  background: rgba(29, 65, 48, 0.72);
+  backdrop-filter: blur(3px);
   z-index: 240;
 }
 
 .knowledge-modal {
+  --knowledge-frame-width: clamp(42px, 4vw, 62px);
+  background: #fff0b9;
+  border: var(--knowledge-frame-width) solid transparent;
+  border-image-repeat: stretch;
+  border-image-slice: 90 fill;
+  border-image-source: var(--knowledge-card-background);
+  border-image-width: var(--knowledge-frame-width);
+  box-sizing: border-box;
   display: grid;
-  gap: 22px;
-  grid-template-columns: minmax(210px, 0.85fr) minmax(250px, 1fr);
-  width: min(730px, 100%);
+  gap: 30px;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(370px, 1.15fr);
+  min-height: 550px;
+  padding: 16px 18px 20px;
+  width: min(940px, 100%);
+}
+
+.knowledge-modal .modal-close {
+  background: #fff3c9;
+  border: 2px solid #9c6a2d;
+  box-shadow: 0 3px 0 rgba(91, 55, 20, 0.2);
+  color: #67401c;
+  height: 44px;
+  right: 18px;
+  top: 18px;
+  width: 44px;
+}
+
+.knowledge-modal .modal-close svg {
+  height: 22px;
+  width: 22px;
 }
 
 .knowledge-visual {
   align-items: center;
-  background: #eaf4e5;
+  align-self: center;
+  background: rgba(232, 244, 214, 0.9);
+  border: 3px solid #bd8c47;
+  box-shadow: inset 0 0 0 5px rgba(255, 252, 225, 0.68), 0 5px 0 rgba(116, 75, 29, 0.16);
   display: flex;
   justify-content: center;
-  min-height: 310px;
+  min-height: 370px;
   overflow: hidden;
+  padding: 10px;
 }
 
 .knowledge-visual > img {
   height: 100%;
-  max-height: 390px;
+  max-height: 430px;
   object-fit: contain;
   width: 100%;
 }
 
 .knowledge-visual .space-knowledge-art {
-  min-height: 310px;
+  min-height: 350px;
 }
 
 .knowledge-copy {
   align-self: center;
-  padding-right: 10px;
+  color: #563817;
+  padding: 10px 14px 10px 0;
+}
+
+.knowledge-copy .modal-kicker {
+  color: #5c823e;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
 }
 
 .knowledge-copy h2 {
-  margin-bottom: 18px;
+  color: #4c3015;
+  font-family: "STKaiti", "KaiTi", serif;
+  font-size: 32px;
+  line-height: 1.3;
+  margin: 0 0 20px;
 }
 
 .knowledge-copy > p {
   align-items: flex-start;
-  color: #496159;
+  background: rgba(255, 250, 219, 0.7);
+  border-left: 5px solid #e1a11a;
+  color: #4e5036;
   display: flex;
-  font-size: 13px;
-  gap: 8px;
-  line-height: 1.6;
-  margin: 9px 0;
+  font-size: 19px;
+  gap: 10px;
+  line-height: 1.75;
+  margin: 12px 0;
+  padding: 11px 13px;
 }
 
 .knowledge-copy > p svg {
   color: #e1a11a;
   fill: currentColor;
   flex: 0 0 auto;
-  height: 15px;
-  margin-top: 3px;
-  width: 15px;
+  height: 24px;
+  margin-top: 4px;
+  width: 24px;
+}
+
+.knowledge-copy .turtle-note {
+  background: rgba(224, 242, 206, 0.86);
+  border: 2px solid #a7c28b;
+  color: #49613d;
+  font-size: 17px;
+  line-height: 1.65;
+  margin-top: 18px;
+  padding: 12px 14px;
+}
+
+.knowledge-copy .turtle-note svg {
+  height: 22px;
+  width: 22px;
 }
 
 .reward-preview strong {
@@ -4954,22 +5016,32 @@ button:disabled {
 
   .knowledge-modal {
     display: block;
+    min-height: 0;
+    width: min(760px, 100%);
   }
 
   .knowledge-visual {
     margin: 0 auto 18px;
     min-height: 0;
-    width: min(280px, 100%);
+    width: min(360px, 100%);
   }
 
   .knowledge-visual > img,
   .knowledge-visual .space-knowledge-art {
-    max-height: 280px;
-    min-height: 230px;
+    max-height: 320px;
+    min-height: 260px;
   }
 
   .knowledge-copy {
-    padding-right: 0;
+    padding: 0 4px 4px;
+  }
+
+  .knowledge-copy h2 {
+    font-size: 29px;
+  }
+
+  .knowledge-copy > p {
+    font-size: 18px;
   }
 }
 
@@ -6331,6 +6403,60 @@ button:disabled {
 }
 
 @media (max-width: 520px) {
+  .modal.knowledge-modal {
+    --knowledge-frame-width: 28px;
+    border-radius: 0;
+    max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
+    padding: 6px 4px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .knowledge-modal .modal-close {
+    height: 40px;
+    right: 9px;
+    top: 9px;
+    width: 40px;
+  }
+
+  .knowledge-visual {
+    border-width: 2px;
+    margin-bottom: 13px;
+    padding: 6px;
+    width: min(280px, 100%);
+  }
+
+  .knowledge-visual > img,
+  .knowledge-visual .space-knowledge-art {
+    max-height: 230px;
+    min-height: 190px;
+  }
+
+  .knowledge-copy .modal-kicker {
+    font-size: 16px;
+  }
+
+  .knowledge-copy h2 {
+    font-size: 26px;
+    margin-bottom: 14px;
+  }
+
+  .knowledge-copy > p {
+    font-size: 17px;
+    line-height: 1.65;
+    margin: 9px 0;
+    padding: 9px 10px;
+  }
+
+  .knowledge-copy > p svg {
+    height: 21px;
+    width: 21px;
+  }
+
+  .knowledge-copy .turtle-note {
+    font-size: 16px;
+    margin-top: 12px;
+    padding: 10px;
+  }
+
   .journal-board {
     padding-inline: 14px;
   }

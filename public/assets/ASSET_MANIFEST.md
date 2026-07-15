@@ -103,6 +103,7 @@
 | `ui/supplied/brand/logo-20260715.png` | 全站品牌 | 登录页和应用顶栏共用的新“龟龟伴读”Logo。 |
 | `ui/journal/` | 成长手账 | 旅行手账、阅读记录和小背包界面使用的像素风背景、面板、卡片和装饰素材。 |
 | `ui/journal/growth-journal-emblem.png` | 手账标识 | 皮革手账、新芽、星星和脚印组成的成长手账徽章。 |
+| `ui/journal/knowledge-card-background.png` | 旅行知识卡 | 与手账主界面统一的木质金边、羊皮纸、藤蔓花朵和龟龟脚印背景。 |
 | `ui/journal/books/` | 阅读记录 | 为《稻草人》《格林童话》《安徒生童话》分别绘制的专属展开书本图标。 |
 | `ui/home-refresh/frames/top-frame.png` | 顶部与导航框体 | 用于宠物身份、资源库存和底部导航的可拉伸像素框。 |
 

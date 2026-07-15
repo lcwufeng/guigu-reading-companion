@@ -2594,7 +2594,14 @@ export default function ReadingApp({
 
       {knowledgeOpen && (
         <div className="modal-backdrop knowledge-backdrop" role="presentation" onMouseDown={() => setKnowledgeOpen(null)}>
-          <section className="modal knowledge-modal" role="dialog" aria-modal="true" aria-labelledby="knowledge-title" onMouseDown={(event) => event.stopPropagation()}>
+          <section
+            className="modal knowledge-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="knowledge-title"
+            style={{ "--knowledge-card-background": `url("${ASSET}/ui/journal/knowledge-card-background.png")` } as React.CSSProperties}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <button className="modal-close" type="button" onClick={() => setKnowledgeOpen(null)} aria-label="关闭"><X /></button>
             <div className="knowledge-visual"><KnowledgeArt destination={knowledgeOpen} /></div>
             <div className="knowledge-copy">
