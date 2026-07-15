@@ -272,8 +272,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /第一张旅行照片正在等你/);
   assert.match(page, /下一次阅读记录会出现在这里/);
   assert.match(page, /等待新发现/);
-  assert.match(styles, /Growth journal rebuilt from the supplied parchment and scrapbook assets/);
+  assert.match(styles, /Growth journal uses the generated wood-and-vine parchment frame as its main board/);
   assert.match(styles, /border-image-source: var\(--journal-frame-image\)/);
+  assert.match(page, /--journal-frame-image": `url\("\$\{ASSET\}\/ui\/journal\/knowledge-card-background\.png"\)/);
+  assert.match(styles, /font-family: "Microsoft YaHei", "PingFang SC", "Heiti SC", Arial, sans-serif;/);
   assert.match(styles, /\.journal-reading-copy p \{[\s\S]*?font-size: 18px;/);
   assert.match(styles, /\.journal-card-copy p \{[\s\S]*?font-size: 17px;/);
   assert.match(page, /knowledge-card-background\.png/);

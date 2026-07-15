@@ -2506,9 +2506,10 @@ button:disabled {
   margin: 0 0 18px;
 }
 
-/* Growth journal rebuilt from the supplied parchment and scrapbook assets. */
+/* Growth journal uses the generated wood-and-vine parchment frame as its main board. */
 .journal-scene {
   background: #9fe3ef;
+  font-family: "Microsoft YaHei", "PingFang SC", "Heiti SC", Arial, sans-serif;
   isolation: isolate;
   overflow-y: auto;
   padding: 104px clamp(24px, 3vw, 56px) 96px;
@@ -2528,7 +2529,7 @@ button:disabled {
   background: #fff4d3;
   border: var(--journal-frame-width) solid transparent;
   border-image-repeat: stretch;
-  border-image-slice: 110 130 120 130 fill;
+  border-image-slice: 90 100 90 100 fill;
   border-image-source: var(--journal-frame-image);
   border-image-width: var(--journal-frame-width);
   box-sizing: border-box;
@@ -2564,9 +2565,9 @@ button:disabled {
 
 .journal-title-badge {
   align-items: center;
-  color: #5a3718;
+  color: #2e241c;
   display: flex;
-  font-family: "STKaiti", "KaiTi", serif;
+  font-family: inherit;
   font-size: 24px;
   font-weight: 900;
   gap: 10px;
@@ -2582,10 +2583,10 @@ button:disabled {
 }
 
 .journal-title h1 {
-  color: #533311;
-  font-family: "STKaiti", "KaiTi", serif;
+  color: #241c16;
+  font-family: inherit;
   font-size: clamp(38px, 3.2vw, 50px);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   margin: 8px 0 7px;
 }
 
@@ -2622,8 +2623,9 @@ button:disabled {
 .record-tabs button {
   background: transparent;
   border: 0;
-  color: #5a3718;
+  color: #31241a;
   cursor: pointer;
+  font-family: inherit;
   font-size: 21px;
   font-weight: 900;
   min-height: 62px;
@@ -2633,7 +2635,7 @@ button:disabled {
 .record-tabs button[aria-selected="true"] {
   background: transparent;
   box-shadow: none;
-  color: #55300d;
+  color: #21170d;
 }
 
 .journal-content {
@@ -2718,12 +2720,12 @@ button:disabled {
 }
 
 .journal-card-copy {
-  color: #4b3018;
+  color: #292019;
   padding: 8px 2px 0;
 }
 
 .journal-card-copy small {
-  color: #725437;
+  color: #4d4134;
   font-size: 16px;
 }
 
@@ -2733,7 +2735,7 @@ button:disabled {
 }
 
 .journal-card-copy p {
-  color: #674a2c;
+  color: #3a3028;
   font-size: 17px;
   margin: 0;
 }
@@ -2832,7 +2834,7 @@ button:disabled {
 
 .journal-empty-copy {
   bottom: 16px;
-  color: #533719;
+  color: #292019;
   left: 32%;
   position: absolute;
   right: 15%;
@@ -2848,7 +2850,7 @@ button:disabled {
 
 .journal-empty-copy p,
 .journal-empty-reading p {
-  color: #765936;
+  color: #42372e;
   font-size: 18px;
   margin: 0 0 14px;
 }
@@ -2862,6 +2864,7 @@ button:disabled {
   color: white;
   cursor: pointer;
   display: inline-flex;
+  font-family: inherit;
   font-size: 20px;
   font-weight: 900;
   gap: 9px;
@@ -2880,7 +2883,7 @@ button:disabled {
 }
 
 .journal-reading-card {
-  background: rgba(255, 249, 226, 0.82);
+  background: rgba(255, 252, 235, 0.94);
   border: 2px solid #d7a85d;
   box-shadow: inset 0 0 0 5px rgba(255, 255, 255, 0.45);
   display: grid;
@@ -2923,7 +2926,7 @@ button:disabled {
 
 .journal-reading-copy {
   align-self: center;
-  color: #4e3217;
+  color: #292019;
   min-width: 0;
 }
 
@@ -2942,7 +2945,7 @@ button:disabled {
 }
 
 .journal-reading-copy p {
-  color: #6d5031;
+  color: #3a3028;
   font-size: 18px;
   line-height: 1.65;
   margin: 0;
@@ -2951,7 +2954,7 @@ button:disabled {
 .journal-reading-copy blockquote {
   background: #fff1c8;
   border-left: 5px solid #efac2f;
-  color: #684726;
+  color: #342a22;
   font-size: 19px;
   line-height: 1.55;
   margin: 12px 0 0;
@@ -2961,7 +2964,7 @@ button:disabled {
 .journal-reading-placeholder {
   align-items: center;
   border: 2px dashed #d9b77d;
-  color: #986726;
+  color: #53422d;
   display: flex;
   font-size: 21px;
   font-weight: 850;
@@ -2989,7 +2992,7 @@ button:disabled {
 
 .journal-inventory-heading {
   align-items: center;
-  color: #52361b;
+  color: #292019;
   display: flex;
   font-size: 23px;
   gap: 9px;
@@ -3006,7 +3009,7 @@ button:disabled {
 
 .journal-inventory-grid > article,
 .journal-inventory-grid > .inventory-card {
-  background: rgba(255, 249, 224, 0.86);
+  background: rgba(255, 252, 235, 0.94);
   border: 3px solid #d9ac67;
   box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.52);
   min-height: 218px;
@@ -3024,8 +3027,8 @@ button:disabled {
   max-width: 90%;
 }
 
-.journal-inventory-grid strong { color: #4f351d; font-size: 20px; }
-.journal-inventory-grid span { color: #765b3f; font-size: 18px; }
+.journal-inventory-grid strong { color: #292019; font-size: 20px; }
+.journal-inventory-grid span { color: #4a3c31; font-size: 18px; }
 
 .journal-locked-item {
   align-items: center;
@@ -4047,6 +4050,7 @@ button:disabled {
   grid-template-columns: minmax(280px, 0.9fr) minmax(370px, 1.15fr);
   min-height: 550px;
   padding: 16px 18px 20px;
+  font-family: "Microsoft YaHei", "PingFang SC", "Heiti SC", Arial, sans-serif;
   width: min(940px, 100%);
 }
 
@@ -4105,7 +4109,7 @@ button:disabled {
 
 .knowledge-copy h2 {
   color: #4c3015;
-  font-family: "STKaiti", "KaiTi", serif;
+  font-family: inherit;
   font-size: 32px;
   line-height: 1.3;
   margin: 0 0 20px;

@@ -2259,9 +2259,8 @@ export default function ReadingApp({
             <img className="journal-scene-background" src={`${ASSET}/ui/journal/background.png`} alt="" />
             <div
               className="journal-board"
-              style={{ "--journal-frame-image": `url("${ASSET}/ui/journal/parchment-panel.png")` } as React.CSSProperties}
+              style={{ "--journal-frame-image": `url("${ASSET}/ui/journal/knowledge-card-background.png")` } as React.CSSProperties}
             >
-              <img className="journal-side-decoration" src={`${ASSET}/ui/journal/side-decoration.png`} alt="" />
               <header className="journal-header">
                 <div className="journal-title">
                   <div className="journal-title-badge">
