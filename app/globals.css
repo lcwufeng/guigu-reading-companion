@@ -14,6 +14,217 @@
   --shadow: 0 12px 32px rgba(20, 49, 38, 0.18);
 }
 
+/* Hide-and-seek: the timer, clue and clickable turtle are three independent layers. */
+.hide-countdown {
+  align-items: center;
+  background: linear-gradient(180deg, #fff9cd 0%, #ffd968 100%);
+  border: 4px solid #fff4b4;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px #ba7b24, 0 8px 0 rgba(105, 70, 24, 0.25), 0 14px 28px rgba(30, 62, 38, 0.2);
+  color: #654018;
+  display: flex;
+  font-size: 48px;
+  font-weight: 950;
+  height: 84px;
+  justify-content: center;
+  left: 50%;
+  line-height: 1;
+  position: absolute;
+  top: 108px;
+  transform: translateX(-50%);
+  width: 84px;
+  z-index: 27;
+}
+
+.hide-countdown.urgent {
+  animation: hideCountdownPulse 720ms ease-in-out infinite alternate;
+  color: #a73e25;
+}
+
+.hide-game-hud {
+  left: 32px;
+  max-width: min(330px, 28vw);
+  padding: 12px 14px 11px;
+  top: 112px;
+  transform: none;
+  width: 310px;
+}
+
+.hide-game-hud.round-found {
+  animation: hidePanelFound 520ms ease both;
+}
+
+.hide-game-topline {
+  gap: 8px;
+  grid-template-columns: auto 1fr auto;
+}
+
+.hide-game-instruction {
+  color: #466245;
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1.45;
+  margin: 9px 0 7px;
+}
+
+.hide-game-score {
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.hide-game-score span {
+  flex-basis: 100%;
+  margin-left: 20px;
+  margin-top: 2px;
+}
+
+.hide-clue-card {
+  align-items: center;
+  background: linear-gradient(180deg, rgba(255, 253, 225, 0.98), rgba(239, 250, 214, 0.98));
+  border: 4px solid #e1ae3e;
+  border-radius: 18px;
+  bottom: 116px;
+  box-shadow: 0 9px 0 rgba(112, 80, 28, 0.22), 0 16px 32px rgba(25, 65, 40, 0.23);
+  color: #2f4c31;
+  display: flex;
+  font-size: clamp(20px, 1.45vw, 25px);
+  font-weight: 900;
+  gap: 12px;
+  left: 50%;
+  line-height: 1.45;
+  max-width: min(780px, 72vw);
+  padding: 14px 22px;
+  position: absolute;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 26;
+}
+
+.hide-clue-card svg {
+  color: #e8a81c;
+  flex: 0 0 auto;
+  height: 30px;
+  width: 30px;
+}
+
+.hidden-turtle {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: block;
+  max-height: none;
+  object-fit: initial;
+  padding: 0;
+  pointer-events: auto;
+  position: absolute;
+  transition: filter 160ms ease, transform 160ms ease;
+  width: clamp(120px, 12vw, 195px);
+  z-index: 16;
+}
+
+.hidden-turtle:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+
+.hidden-turtle:focus-visible {
+  filter: drop-shadow(0 0 8px #fff6a8);
+  outline: 4px solid #fff6a8;
+  outline-offset: 3px;
+}
+
+.hidden-turtle:disabled {
+  cursor: default;
+}
+
+.hidden-turtle-art {
+  display: block;
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+  width: 100%;
+}
+
+.hidden-water { bottom: 24%; left: 14%; }
+.hidden-tree { left: 38%; top: 10%; width: clamp(230px, 24vw, 405px); }
+.hidden-behind { left: 46.5%; top: 28%; width: clamp(115px, 11vw, 175px); }
+.hidden-lotus { bottom: 18%; left: 23%; width: clamp(135px, 13vw, 210px); }
+.hidden-cave { left: 69%; top: 31%; width: clamp(130px, 12vw, 190px); }
+.hidden-bush { left: 45%; top: 51%; width: clamp(125px, 11vw, 180px); }
+.hidden-flowers { left: 76%; top: 57%; width: clamp(135px, 12vw, 200px); }
+.hidden-pond-rocks { left: 13%; top: 38%; width: clamp(135px, 12vw, 200px); }
+.hidden-fruit { left: 49%; top: 7%; width: clamp(130px, 12vw, 195px); }
+.hidden-path-rock { left: 58%; top: 67%; width: clamp(125px, 11vw, 180px); }
+
+@keyframes hideCountdownPulse {
+  from { transform: translateX(-50%) scale(1); }
+  to { transform: translateX(-50%) scale(1.08); }
+}
+
+@keyframes hidePanelFound {
+  0% { transform: scale(0.9); }
+  65% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 820px) {
+  .hide-countdown {
+    font-size: 30px;
+    height: 54px;
+    top: calc(var(--mobile-topbar) + 74px);
+    width: 54px;
+  }
+
+  .hide-game-hud {
+    left: 8px;
+    max-width: 205px;
+    padding: 8px 9px 7px;
+    right: auto;
+    top: calc(var(--mobile-topbar) + 136px);
+    transform: none;
+    width: 205px;
+  }
+
+  .hide-game-topline {
+    gap: 5px;
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .hide-game-topline > strong { font-size: 13px; }
+  .hide-round-pips i { font-size: 8px; height: 18px; width: 18px; }
+  .hide-cancel { height: 24px; width: 24px; }
+  .hide-cancel svg { height: 14px; width: 14px; }
+  .hide-game-instruction { font-size: 12px; margin-block: 6px 5px; }
+  .hide-game-score { font-size: 10px; }
+  .hide-game-score span { display: none; }
+
+  .hide-clue-card {
+    bottom: calc(var(--mobile-nav) + 14px);
+    font-size: 17px;
+    gap: 8px;
+    left: 12px;
+    line-height: 1.4;
+    max-width: none;
+    padding: 11px 13px;
+    right: 12px;
+    transform: none;
+    width: auto;
+  }
+
+  .hide-clue-card svg { height: 24px; width: 24px; }
+
+  .hidden-water { bottom: auto; left: 4%; top: 51%; width: 112px; }
+  .hidden-tree { left: 31%; top: 20%; width: 185px; }
+  .hidden-behind { left: 46%; top: 38%; width: 96px; }
+  .hidden-lotus { bottom: auto; left: 9%; top: 66%; width: 118px; }
+  .hidden-cave { left: 69%; top: 39%; width: 115px; }
+  .hidden-bush { left: 39%; top: 55%; width: 110px; }
+  .hidden-flowers { left: 67%; top: 61%; width: 120px; }
+  .hidden-pond-rocks { left: 7%; top: 42%; width: 120px; }
+  .hidden-fruit { left: 52%; top: 18%; width: 116px; }
+  .hidden-path-rock { left: 50%; top: 69%; width: 112px; }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -6825,6 +7036,8 @@ button:disabled {
 
 /* The hide-and-seek panel stays compact on phones without moving the desktop scene. */
 @media (max-width: 820px) {
+  .home-scene:has(.hide-game-hud) .daily-task-panel { display: none; }
+
   .hide-game-hud {
     left: 8px;
     max-width: none;
@@ -6868,4 +7081,45 @@ button:disabled {
     65% { transform: scale(1.03); }
     100% { transform: scale(1); }
   }
+}
+
+/* Final hide-and-seek overrides follow the legacy mobile compatibility section. */
+.hide-game-hud {
+  left: 32px;
+  max-width: min(330px, 28vw);
+  padding: 12px 14px 11px;
+  top: 112px;
+  transform: none;
+  width: 310px;
+}
+
+.hide-game-hud.round-found { animation: hidePanelFound 520ms ease both; }
+.hide-game-topline { gap: 8px; grid-template-columns: auto 1fr auto; }
+.hide-game-score { font-size: 12px; flex-wrap: wrap; }
+.hide-game-score span { flex-basis: 100%; margin-left: 20px; margin-top: 2px; }
+.hidden-turtle { max-height: none; pointer-events: auto; width: clamp(120px, 12vw, 195px); z-index: 16; }
+.hidden-turtle.generated-hide { clip-path: inset(15%); }
+.hidden-water { bottom: 24%; left: 14%; }
+.hidden-tree { left: 38%; top: 10%; width: clamp(230px, 24vw, 405px); }
+.hidden-behind { left: 46.5%; top: 28%; width: clamp(115px, 11vw, 175px); }
+.hidden-lotus { bottom: 18%; left: 23%; width: clamp(135px, 13vw, 210px); }
+
+@media (max-width: 820px) {
+  .hide-game-hud {
+    left: 8px;
+    max-width: 205px;
+    padding: 8px 9px 7px;
+    right: auto;
+    top: calc(var(--mobile-topbar) + 136px);
+    transform: none;
+    width: 205px;
+  }
+
+  .hide-game-topline { gap: 5px; grid-template-columns: auto 1fr auto; }
+  .hide-game-score { font-size: 10px; }
+  .hide-game-score span { display: none; }
+  .hidden-water { bottom: auto; left: 4%; top: 51%; width: 112px; }
+  .hidden-tree { left: 31%; top: 20%; width: 185px; }
+  .hidden-behind { left: 46%; top: 38%; width: 96px; }
+  .hidden-lotus { bottom: auto; left: 9%; top: 66%; width: 118px; }
 }

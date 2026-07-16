@@ -18,7 +18,6 @@ import {
   Pause,
   Play,
   RotateCcw,
-  Search,
   Send,
   Sparkles,
   Star,
@@ -498,7 +497,7 @@ const destinations: Destination[] = [
   },
 ];
 
-const hidePlaces = ["water", "tree", "behind", "lotus"] as const;
+const hidePlaces = ["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock"] as const;
 type HidePlace = (typeof hidePlaces)[number];
 type HomeSpot = "center" | "tree-shade" | "cave-door";
 const HIDE_TOTAL_ROUNDS = 3;
@@ -511,13 +510,12 @@ const hideLabels: Record<HidePlace, string> = {
   tree: "树梢上",
   behind: "树干后",
   lotus: "荷叶下",
-};
-
-const hideCoordinates: Record<HidePlace, { x: number; y: number }> = {
-  water: { x: 19, y: 50 },
-  tree: { x: 49, y: 17 },
-  behind: { x: 50, y: 43 },
-  lotus: { x: 29, y: 69 },
+  cave: "石头边",
+  bush: "小草丛里",
+  flowers: "花丛里",
+  "pond-rocks": "池塘石缝里",
+  fruit: "果树叶间",
+  "path-rock": "小路石头旁",
 };
 
 const hideSceneClues: Record<HidePlace, { soft: string; strong: string }> = {
@@ -525,22 +523,30 @@ const hideSceneClues: Record<HidePlace, { soft: string; strong: string }> = {
   tree: { soft: "高高的地方有叶子在沙沙响。", strong: "树梢上露出了一点绿色！" },
   behind: { soft: "大树附近传来窸窸窣窣的声音。", strong: "树干后面好像有小脚动了一下！" },
   lotus: { soft: "池塘边有一片叶子轻轻抖了抖。", strong: "荷叶下面冒出了一串小泡泡！" },
+  cave: { soft: "右边的紫色石头附近好像有动静。", strong: "山洞旁的石缝里露出了一点绿色！" },
+  bush: { soft: "画面中间的小草丛正在轻轻晃。", strong: "小草丛里的叶子突然分开了！" },
+  flowers: { soft: "右下角的花草间传来穿行的声音。", strong: "高高的草叶后面闪过了龟龟的脸！" },
+  "pond-rocks": { soft: "池塘边的几块石头后面静悄悄的。", strong: "左边水边的石缝里有小眼睛在眨！" },
+  fruit: { soft: "红彤彤的果子旁，树叶好像变重了。", strong: "果树顶上的叶子中间藏着一张笑脸！" },
+  "path-rock": { soft: "中间的小路边，花朵和石头挨得很近。", strong: "小路边的石头后露出了绿色的脑袋！" },
+};
+
+const hideSprites: Record<HidePlace, string> = {
+  water: `${ASSET}/characters/turtle/turtle_hide_water.png`,
+  tree: `${ASSET}/characters/turtle/turtle_hide_tree_top.png`,
+  behind: `${ASSET}/characters/turtle/turtle_hide_tree_behind.png`,
+  lotus: `${ASSET}/characters/turtle/turtle_hide_lotus.png`,
+  cave: `${ASSET}/characters/turtle/hide-generated/turtle-hide-cave-20260716.png`,
+  bush: `${ASSET}/characters/turtle/hide-generated/turtle-hide-bush-20260716.png`,
+  flowers: `${ASSET}/characters/turtle/hide-generated/turtle-hide-flowers-20260716.png`,
+  "pond-rocks": `${ASSET}/characters/turtle/hide-generated/turtle-hide-pond-rocks-20260716.png`,
+  fruit: `${ASSET}/characters/turtle/hide-generated/turtle-hide-fruit-20260716.png`,
+  "path-rock": `${ASSET}/characters/turtle/hide-generated/turtle-hide-path-rock-20260716.png`,
 };
 
 function randomHidePlace(previous?: HidePlace) {
   const choices = previous ? hidePlaces.filter((place) => place !== previous) : hidePlaces;
   return choices[Math.floor(Math.random() * choices.length)];
-}
-
-function warmerHideClue(guess: HidePlace, target: HidePlace) {
-  const from = hideCoordinates[guess];
-  const to = hideCoordinates[target];
-  const distance = Math.hypot(to.x - from.x, to.y - from.y);
-  const warmth = distance < 25 ? "暖暖的，已经很近啦！" : distance < 43 ? "有一点点动静，再靠近些。" : "凉凉的，龟龟离这里有点远。";
-  const horizontal = to.x > from.x ? "往右边" : "往左边";
-  const vertical = to.y > from.y ? "往下面" : "往上面";
-  const direction = Math.abs(to.x - from.x) > Math.abs(to.y - from.y) ? horizontal : vertical;
-  return `${warmth}${direction}找找看。`;
 }
 
 function clamp(value: number) {
@@ -831,9 +837,7 @@ export default function ReadingApp({
   const [hideTarget, setHideTarget] = useState<HidePlace | null>(null);
   const [hideRound, setHideRound] = useState(0);
   const [hideSeconds, setHideSeconds] = useState(HIDE_ROUND_SECONDS);
-  const [hideGuesses, setHideGuesses] = useState<HidePlace[]>([]);
-  const [hideHint, setHideHint] = useState("");
-  const [hidePerfectRounds, setHidePerfectRounds] = useState(0);
+  const [hideFastRounds, setHideFastRounds] = useState(0);
   const [hideFound, setHideFound] = useState<HidePlace | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
@@ -1283,11 +1287,9 @@ export default function ReadingApp({
     setHideTarget(randomHidePlace());
     setHideRound(1);
     setHideSeconds(HIDE_ROUND_SECONDS);
-    setHideGuesses([]);
-    setHideHint("");
-    setHidePerfectRounds(0);
+    setHideFastRounds(0);
     setHideFound(null);
-    showToast(`${game.name}藏好啦！三轮都找到会有额外星星`);
+    showToast(`${game.name}藏好啦！直接点到藏起来的龟龟就算找到`);
   };
 
   const cancelHideAndSeek = () => {
@@ -1295,55 +1297,41 @@ export default function ReadingApp({
     hideAdvanceTimerRef.current = null;
     setHideTarget(null);
     setHideRound(0);
-    setHideGuesses([]);
-    setHideHint("");
     setHideFound(null);
     showToast("先休息一下，下次再继续找龟龟");
   };
 
-  const guessHidePlace = (place: HidePlace) => {
-    if (!hideTarget || hideFound || hideGuesses.includes(place)) return;
-    if (place === hideTarget) {
-      const nextPerfectRounds = hidePerfectRounds + (hideGuesses.length === 0 ? 1 : 0);
-      const completedRound = hideRound;
-      setHidePerfectRounds(nextPerfectRounds);
-      setHideFound(place);
-      setHideHint(hideGuesses.length === 0 ? "一次就找到啦，观察力满分！" : "找到了！龟龟正在开心地挥手。对啦");
-      showToast(`第 ${completedRound} 轮找到啦！龟龟藏在${hideLabels[place]}`);
-      hideAdvanceTimerRef.current = window.setTimeout(() => {
-        if (completedRound < HIDE_TOTAL_ROUNDS) {
-          setHideTarget(randomHidePlace(place));
-          setHideRound(completedRound + 1);
-          setHideSeconds(HIDE_ROUND_SECONDS);
-          setHideGuesses([]);
-          setHideHint("");
-          setHideFound(null);
-          showToast(`第 ${completedRound + 1} 轮开始，龟龟又藏好啦！`);
-          return;
-        }
-        const starReward = HIDE_TOTAL_ROUNDS + nextPerfectRounds;
-        setHideTarget(null);
-        setHideRound(0);
+  const findHiddenTurtle = () => {
+    if (!hideTarget || hideFound) return;
+    const nextFastRounds = hideFastRounds + (hideSeconds > HIDE_ROUND_SECONDS - 5 ? 1 : 0);
+    const completedRound = hideRound;
+    setHideFastRounds(nextFastRounds);
+    setHideFound(hideTarget);
+    showToast(`第 ${completedRound} 轮找到啦！龟龟藏在${hideLabels[hideTarget]}`);
+    hideAdvanceTimerRef.current = window.setTimeout(() => {
+      if (completedRound < HIDE_TOTAL_ROUNDS) {
+        setHideTarget(randomHidePlace(hideTarget));
+        setHideRound(completedRound + 1);
         setHideSeconds(HIDE_ROUND_SECONDS);
-        setHideGuesses([]);
-        setHideHint("");
         setHideFound(null);
-        setTurtleSprite("turtle_excited.png");
-        setGame((current) => ({
-          ...current,
-          boredom: clamp(current.boredom - 30),
-          stars: current.stars + starReward,
-        }));
-        showToast(`三轮全找到！奖励 ${starReward} 颗星星`);
-        void remember({ type: "activity", activity: "捉迷藏", detail: `完成三轮捉迷藏，${nextPerfectRounds}轮一次找到，获得${starReward}颗星星` });
-        window.setTimeout(() => setTurtleSprite(null), 2400);
-      }, 1200);
-    } else {
-      const clue = warmerHideClue(place, hideTarget);
-      setHideGuesses((guesses) => [...guesses, place]);
-      setHideHint(clue);
-      showToast(clue);
-    }
+        showToast(`第 ${completedRound + 1} 轮开始，龟龟又藏好啦！`);
+        return;
+      }
+      const starReward = HIDE_TOTAL_ROUNDS + nextFastRounds;
+      setHideTarget(null);
+      setHideRound(0);
+      setHideSeconds(HIDE_ROUND_SECONDS);
+      setHideFound(null);
+      setTurtleSprite("turtle_excited.png");
+      setGame((current) => ({
+        ...current,
+        boredom: clamp(current.boredom - 30),
+        stars: current.stars + starReward,
+      }));
+      showToast(`三轮全找到！奖励 ${starReward} 颗星星`);
+      void remember({ type: "activity", activity: "捉迷藏", detail: `完成三轮捉迷藏，${nextFastRounds}轮在5秒内找到，获得${starReward}颗星星` });
+      window.setTimeout(() => setTurtleSprite(null), 2400);
+    }, 1200);
   };
 
   const selectedChapters = loadedBooks[selectedBook.id] || [];
@@ -1363,11 +1351,11 @@ export default function ReadingApp({
     ? chapterKnowledge[selectedBook.id]?.[activeChapter.title] || selectedBook.knowledge
     : selectedBook.knowledge;
   const activeHideHint = hideTarget
-    ? hideFound
-      ? hideHint
-      : hideSeconds <= 8
-        ? hideSceneClues[hideTarget].strong
-        : hideHint || (hideSeconds <= 15 ? hideSceneClues[hideTarget].soft : "仔细看一看：哪里的叶子、水波或树枝在轻轻动？")
+    ? hideSeconds <= 8
+      ? hideSceneClues[hideTarget].strong
+      : hideSeconds <= HIDE_ROUND_SECONDS - 5
+        ? hideSceneClues[hideTarget].soft
+        : ""
     : "";
   const activeBookAudioKey = activeChapter ? `${selectedBook.id}:${selectedChapter}` : "";
   const currentBookAudio = bookAudio?.bookId === selectedBook.id && bookAudio.chapterIndex === selectedChapter
@@ -2114,6 +2102,9 @@ export default function ReadingApp({
             )}
             {hideTarget && (
               <>
+                <div className={`hide-countdown ${hideSeconds <= 8 ? "urgent" : ""}`} aria-label={`剩余${hideSeconds}秒`}>
+                  {hideSeconds}
+                </div>
                 <section className={`hide-game-hud ${hideFound ? "round-found" : ""}`} aria-live="polite">
                   <div className="hide-game-topline">
                     <strong>龟龟捉迷藏</strong>
@@ -2122,37 +2113,30 @@ export default function ReadingApp({
                         <i key={index} className={index + 1 < hideRound ? "done" : index + 1 === hideRound ? "current" : ""}>{index + 1}</i>
                       ))}
                     </div>
-                    <span className={`hide-timer ${hideSeconds <= 8 ? "urgent" : ""}`}><Search /> {hideSeconds > 0 ? `${hideSeconds} 秒后新线索` : "龟龟动了一下"}</span>
                     <button className="hide-cancel" type="button" onClick={cancelHideAndSeek} aria-label="结束捉迷藏"><X /></button>
                   </div>
-                  <p className="hide-live-clue">{activeHideHint}</p>
-                  <div className="hide-game-score"><Star /> 一次找到：{hidePerfectRounds} 轮 <span>完成三轮奖励 3～6 颗星</span></div>
+                  <p className="hide-game-instruction">仔细看场景，直接点藏起来的龟龟</p>
+                  <div className="hide-game-score"><Star /> 5秒内找到：{hideFastRounds} 轮 <span>完成三轮奖励 3～6 颗星</span></div>
                 </section>
-                {!hideFound && (
-                  <>
-                    <button className={`world-hotspot pond-hotspot ${hideGuesses.includes("water") ? "searched" : ""} ${hideSeconds === 0 && hideTarget === "water" ? "strong-clue" : ""}`} type="button" onClick={() => guessHidePlace("water")} aria-label="找找水波里" title="找找水波里" disabled={hideGuesses.includes("water")}><Search /><span>水波里</span></button>
-                    <button className={`world-hotspot tree-hotspot ${hideGuesses.includes("tree") ? "searched" : ""} ${hideSeconds === 0 && hideTarget === "tree" ? "strong-clue" : ""}`} type="button" onClick={() => guessHidePlace("tree")} aria-label="找找树梢上" title="找找树梢上" disabled={hideGuesses.includes("tree")}><Search /><span>树梢上</span></button>
-                    <button className={`world-hotspot trunk-hotspot ${hideGuesses.includes("behind") ? "searched" : ""} ${hideSeconds === 0 && hideTarget === "behind" ? "strong-clue" : ""}`} type="button" onClick={() => guessHidePlace("behind")} aria-label="找找树干后" title="找找树干后" disabled={hideGuesses.includes("behind")}><Search /><span>树干后</span></button>
-                    <button className={`world-hotspot lotus-hotspot ${hideGuesses.includes("lotus") ? "searched" : ""} ${hideSeconds === 0 && hideTarget === "lotus" ? "strong-clue" : ""}`} type="button" onClick={() => guessHidePlace("lotus")} aria-label="找找荷叶下" title="找找荷叶下" disabled={hideGuesses.includes("lotus")}><Search /><span>荷叶下</span></button>
-                  </>
+                {activeHideHint && !hideFound && (
+                  <div className="hide-clue-card" role="status">
+                    <Lightbulb />
+                    <span>{activeHideHint}</span>
+                  </div>
                 )}
               </>
             )}
 
             {hideTarget && (
-              <img
-                className={`hidden-turtle hidden-${hideTarget} ${hideFound ? "is-found" : hideSeconds <= 8 ? "is-peeking" : ""}`}
-                src={`${ASSET}/characters/turtle/${
-                  hideTarget === "water"
-                    ? "turtle_hide_water.png"
-                    : hideTarget === "tree"
-                      ? "turtle_hide_tree_top.png"
-                      : hideTarget === "behind"
-                        ? "turtle_hide_tree_behind.png"
-                        : "turtle_hide_lotus.png"
-                }`}
-                alt="藏起来的龟龟"
-              />
+              <button
+                className={`hidden-turtle hidden-${hideTarget} ${hidePlaces.indexOf(hideTarget) >= 4 ? "generated-hide" : ""} ${hideFound ? "is-found" : hideSeconds <= 8 ? "is-peeking" : ""}`}
+                type="button"
+                onClick={findHiddenTurtle}
+                aria-label="找到藏起来的龟龟"
+                disabled={!!hideFound}
+              >
+                <img className="hidden-turtle-art" src={hideSprites[hideTarget]} alt="" />
+              </button>
             )}
 
             {hideFound && <div className="hide-celebration" aria-hidden="true"><Sparkles /><Star /><Sparkles /></div>}

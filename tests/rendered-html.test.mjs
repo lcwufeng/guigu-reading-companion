@@ -220,7 +220,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   for (const threshold of [10, 15, 50, 70, 100, 150]) {
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
-  assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus"\]/);
+  assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock"\]/);
   assert.match(page, /landHomeSpots: HomeSpot\[\] = \["center", "tree-shade", "cave-door"\]/);
   assert.doesNotMatch(page, /HomeSpot = [^;]*pond-edge/);
   assert.match(styles, /width: clamp\(106px, 10\.5vw, 165px\)/);
@@ -300,12 +300,20 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /label: "中"/);
   assert.match(page, /label: "大"/);
   assert.match(page, /HIDE_TOTAL_ROUNDS = 3/);
-  assert.match(page, /三轮都找到会有额外星星/);
-  assert.match(page, /warmerHideClue/);
-  assert.match(page, /25 秒后新线索|秒后新线索/);
+  assert.match(page, /hideSeconds <= HIDE_ROUND_SECONDS - 5/);
+  assert.match(page, /className={`hide-countdown/);
+  assert.match(page, /\{hideSeconds\}/);
+  assert.doesNotMatch(page, /倒计时|秒后新线索|warmerHideClue|guessHidePlace/);
+  assert.match(page, /onClick=\{findHiddenTurtle\}/);
+  assert.match(page, /直接点藏起来的龟龟/);
+  assert.doesNotMatch(page, /className={`world-hotspot/);
   assert.match(page, /完成三轮奖励 3～6 颗星/);
   assert.match(styles, /\.hide-game-hud \{/);
-  assert.match(styles, /\.world-hotspot\.strong-clue/);
+  assert.match(styles, /\.hide-countdown \{/);
+  assert.match(styles, /\.hide-clue-card \{/);
+  assert.match(styles, /bottom: 116px/);
+  assert.match(styles, /font-size: clamp\(20px, 1\.45vw, 25px\)/);
+  assert.match(styles, /\.hidden-turtle\.generated-hide \{ clip-path: inset\(15%\); \}/);
   assert.match(styles, /@keyframes turtlePeek/);
   assert.match(styles, /\.reading-font-medium \.original-book-text p \{ font-size: 18px; \}/);
   assert.match(styles, /\.reading-font-large \.original-book-text p \{ font-size: 20px; \}/);
@@ -513,6 +521,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/ui/journal/books/scarecrow-reading-book.png",
     "../public/assets/ui/journal/books/grimm-reading-book.png",
     "../public/assets/ui/journal/books/andersen-reading-book.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-cave-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-bush-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-flowers-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-pond-rocks-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-fruit-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-path-rock-20260716.png",
     "../public/books/scarecrow-zh.md",
     "../public/books/grimms-fairy-tales-zh.md",
     "../public/books/andersens-fairy-tales-zh.md",
