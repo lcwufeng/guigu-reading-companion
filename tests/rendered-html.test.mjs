@@ -198,6 +198,18 @@ test("keeps the product loops, account safeguards, and required art assets", asy
 
   assert.doesNotMatch(page, /localStorage|guigu-reader-device-id|guigu-v1-state/);
   assert.match(page, /activeTravel/);
+  assert.match(page, /pickTravelKnowledgeCard/);
+  assert.match(page, /unseenCards/);
+  assert.match(page, /nonRepeatingCards/);
+  assert.match(page, /Math\.random\(\) \* candidates\.length/);
+  assert.match(page, /knowledgeCardId/);
+  assert.match(page, /随机海洋知识卡/);
+  assert.match(page, /随机森林知识卡/);
+  assert.match(page, /随机恐龙知识卡/);
+  assert.match(page, /随机太空知识卡/);
+  assert.match(page, /随机古文明知识卡/);
+  assert.match(page, /随机未来科学知识卡/);
+  assert.match(page, /优先不重复/);
   assert.match(page, /tickets: 3/);
   assert.match(page, /mistakes: \[\]/);
   assert.match(page, /dailyPlan:/);
@@ -546,6 +558,25 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/characters/turtle/hide-generated/turtle-hide-path-grass-20260716.png",
     "../public/assets/characters/turtle/hide-generated/turtle-hide-pond-cobbles-20260716.png",
     "../public/assets/characters/turtle/hide-generated/turtle-hide-boulder-20260716.png",
+    "../public/assets/travel/knowledge-cards-20260716/forest-layers.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/tree-rings.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/forest-seasons.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/coral-reef.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/deep-sea.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/sea-turtle.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/shark.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/dinosaur-types.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/dinosaur-fossils.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/dinosaur-habits.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/dinosaur-extinction.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/solar-system.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/moon-exploration.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/constellations.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/mars-exploration.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/ancient-ruins.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/pyramids.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/future-science.jpg",
+    "../public/assets/travel/knowledge-cards-20260716/clean-energy.jpg",
     "../public/books/scarecrow-zh.md",
     "../public/books/grimms-fairy-tales-zh.md",
     "../public/books/andersens-fairy-tales-zh.md",

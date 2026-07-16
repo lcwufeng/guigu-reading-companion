@@ -51,6 +51,9 @@ type TravelRecord = {
   reward: string;
   photo: string;
   knowledge?: string;
+  knowledgeCardId?: string;
+  knowledgeTitle?: string;
+  knowledgeFacts?: string[];
 };
 
 type MistakeStatus = "new" | "reviewing" | "mastered";
@@ -148,6 +151,13 @@ type BookAudioInfo = {
 };
 type BookAudioPhase = "idle" | "loading" | "ready" | "playing" | "paused" | "unavailable";
 
+type KnowledgeCard = {
+  id: string;
+  title: string;
+  image: string;
+  facts: string[];
+};
+
 type Destination = {
   id: string;
   name: string;
@@ -159,9 +169,12 @@ type Destination = {
   locationArt: string;
   knowledgeTitle: string;
   knowledgeFacts: string[];
+  knowledgeCards: KnowledgeCard[];
   position: string;
   requiredStars: number;
 };
+
+type TravelDiscovery = { destination: Destination; card: KnowledgeCard };
 
 type CompanionPayload = {
   mode: "chat" | "reading";
@@ -416,18 +429,27 @@ function parsePublicDomainBook(text: string, startHeading: string): BookChapter[
   return chapters;
 }
 
+const NEW_KNOWLEDGE_CARD_ASSET = `${ASSET}/travel/knowledge-cards-20260716`;
+
 const destinations: Destination[] = [
   {
     id: "beach",
     name: "星沙海湾",
     note: "去找会发光的贝壳",
     duration: "8秒",
-    reward: "潮汐知识卡",
+    reward: "随机海洋知识卡",
     photo: `${ASSET}/optimized/travel/photos/photo_beach.webp`,
     knowledge: `${ASSET}/optimized/travel/knowledge_cards/knowledge_tide.webp`,
     locationArt: `${ASSET}/legacy/travel/location_beach.png`,
     knowledgeTitle: "潮汐的小秘密",
     knowledgeFacts: ["海水会有规律地涨落。", "月球引力是形成潮汐的重要原因。"],
+    knowledgeCards: [
+      { id: "beach-tide", title: "潮汐的小秘密", image: `${ASSET}/optimized/travel/knowledge_cards/knowledge_tide.webp`, facts: ["海水会有规律地涨落。", "月球引力是形成潮汐的重要原因。"] },
+      { id: "beach-coral-reef", title: "珊瑚礁知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/coral-reef.jpg`, facts: ["珊瑚礁是许多海洋生物的家。", "保护珊瑚礁要减少污染和踩踏。"] },
+      { id: "beach-deep-sea", title: "深海世界知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/deep-sea.jpg`, facts: ["深海很黑，水压也非常大。", "有些深海生物会自己发光。"] },
+      { id: "beach-sea-turtle", title: "海龟知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/sea-turtle.jpg`, facts: ["海龟会回到陆地上的沙滩产卵。", "减少塑料垃圾能帮助保护海龟。"] },
+      { id: "beach-shark", title: "鲨鱼知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/shark.jpg`, facts: ["鲨鱼的骨骼主要由软骨组成。", "鲨鱼能帮助维持海洋生态平衡。"] },
+    ],
     position: "destination-beach",
     requiredStars: 10,
   },
@@ -436,12 +458,18 @@ const destinations: Destination[] = [
     name: "森语树屋",
     note: "听一听大树的年轮故事",
     duration: "8秒",
-    reward: "树木年轮卡",
+    reward: "随机森林知识卡",
     photo: `${ASSET}/optimized/travel/photos/photo_forest.webp`,
     knowledge: `${ASSET}/optimized/travel/knowledge_cards/knowledge_tree_ring.webp`,
     locationArt: `${ASSET}/legacy/travel/location_forest.png`,
     knowledgeTitle: "大树的时间圈",
     knowledgeFacts: ["年轮记录着树木一年的生长。", "科学家会从年轮了解过去的气候。"],
+    knowledgeCards: [
+      { id: "forest-tree-ring-legacy", title: "大树的时间圈", image: `${ASSET}/optimized/travel/knowledge_cards/knowledge_tree_ring.webp`, facts: ["年轮记录着树木一年的生长。", "科学家会从年轮了解过去的气候。"] },
+      { id: "forest-layers", title: "森林分层知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/forest-layers.jpg`, facts: ["森林从高到低有乔木、灌木和草本等层次。", "不同层次为不同动物提供食物和住所。"] },
+      { id: "forest-tree-rings", title: "树木年轮知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/tree-rings.jpg`, facts: ["树干里的年轮通常能帮助判断树木年龄。", "年轮的宽窄还记录着过去的生长环境。"] },
+      { id: "forest-seasons", title: "森林四季知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/forest-seasons.jpg`, facts: ["森林会随着四季发生不同变化。", "四季变化让森林更加丰富多彩。"] },
+    ],
     position: "destination-forest",
     requiredStars: 15,
   },
@@ -450,12 +478,19 @@ const destinations: Destination[] = [
     name: "恐龙博物馆",
     note: "寻找巨大的远古脚印",
     duration: "8秒",
-    reward: "恐龙知识卡",
+    reward: "随机恐龙知识卡",
     photo: `${ASSET}/optimized/travel/photos/photo_museum.webp`,
     knowledge: `${ASSET}/optimized/travel/knowledge_cards/knowledge_dinosaur.webp`,
     locationArt: `${ASSET}/legacy/travel/location_museum.png`,
     knowledgeTitle: "脚印里的远古线索",
     knowledgeFacts: ["恐龙脚印也能成为化石。", "大小、深浅和间距能帮助科学家推测恐龙怎样行动。"],
+    knowledgeCards: [
+      { id: "museum-footprints", title: "脚印里的远古线索", image: `${ASSET}/optimized/travel/knowledge_cards/knowledge_dinosaur.webp`, facts: ["恐龙脚印也能成为化石。", "脚印能帮助科学家推测恐龙怎样行动。"] },
+      { id: "museum-dinosaur-types", title: "恐龙种类知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/dinosaur-types.jpg`, facts: ["恐龙有植食、肉食等不同种类。", "不同恐龙的体型和牙齿差别很大。"] },
+      { id: "museum-dinosaur-fossils", title: "恐龙化石知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/dinosaur-fossils.jpg`, facts: ["化石是古生物留下的遗骸或痕迹。", "科学家通过化石了解远古生命。"] },
+      { id: "museum-dinosaur-habits", title: "恐龙习性知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/dinosaur-habits.jpg`, facts: ["不同恐龙生活在不同环境里。", "科学家通过化石研究恐龙的食物和行动。"] },
+      { id: "museum-dinosaur-extinction", title: "恐龙灭绝知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/dinosaur-extinction.jpg`, facts: ["恐龙大约在6600万年前大量消失。", "撞击和气候变化可能共同影响了恐龙。"] },
+    ],
     position: "destination-museum",
     requiredStars: 50,
   },
@@ -464,11 +499,17 @@ const destinations: Destination[] = [
     name: "太空站",
     note: "从太空看一看蓝色地球",
     duration: "8秒",
-    reward: "太空站知识卡",
+    reward: "随机太空知识卡",
     photo: `${ASSET}/legacy/travel/location_space.png`,
     locationArt: `${ASSET}/legacy/travel/location_space.png`,
     knowledgeTitle: "绕着地球旅行",
     knowledgeFacts: ["空间站像一座绕地球飞行的实验室。", "在微重力环境里，航天员和物品会呈现漂浮状态。"],
+    knowledgeCards: [
+      { id: "space-solar-system", title: "太阳系知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/solar-system.jpg`, facts: ["太阳系里有太阳和八大行星。", "地球是离太阳第三近的行星。"] },
+      { id: "space-moon", title: "月球探秘知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/moon-exploration.jpg`, facts: ["月球是离地球最近的天然卫星。", "月球表面有许多大大小小的环形山。"] },
+      { id: "space-constellations", title: "星座知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/constellations.jpg`, facts: ["人们把星星想象连线组成星座。", "观察星空可以帮助认识方向和季节。"] },
+      { id: "space-mars", title: "火星探索知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/mars-exploration.jpg`, facts: ["火星表面有沙尘、峡谷和火山。", "科学家用探测器研究火星环境。"] },
+    ],
     position: "destination-space",
     requiredStars: 70,
   },
@@ -477,11 +518,15 @@ const destinations: Destination[] = [
     name: "古城遗迹",
     note: "沿着石阶寻找古城的故事",
     duration: "8秒",
-    reward: "古城建筑知识卡",
+    reward: "随机古文明知识卡",
     photo: `${ASSET}/legacy/travel/location_ancient_city.png`,
     locationArt: `${ASSET}/legacy/travel/location_ancient_city.png`,
     knowledgeTitle: "石头留下的城市记忆",
     knowledgeFacts: ["遗迹能帮助我们了解过去的人怎样生活。", "保护遗迹时，要尽量保留原有材料和历史信息。"],
+    knowledgeCards: [
+      { id: "ancient-ruins", title: "古代遗迹知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/ancient-ruins.jpg`, facts: ["古代遗迹记录着过去文明的生活。", "保护遗迹能帮助我们读懂历史。"] },
+      { id: "ancient-pyramids", title: "金字塔知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/pyramids.jpg`, facts: ["金字塔是古代文明留下的重要遗迹。", "巨大的石块展现了古人的建筑智慧。"] },
+    ],
     position: "destination-ancient",
     requiredStars: 100,
   },
@@ -490,11 +535,15 @@ const destinations: Destination[] = [
     name: "未来车站",
     note: "看看未来的城市怎样出发",
     duration: "8秒",
-    reward: "未来交通知识卡",
+    reward: "随机未来科学知识卡",
     photo: `${ASSET}/legacy/travel/location_future_station.png`,
     locationArt: `${ASSET}/legacy/travel/location_future_station.png`,
     knowledgeTitle: "会思考的交通站",
     knowledgeFacts: ["公共交通能让更多人共享一次出行。", "未来交通会更重视安全、节能与无障碍体验。"],
+    knowledgeCards: [
+      { id: "future-science", title: "未来科学知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/future-science.jpg`, facts: ["机器人和人工智能会帮助人们完成更多工作。", "未来科技会继续探索太空和智慧城市。"] },
+      { id: "future-clean-energy", title: "清洁能源知识卡", image: `${NEW_KNOWLEDGE_CARD_ASSET}/clean-energy.jpg`, facts: ["太阳能和风能属于清洁能源。", "使用清洁能源能减少污染、保护环境。"] },
+    ],
     position: "destination-future",
     requiredStars: 150,
   },
@@ -782,27 +831,36 @@ function destinationForRecord(record: TravelRecord) {
   );
 }
 
-function KnowledgeArt({ destination }: { destination: Destination }) {
-  if (destination.knowledge) {
-    return <img src={destination.knowledge} alt={`${destination.knowledgeTitle}知识卡`} />;
-  }
-  if (!hydrated) {
-    return (
-      <main className="account-loading" role="status">
-        <img src={`${ASSET}/characters/turtle/turtle_reading.png`} alt="正在整理你的学习记录" />
-        <Sparkles aria-hidden="true" />
-        <strong>龟龟正在取回你的学习记录…</strong>
-      </main>
-    );
-  }
+function knowledgeCardForRecord(record: TravelRecord, destination: Destination) {
+  return destination.knowledgeCards.find((card) => (
+    card.id === record.knowledgeCardId
+    || card.image === record.knowledge
+    || card.title === record.knowledgeTitle
+    || card.title === record.reward
+  )) ?? destination.knowledgeCards[0];
+}
 
-  return (
-    <div className="space-knowledge-art">
-      <img src={destination.locationArt} alt={destination.name} />
-      <span>{destination.name}发现</span>
-      <strong>{destination.knowledgeTitle}</strong>
-    </div>
-  );
+function discoveryForRecord(record: TravelRecord): TravelDiscovery | null {
+  const destination = destinationForRecord(record);
+  if (!destination) return null;
+  return { destination, card: knowledgeCardForRecord(record, destination) };
+}
+
+function pickTravelKnowledgeCard(destination: Destination, records: TravelRecord[]) {
+  const destinationRecords = records.filter((record) => (
+    record.destinationId === destination.id || record.destination === destination.name
+  ));
+  const collectedIds = new Set(destinationRecords.map((record) => knowledgeCardForRecord(record, destination).id));
+  const unseenCards = destination.knowledgeCards.filter((card) => !collectedIds.has(card.id));
+  const lastCardId = destinationRecords[0] ? knowledgeCardForRecord(destinationRecords[0], destination).id : null;
+  const cycleCards = unseenCards.length ? unseenCards : destination.knowledgeCards;
+  const nonRepeatingCards = cycleCards.filter((card) => card.id !== lastCardId);
+  const candidates = nonRepeatingCards.length ? nonRepeatingCards : cycleCards;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function KnowledgeArt({ card }: { card: KnowledgeCard }) {
+  return <img src={card.image} alt={card.title} />;
 }
 
 function StatusPill({
@@ -913,8 +971,8 @@ export default function ReadingApp({
   const [voiceLevel, setVoiceLevel] = useState(0.08);
   const [selectedDestination, setSelectedDestination] = useState<Destination>(destinations[0]);
   const [travelProgress, setTravelProgress] = useState(0);
-  const [travelReward, setTravelReward] = useState<Destination | null>(null);
-  const [knowledgeOpen, setKnowledgeOpen] = useState<Destination | null>(null);
+  const [travelReward, setTravelReward] = useState<TravelDiscovery | null>(null);
+  const [knowledgeOpen, setKnowledgeOpen] = useState<TravelDiscovery | null>(null);
   const [recordTab, setRecordTab] = useState<RecordTab>("travel");
   const [mistakeFilter, setMistakeFilter] = useState<"all" | "review" | "mastered">("all");
   const [mistakeFormOpen, setMistakeFormOpen] = useState(false);
@@ -1193,14 +1251,18 @@ export default function ReadingApp({
       if (progress < 100) return;
 
       window.clearInterval(interval);
+      const knowledgeCard = pickTravelKnowledgeCard(traveling, game.travelRecords);
       const record: TravelRecord = {
         id: now,
         destinationId: traveling.id,
         destination: traveling.name,
         date: formatDate(),
-        reward: traveling.reward,
+        reward: knowledgeCard.title,
         photo: traveling.photo,
-        knowledge: traveling.knowledge,
+        knowledge: knowledgeCard.image,
+        knowledgeCardId: knowledgeCard.id,
+        knowledgeTitle: knowledgeCard.title,
+        knowledgeFacts: knowledgeCard.facts,
       };
       setGame((current) => {
         if (current.activeTravel?.startedAt !== active.startedAt) return current;
@@ -1215,12 +1277,12 @@ export default function ReadingApp({
         };
       });
       setTravelProgress(0);
-      setTravelReward(traveling);
+      setTravelReward({ destination: traveling, card: knowledgeCard });
       showToast(`${game.name}带着新发现回来啦！`);
-      void remember({ type: "activity", activity: "旅行", detail: `一起去了${traveling.name}，带回${traveling.reward}` });
+      void remember({ type: "activity", activity: "旅行", detail: `一起去了${traveling.name}，随机带回${knowledgeCard.title}` });
     }, 100);
     return () => window.clearInterval(interval);
-  }, [game.activeTravel, game.name, hydrated, remember, showToast, traveling]);
+  }, [game.activeTravel, game.name, game.travelRecords, hydrated, remember, showToast, traveling]);
 
   const runTimedAction = useCallback(
     (
@@ -2551,7 +2613,7 @@ export default function ReadingApp({
                 <dl>
                   <div><dt>旅行时间</dt><dd>{selectedDestination.duration}</dd></div>
                   <div><dt>解锁条件</dt><dd>{selectedDestination.requiredStars} 颗星</dd></div>
-                  <div><dt>可能带回</dt><dd>{selectedDestination.reward}</dd></div>
+                  <div><dt>可能带回</dt><dd>{selectedDestination.reward}（共 {selectedDestination.knowledgeCards.length} 张，优先不重复）</dd></div>
                 </dl>
                 {!selectedDestinationUnlocked && <p className="unlock-note">再获得 {selectedDestinationMissingStars} 颗星就能出发</p>}
                 <button type="button" onClick={startTravel} disabled={!!traveling || !selectedDestinationUnlocked || game.tickets < 1}>
@@ -2605,7 +2667,8 @@ export default function ReadingApp({
                     <div className="journal-travel-layout">
                       <div className="journal-travel-grid">
                         {journalTravelItems.map((record, index) => {
-                          const destination = destinationForRecord(record);
+                          const discovery = discoveryForRecord(record);
+                          const destination = discovery?.destination;
                           return (
                             <article className="journal-travel-card" key={record.id}>
                               <img className="journal-card-frame" src={`${ASSET}/ui/journal/travel-card-frame.png`} alt="" />
@@ -2618,8 +2681,8 @@ export default function ReadingApp({
                                 <p>带回了：{record.reward}</p>
                               </div>
                               <img className="journal-card-stamp" src={`${ASSET}/ui/journal/${destination?.id === "beach" || index % 2 ? "shell" : "leaf"}-stamp.png`} alt="" />
-                              {destination && (
-                                <button className="journal-card-action" type="button" onClick={() => setKnowledgeOpen(destination)}>
+                              {discovery && (
+                                <button className="journal-card-action" type="button" onClick={() => setKnowledgeOpen(discovery)}>
                                   <img src={`${ASSET}/ui/journal/card-action-button.png`} alt="" />
                                   <span><Lightbulb /> 查看知识卡</span>
                                 </button>
@@ -2678,10 +2741,10 @@ export default function ReadingApp({
                       <article><div className="item-art star-item"><Star /></div><strong>成长星星</strong><span>× {game.stars}</span></article>
                       <article><div className="item-art ticket-item"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="旅行票" /></div><strong>旅行票</strong><span>× {game.tickets}</span></article>
                       {journalTravelItems.map((record) => {
-                        const destination = destinationForRecord(record);
-                        return destination ? (
-                          <button className="inventory-card" type="button" key={record.id} onClick={() => setKnowledgeOpen(destination)}>
-                            <div className="item-art"><KnowledgeArt destination={destination} /></div>
+                        const discovery = discoveryForRecord(record);
+                        return discovery ? (
+                          <button className="inventory-card" type="button" key={record.id} onClick={() => setKnowledgeOpen(discovery)}>
+                            <div className="item-art"><KnowledgeArt card={discovery.card} /></div>
                             <strong>{record.reward}</strong><span>来自{record.destination}</span>
                           </button>
                         ) : null;
@@ -2899,11 +2962,11 @@ export default function ReadingApp({
             <button className="modal-close" type="button" onClick={() => setTravelReward(null)} aria-label="关闭"><X /></button>
             <img className="returning-turtle" src={`${ASSET}/characters/turtle/turtle_travel_return.png`} alt="旅行回来的龟龟" />
             <span className="modal-kicker">旅行平安归来 · +4 星星</span>
-            <h2 id="reward-title">从{travelReward.name}带回了新发现</h2>
+            <h2 id="reward-title">从{travelReward.destination.name}带回了新发现</h2>
             <div className="reward-preview">
-              <img src={travelReward.photo} alt={`${travelReward.name}照片`} />
+              <img src={travelReward.destination.photo} alt={`${travelReward.destination.name}照片`} />
               <div>
-                <small>本次收获</small><strong>{travelReward.reward}</strong><span>还有 1 个野外果子</span>
+                <small>本次随机收获</small><strong>{travelReward.card.title}</strong><span>还有 1 个野外果子</span>
                 <button className="knowledge-link" type="button" onClick={() => setKnowledgeOpen(travelReward)}><img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 先看看知识卡</button>
               </div>
             </div>
@@ -2923,11 +2986,11 @@ export default function ReadingApp({
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button className="modal-close" type="button" onClick={() => setKnowledgeOpen(null)} aria-label="关闭"><X /></button>
-            <div className="knowledge-visual"><KnowledgeArt destination={knowledgeOpen} /></div>
+            <div className="knowledge-visual"><KnowledgeArt card={knowledgeOpen.card} /></div>
             <div className="knowledge-copy">
-              <span className="modal-kicker">{knowledgeOpen.name} · 旅行知识卡</span>
-              <h2 id="knowledge-title">{knowledgeOpen.knowledgeTitle}</h2>
-              {knowledgeOpen.knowledgeFacts.map((fact) => <p key={fact}><Star /> {fact}</p>)}
+              <span className="modal-kicker">{knowledgeOpen.destination.name} · 旅行知识卡</span>
+              <h2 id="knowledge-title">{knowledgeOpen.card.title}</h2>
+              {knowledgeOpen.card.facts.map((fact) => <p key={fact}><Star /> {fact}</p>)}
               <div className="turtle-note"><Sparkles /> 下次向别人讲一讲，你会记得更牢。</div>
             </div>
           </section>
