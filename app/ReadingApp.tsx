@@ -29,7 +29,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { chapterKnowledge } from "./book-knowledge";
-import { chapterPrompts } from "./book-prompts";
+import { chapterPrompts, type ChapterPrompt } from "./book-prompts";
+import classicBookManifest from "./classic-books-manifest.json";
 
 type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal";
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
@@ -128,7 +129,7 @@ type Book = {
   memoryCategory: string;
   source?: {
     url: string;
-    format: "markdown" | "gutenberg";
+    format: "markdown" | "gutenberg" | "json";
     startHeading?: string;
     label: string;
     language: string;
@@ -136,7 +137,11 @@ type Book = {
   unavailableReason?: string;
 };
 
-type BookPage = { heading: string; body: string };
+type BookPage = {
+  heading: string;
+  body: string;
+  images?: Array<{ src: string; alt: string }>;
+};
 type BookChapter = { id: string; title: string; pages: BookPage[] };
 type SavedReadingProgress = { chapter: number; page: number; completed: boolean };
 type BookAudioInfo = {
@@ -273,6 +278,7 @@ const journalReadingArtByTitle: Record<string, string> = {
   "稻草人": "ui/journal/books/scarecrow-reading-book.png",
   "格林童话": "ui/journal/books/grimm-reading-book.png",
   "安徒生童话": "ui/journal/books/andersen-reading-book.png",
+  ...Object.fromEntries(classicBookManifest.map((book) => [book.title, `ui/journal/books/classics/${book.slug}.png`])),
 };
 
 function journalReadingArtFor(title: string) {
@@ -282,6 +288,25 @@ function journalReadingArtFor(title: string) {
 function isReadingFontSize(value: unknown): value is ReadingFontSize {
   return value === "small" || value === "medium" || value === "large";
 }
+
+const classicBooks: Book[] = classicBookManifest.map((book) => ({
+  id: book.slug,
+  title: book.title,
+  author: book.author,
+  category: `${book.grade}经典读物`,
+  coverMark: book.title.slice(0, 1),
+  coverClass: "cover-classic",
+  pages: [],
+  summary: book.summary,
+  knowledge: book.knowledge,
+  memoryCategory: book.memoryCategory,
+  source: {
+    url: `${BASE_PATH}/books/classics/${book.slug}.json`,
+    format: "json",
+    label: "用户提供电子版；扫描页经本地 OCR 整理并保留原书插图",
+    language: "中文原文",
+  },
+}));
 
 const books: Book[] = [
   {
@@ -338,7 +363,35 @@ const books: Book[] = [
       language: "中文原文",
     },
   },
+  ...classicBooks,
 ];
+
+function buildChapterPrompt(title: string): ChapterPrompt {
+  const seed = [...title].reduce((total, character) => total + (character.codePointAt(0) || 0), 0) % 4;
+  const prompts: ChapterPrompt[] = [
+    {
+      question: `读完《${title}》，哪一个人物、行动或变化最值得留意？它怎样推动了这一章的内容？`,
+      guide: "回到原文找一个关键行动，再看看它发生以后，人物或事情有了什么变化。",
+      referenceAnswer: "这是开放性问题。答案只要准确引用本章中的人物、行动或变化，并说明它对后续内容的影响，就应判为正确；不要要求唯一表述。",
+    },
+    {
+      question: `《${title}》里，哪个细节最能帮助你理解这一章？请用原文内容说说理由。`,
+      guide: "可以找一句话、一个动作、一处景物或一次观察，说明它告诉了你什么。",
+      referenceAnswer: "这是开放性问题。答案只要选取本章真实存在的细节，并作出与原文相符的解释，就应判为正确；允许学生有自己的感受。",
+    },
+    {
+      question: `如果请你给《${title}》再取一个小标题，你会取什么？为什么这个标题符合原文？`,
+      guide: "先想想这一章最重要的人、事或发现，再从原文找一两个细节支持你的小标题。",
+      referenceAnswer: "这是开放性问题。新标题不必唯一，只要能够概括本章核心内容，并有至少一个与原文相符的理由，就应判为正确。",
+    },
+    {
+      question: `读《${title}》时，你发现人物、事情或观察结果前后有什么变化？请结合原文说明。`,
+      guide: "找一找开头和结尾有什么不同；如果没有明显变化，也可以说说认识是怎样一步步变清楚的。",
+      referenceAnswer: "这是开放性问题。答案只要指出本章前后真实存在的变化或认识过程，并用原文细节解释，就应判为正确。",
+    },
+  ];
+  return prompts[seed];
+}
 
 function readableTitle(title: string) {
   return title.toLowerCase().replace(/(^|[\s[-])([a-z])/g, (_, prefix: string, letter: string) => `${prefix}${letter.toUpperCase()}`);
@@ -1132,12 +1185,20 @@ export default function ReadingApp({
     if (!selectedBook.source || loadedBooks[selectedBook.id]) return;
     const controller = new AbortController();
     void fetch(selectedBook.source.url, { signal: controller.signal })
-      .then((response) => response.ok ? response.text() : Promise.reject(new Error("book download failed")))
-      .then((text) => {
+      .then(async (response) => {
+        if (!response.ok) throw new Error("book download failed");
         const source = selectedBook.source!;
+        if (source.format === "json") {
+          const payload = await response.json() as { chapters?: BookChapter[] };
+          return payload.chapters || [];
+        }
+        const text = await response.text();
         const chapters = source.format === "markdown"
           ? parseMarkdownBook(text)
           : parsePublicDomainBook(text, source.startHeading || "");
+        return chapters;
+      })
+      .then((chapters) => {
         if (!chapters.length) throw new Error("book chapters missing");
         setLoadedBooks((current) => ({ ...current, [selectedBook.id]: chapters }));
       })
@@ -1467,8 +1528,10 @@ export default function ReadingApp({
   const pagesBeforeChapter = selectedChapters.slice(0, selectedChapter).reduce((total, chapter) => total + chapter.pages.length, 0);
   const overallPageNumber = totalBookPages ? pagesBeforeChapter + bookPage + 1 : 0;
   const overallProgress = totalBookPages ? (overallPageNumber / totalBookPages) * 100 : 0;
-  const activeChapterPrompt = activeChapter ? chapterPrompts[selectedBook.id]?.[activeChapter.title] : null;
   const activeChapterText = activePages.map((page) => page.body).join("\n\n");
+  const activeChapterPrompt = activeChapter
+    ? chapterPrompts[selectedBook.id]?.[activeChapter.title] || buildChapterPrompt(activeChapter.title)
+    : null;
   const currentChapterQuestionKey = activeChapter ? `chapter:${selectedBook.id}:${activeChapter.title}` : "";
   const currentChapterQuestionAnswered = Boolean(currentChapterQuestionKey)
     && (answeredChapterQuestions.includes(currentChapterQuestionKey) || game.readingRewards.includes(currentChapterQuestionKey));
@@ -2379,7 +2442,19 @@ export default function ReadingApp({
                     <div className="reading-progress"><i style={{ width: `${overallProgress}%` }} /></div>
                     <small className="chapter-position">第 {selectedChapter + 1} 章 · 本章 {bookPage + 1}/{activePages.length} 页</small>
                     <h2>{activePage.heading}</h2>
-                    <div className="original-book-text" ref={readerTextRef}>{activePage.body.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
+                    <div className="original-book-text" ref={readerTextRef}>
+                      {activePage.images?.length ? (
+                        <div className="book-inline-illustrations" aria-label="原书插图">
+                          {activePage.images.map((illustration, index) => (
+                            <figure key={`${illustration.src}-${index}`}>
+                              <img src={`${BASE_PATH}${illustration.src}`} alt={illustration.alt} loading="lazy" />
+                              <figcaption>原书插图</figcaption>
+                            </figure>
+                          ))}
+                        </div>
+                      ) : null}
+                      {activePage.body.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+                    </div>
                     <div className={`book-audio-bar phase-${currentBookAudioPhase}`} aria-label="原文朗读控制">
                       <button
                         className="book-audio-toggle"

@@ -55,6 +55,57 @@ test("server-renders the internal beta login before the reading companion", asyn
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
 
+test("imports the complete graded ebook shelf with chapters, paragraphs, illustrations, and journal art", async () => {
+  const manifestUrl = new URL("../public/books/classics/manifest.json", import.meta.url);
+  const manifest = JSON.parse(await readFile(manifestUrl, "utf8"));
+  assert.equal(manifest.length, 26);
+  assert.equal(new Set(manifest.map((book) => book.slug)).size, 26);
+  assert.equal(manifest.reduce((total, book) => total + book.chapterCount, 0), 740);
+  assert.equal(manifest.reduce((total, book) => total + book.pageCount, 0), 2488);
+  assert.equal(manifest.reduce((total, book) => total + book.imageCount, 0), 565);
+
+  const expectedChapterCounts = new Map([
+    ["chinese-idioms", 122],
+    ["andersen-complete", 164],
+    ["little-prince", 27],
+    ["little-house-prairie", 26],
+    ["spring-autumn-stories", 24],
+    ["palm-fairy-tales", 31],
+  ]);
+
+  for (const book of manifest) {
+    const payloadUrl = new URL(`../public/books/classics/${book.slug}.json`, import.meta.url);
+    const payload = JSON.parse(await readFile(payloadUrl, "utf8"));
+    assert.equal(payload.chapters.length, book.chapterCount, `${book.title} chapter count`);
+    assert.equal(payload.chapters.reduce((total, chapter) => total + chapter.pages.length, 0), book.pageCount, `${book.title} page count`);
+    if (expectedChapterCounts.has(book.slug)) assert.equal(payload.chapters.length, expectedChapterCounts.get(book.slug));
+    assert.doesNotMatch(payload.chapters.map((chapter) => chapter.title).join("\n"), /目录|目次|前言|译序|序言|后记|索引/);
+
+    for (const chapter of payload.chapters) {
+      assert.ok(chapter.title.trim(), `${book.title} has a chapter title`);
+      for (const page of chapter.pages) {
+        assert.ok(page.body.length >= 20, `${book.title} · ${chapter.title} has readable text`);
+        assert.doesNotMatch(page.body, /(?<!\n)\n(?!\n)/, `${book.title} · ${chapter.title} has no broken physical lines`);
+        assert.doesNotMatch(page.body, /本章正文识别后暂时没有可显示的文字/);
+        for (const illustration of page.images || []) {
+          assert.match(illustration.src, /^\/assets\/books\/classics\//);
+          await access(new URL(`../public${illustration.src}`, import.meta.url));
+        }
+      }
+    }
+
+    await access(new URL(`../public/assets/ui/journal/books/classics/${book.slug}.png`, import.meta.url));
+  }
+
+  const readingApp = await readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(readingApp, /format: "json"/);
+  assert.match(readingApp, /book-inline-illustrations/);
+  assert.match(readingApp, /buildChapterPrompt/);
+  assert.match(styles, /text-indent: 2em/);
+  assert.match(styles, /book-inline-illustrations/);
+});
+
 test("forces first-login password reset and isolates every student's data", async () => {
   const unauthorized = await fetchApp("/api/user-state");
   assert.equal(unauthorized.status, 401);
