@@ -341,6 +341,11 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.doesNotMatch(page, /提交给 AI 判断|修改后重新提交/);
   assert.match(page, /readingRewards/);
   assert.match(page, /if \(result\.correct\)/);
+  assert.match(page, /else if \(currentChapterQuestionAnswered\) \{\s*continueAfterChapterQuestion\(\)/);
+  assert.match(page, /已回答 · 进入下一章/);
+  assert.match(page, /已回答 · 查看阅读小结/);
+  assert.match(styles, /\.next-button\.completed/);
+  assert.doesNotMatch(page, /readingRewards[^\n]*slice\(-500\)/);
   assert.match(page, /scarecrow-zh\.md/);
   assert.match(page, /grimms-fairy-tales-zh\.md/);
   assert.match(page, /andersens-fairy-tales-zh\.md/);

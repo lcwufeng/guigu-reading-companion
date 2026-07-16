@@ -1137,7 +1137,9 @@ export default function ReadingApp({
               hunger: clamp((parsed.hunger ?? initialState.hunger) + hours * 3),
               cleanliness: clamp((parsed.cleanliness ?? initialState.cleanliness) - hours),
               boredom: clamp((parsed.boredom ?? initialState.boredom) + hours * 2),
-              readingRewards: Array.isArray(parsed.readingRewards) ? parsed.readingRewards.slice(-500) : [],
+              readingRewards: Array.isArray(parsed.readingRewards)
+                ? [...new Set(parsed.readingRewards.filter((key): key is string => typeof key === "string" && key.startsWith("chapter:")))]
+                : [],
               readingFontSize: isReadingFontSize(parsed.readingFontSize) ? parsed.readingFontSize : "medium",
               lastSeen: Date.now(),
             };
@@ -1535,6 +1537,9 @@ export default function ReadingApp({
   const currentChapterQuestionKey = activeChapter ? `chapter:${selectedBook.id}:${activeChapter.title}` : "";
   const currentChapterQuestionAnswered = Boolean(currentChapterQuestionKey)
     && (answeredChapterQuestions.includes(currentChapterQuestionKey) || game.readingRewards.includes(currentChapterQuestionKey));
+  const completedChapterButtonLabel = selectedChapter === selectedChapters.length - 1
+    ? "已回答 · 查看阅读小结"
+    : "已回答 · 进入下一章";
   const activeChapterKnowledge = activeChapter
     ? chapterKnowledge[selectedBook.id]?.[activeChapter.title] || selectedBook.knowledge
     : selectedBook.knowledge;
@@ -1631,6 +1636,8 @@ export default function ReadingApp({
       setReadingAnswer("");
       setReadingFeedback("");
       setReadingEvaluation(null);
+    } else if (currentChapterQuestionAnswered) {
+      continueAfterChapterQuestion();
     } else if (activeChapterPrompt) {
       setReadingAnswer("");
       setReadingFeedback("");
@@ -1738,7 +1745,7 @@ export default function ReadingApp({
             boredom: clamp(current.boredom - 8),
             stars: current.stars + (rewardKind === "star" ? 1 : 0),
             tickets: current.tickets + (rewardKind === "ticket" ? 1 : 0),
-            readingRewards: [...current.readingRewards, currentChapterQuestionKey].slice(-500),
+            readingRewards: [...current.readingRewards, currentChapterQuestionKey],
           }));
         }
         setReadingFeedback(`${result.reply}${alreadyRewarded ? " 这道题的奖励已经领取过啦。" : ` 这次随机获得了${rewardLabel}！`}`);
@@ -2494,7 +2501,18 @@ export default function ReadingApp({
                     <div className="reading-controls">
                       <button className="icon-button" type="button" onClick={previousBookPage} disabled={selectedChapter === 0 && bookPage === 0} title="上一页" aria-label="上一页"><ChevronLeft /></button>
                       <span>{currentChapterQuestionAnswered ? "龟龟把这一章的思考收好啦" : "进度已自动保存"}</span>
-                      <button className="next-button" type="button" onClick={nextBookPage}>{selectedChapter === selectedChapters.length - 1 && bookPage === activePages.length - 1 ? "读完全书" : bookPage === activePages.length - 1 ? "读完本章" : "下一页"}<ChevronRight /></button>
+                      <button
+                        className={`next-button ${bookPage === activePages.length - 1 && currentChapterQuestionAnswered ? "completed" : ""}`}
+                        type="button"
+                        onClick={nextBookPage}
+                      >
+                        {bookPage === activePages.length - 1 && currentChapterQuestionAnswered
+                          ? completedChapterButtonLabel
+                          : selectedChapter === selectedChapters.length - 1 && bookPage === activePages.length - 1
+                            ? "读完全书"
+                            : bookPage === activePages.length - 1 ? "读完本章" : "下一页"}
+                        {bookPage === activePages.length - 1 && currentChapterQuestionAnswered ? <Check /> : <ChevronRight />}
+                      </button>
                     </div>
                   </article>
 

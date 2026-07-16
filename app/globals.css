@@ -1711,6 +1711,15 @@ button:disabled {
   background: var(--leaf-dark);
 }
 
+.next-button.completed {
+  background: #3f7b4d;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+}
+
+.next-button.completed:hover {
+  background: #2f633d;
+}
+
 .next-button svg,
 .primary-button svg,
 .voice-button svg,
