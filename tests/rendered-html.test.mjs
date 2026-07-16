@@ -215,6 +215,9 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /dailyPlan:/);
   assert.match(page, /createDailyPlan/);
   assert.match(page, /advanceDailyTask/);
+  assert.match(page, /const completesDailyReadingTask = dailyPlan\.progress\.reading < dailyPlan\.targets\.reading/);
+  assert.match(page, /setGame\(\(current\) => advanceDailyTask\(current, "reading"\)\)/);
+  assert.match(page, /这一章读完啦，今日伴读任务已完成/);
   assert.match(page, /earnedReward \? 3 : 0/);
   assert.match(page, /全部完成可得 3 颗星星/);
   assert.match(page, /ui\/daily-tasks\/title\.png/);

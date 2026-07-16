@@ -1721,6 +1721,8 @@ export default function ReadingApp({
 
   const continueAfterChapterQuestion = () => {
     const hasNextChapter = selectedChapter < selectedChapters.length - 1;
+    const completesDailyReadingTask = dailyPlan.progress.reading < dailyPlan.targets.reading;
+    setGame((current) => advanceDailyTask(current, "reading"));
     setChapterQuestionOpen(false);
     setReadingAnswer("");
     setReadingFeedback("");
@@ -1728,8 +1730,11 @@ export default function ReadingApp({
     if (hasNextChapter) {
       setSelectedChapter((chapter) => chapter + 1);
       setBookPage(0);
-      showToast("已经进入下一章，进度自动保存啦");
+      showToast(completesDailyReadingTask
+        ? "这一章读完啦，今日伴读任务已完成！已经进入下一章"
+        : "已经进入下一章，进度自动保存啦");
     } else {
+      if (completesDailyReadingTask) showToast("这一章读完啦，今日伴读任务已完成！");
       finishReading();
     }
   };
