@@ -269,7 +269,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.chat-panel \{[\s\S]*?height: clamp\(360px, calc\(100dvh - 200px\), 760px\);/);
   assert.match(styles, /\.chat-panel \{[\s\S]*?width: min\(1180px, calc\(100vw - clamp\(56px, 10vw, 180px\)\)\);/);
   assert.match(styles, /\.message p \{[\s\S]*?font-size: 17px;/);
-  assert.match(page, /回答正确奖励/);
+  assert.match(page, /回答正确随机奖励/);
+  assert.match(page, /1 颗星星或 1 张旅行票/);
+  assert.match(page, /const rewardKind = Math\.random\(\) < 0\.5 \? "star" : "ticket"/);
+  assert.match(page, /stars: current\.stars \+ \(rewardKind === "star" \? 1 : 0\)/);
+  assert.match(page, /tickets: current\.tickets \+ \(rewardKind === "ticket" \? 1 : 0\)/);
+  assert.match(page, /这道题的奖励已经领取过啦/);
   assert.match(page, /龟龟的问题/);
   assert.match(page, /这次先跳过/);
   assert.match(page, /语音回答/);
@@ -338,6 +343,11 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /@keyframes turtlePeek/);
   assert.match(styles, /\.reading-font-medium \.original-book-text p \{ font-size: 18px; \}/);
   assert.match(styles, /\.reading-font-large \.original-book-text p \{ font-size: 20px; \}/);
+  assert.match(styles, /\.knowledge-only-panel > p \{[\s\S]*?font-size: clamp\(16px, 1\.08vw, 19px\)/);
+  assert.match(styles, /\.mistake-card h2 \{ font-size: 18px/);
+  assert.match(styles, /\.mistake-card > p \{ font-size: 15px/);
+  assert.match(styles, /\.travel-card p \{ font-size: 16px/);
+  assert.match(styles, /\.travel-card dl div \{[\s\S]*?font-size: 14px/);
   assert.match(styles, /height: clamp\(360px, calc\(100dvh - 190px\), 760px\)/);
   assert.match(styles, /width: min\(1500px, 84vw\)/);
   assert.match(styles, /flex: 0 0 clamp\(170px, 14vw, 220px\)/);

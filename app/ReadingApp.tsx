@@ -1663,30 +1663,34 @@ export default function ReadingApp({
         answer: readingAnswer.trim().slice(0, 500),
       });
       if (typeof result.correct !== "boolean") throw new Error("reading evaluation missing");
-      setReadingFeedback(result.reply);
       if (result.correct) {
         setReadingEvaluation("correct");
         setAnsweredChapterQuestions((questions) => questions.includes(currentChapterQuestionKey) ? questions : [...questions, currentChapterQuestionKey]);
         const alreadyRewarded = game.readingRewards.includes(currentChapterQuestionKey);
+        const rewardKind = Math.random() < 0.5 ? "star" : "ticket";
+        const rewardLabel = rewardKind === "star" ? "1 颗成长星星" : "1 张旅行票";
         if (!alreadyRewarded) {
           setGame((current) => current.readingRewards.includes(currentChapterQuestionKey) ? current : ({
             ...current,
             boredom: clamp(current.boredom - 8),
-            stars: current.stars + 1,
+            stars: current.stars + (rewardKind === "star" ? 1 : 0),
+            tickets: current.tickets + (rewardKind === "ticket" ? 1 : 0),
             readingRewards: [...current.readingRewards, currentChapterQuestionKey].slice(-500),
           }));
         }
-        showToast(alreadyRewarded ? "回答正确，这道题的星星已经领取过啦" : "回答正确，获得 1 颗成长星星！");
+        setReadingFeedback(`${result.reply}${alreadyRewarded ? " 这道题的奖励已经领取过啦。" : ` 这次随机获得了${rewardLabel}！`}`);
+        showToast(alreadyRewarded ? "回答正确，这道题的奖励已经领取过啦" : `回答正确，随机获得${rewardLabel}！`);
         void remember({
           type: "learning",
           detail: `在《${selectedBook.title}·${activeChapter?.title || "本章"}》中依据原文回答了伴读问题`,
         });
       } else {
+        setReadingFeedback(result.reply);
         setReadingEvaluation("incorrect");
         showToast("龟龟把这一章的思考整理给你啦");
       }
     } catch {
-      setReadingFeedback("龟龟暂时没有听懂这次回答。这次不会发放星星，你可以重新发送或先跳过。");
+      setReadingFeedback("龟龟暂时没有听懂这次回答。这次不会发放奖励，你可以重新发送或先跳过。");
       setReadingEvaluation("error");
     }
     setCompanionLoading(false);
@@ -2429,11 +2433,11 @@ export default function ReadingApp({
                     ) : (
                       <div className="reading-companion-card embedded">
                         <div className="companion-card-heading"><img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪读的龟龟" /><div><small>伴读区 · 非原文</small><strong>{game.name}陪你读</strong></div></div>
-                        <div className="companion-reward-rule"><Star fill="currentColor" /><span>回答正确奖励 <strong>1 颗星</strong></span></div>
+                        <div className="companion-reward-rule"><Sparkles /><span>回答正确随机奖励 <strong>1 颗星星或 1 张旅行票</strong></span></div>
                         <h3>这一章，龟龟陪你留心</h3>
                         {activeChapterPrompt ? <p className="reading-guide"><Lightbulb /> {activeChapterPrompt.guide}</p> : null}
                         {currentChapterQuestionAnswered ? (
-                          <p className="answered-note"><Check /> 这一章已经认真想过啦，星星也收好啦。</p>
+                          <p className="answered-note"><Check /> 这一章已经认真想过啦，随机奖励也收好啦。</p>
                         ) : (
                           <p className="quiet-reading-note"><BookOpen /> 慢慢读到本章最后一页，龟龟会带着一个只属于这个故事的问题来找你。</p>
                         )}
@@ -2848,7 +2852,7 @@ export default function ReadingApp({
             ) : (
               <>
                 <div className={`chapter-reading-feedback ${readingEvaluation}`} role="status">
-                  {readingEvaluation === "correct" ? <Star fill="currentColor" /> : <Lightbulb />}
+                  {readingEvaluation === "correct" ? <Sparkles /> : <Lightbulb />}
                   <p><strong>{readingEvaluation === "correct" ? "龟龟的称赞" : "龟龟的思考"}</strong>{readingFeedback}</p>
                 </div>
                 <div className="modal-actions chapter-feedback-actions">
