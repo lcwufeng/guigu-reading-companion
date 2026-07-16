@@ -80,6 +80,7 @@ type DailyPlan = {
   rewardClaimed: boolean;
 };
 type DailyFruitPicking = { dateKey: string; picked: number };
+type DailyHideAndSeek = { dateKey: string; completed: number };
 type ReadingFontSize = "small" | "medium" | "large";
 type StudentMemoryEvent = {
   type: "reading" | "learning" | "activity";
@@ -107,6 +108,7 @@ type GameState = {
   mistakes: MistakeRecord[];
   dailyPlan: DailyPlan;
   fruitPicking: DailyFruitPicking;
+  hideAndSeekDaily: DailyHideAndSeek;
   readingFontSize: ReadingFontSize;
 };
 
@@ -244,6 +246,7 @@ const initialState: GameState = {
     rewardClaimed: false,
   },
   fruitPicking: { dateKey: "", picked: 0 },
+  hideAndSeekDaily: { dateKey: "", completed: 0 },
   readingFontSize: "medium",
 };
 
@@ -497,11 +500,12 @@ const destinations: Destination[] = [
   },
 ];
 
-const hidePlaces = ["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock"] as const;
+const hidePlaces = ["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock", "tree-root", "flower-bank", "lily-pad", "cave-door", "cave-flowers", "blue-flowers", "hedge", "path-grass", "pond-cobbles", "boulder"] as const;
 type HidePlace = (typeof hidePlaces)[number];
 type HomeSpot = "center" | "tree-shade" | "cave-door";
-const HIDE_TOTAL_ROUNDS = 3;
+const HIDE_TOTAL_ROUNDS = 5;
 const HIDE_ROUND_SECONDS = 25;
+const DAILY_HIDE_AND_SEEK_LIMIT = 5;
 
 const landHomeSpots: HomeSpot[] = ["center", "tree-shade", "cave-door"];
 
@@ -516,6 +520,16 @@ const hideLabels: Record<HidePlace, string> = {
   "pond-rocks": "池塘石缝里",
   fruit: "果树叶间",
   "path-rock": "小路石头旁",
+  "tree-root": "大树根后",
+  "flower-bank": "池边花丛",
+  "lily-pad": "大荷叶后",
+  "cave-door": "石洞门口",
+  "cave-flowers": "石洞花丛",
+  "blue-flowers": "树下蓝花间",
+  hedge: "右边树篱",
+  "path-grass": "小路草丛",
+  "pond-cobbles": "池边石墙后",
+  boulder: "大石头后",
 };
 
 const hideSceneClues: Record<HidePlace, { soft: string; strong: string }> = {
@@ -529,6 +543,16 @@ const hideSceneClues: Record<HidePlace, { soft: string; strong: string }> = {
   "pond-rocks": { soft: "池塘边的几块石头后面静悄悄的。", strong: "左边水边的石缝里有小眼睛在眨！" },
   fruit: { soft: "红彤彤的果子旁，树叶好像变重了。", strong: "果树顶上的叶子中间藏着一张笑脸！" },
   "path-rock": { soft: "中间的小路边，花朵和石头挨得很近。", strong: "小路边的石头后露出了绿色的脑袋！" },
+  "tree-root": { soft: "大树下面好像传来轻轻的脚步声。", strong: "粗粗的树根后面露出了绿色的小脸！" },
+  "flower-bank": { soft: "池塘旁边有一片花朵在摇晃。", strong: "左边水岸的花丛里有一双亮亮的眼睛！" },
+  "lily-pad": { soft: "池塘里有一片大叶子动了一下。", strong: "大荷叶后面悄悄探出了一颗绿色脑袋！" },
+  "cave-door": { soft: "紫色石洞的门口传来沙沙声。", strong: "右边石洞门口有一只小手在挥呀挥！" },
+  "cave-flowers": { soft: "石洞附近的花草好像被碰到了。", strong: "右边石洞旁的花丛后藏着龟龟！" },
+  "blue-flowers": { soft: "树下的蓝色小花中间有一点绿色。", strong: "蓝色花朵后面露出了龟龟的红领结！" },
+  hedge: { soft: "画面右边茂密的树叶轻轻晃了晃。", strong: "右边树篱中间有一张圆圆的笑脸！" },
+  "path-grass": { soft: "小路旁的草叶好像被谁拨开了。", strong: "中间小路的草丛后面藏着一个小龟壳！" },
+  "pond-cobbles": { soft: "水边整齐的小石头后面有动静。", strong: "左边池塘的石墙后露出两只小眼睛！" },
+  boulder: { soft: "地上的大石头旁边传来窸窣声。", strong: "大石头后面探出了龟龟的绿色脑袋！" },
 };
 
 const hideSprites: Record<HidePlace, string> = {
@@ -542,6 +566,16 @@ const hideSprites: Record<HidePlace, string> = {
   "pond-rocks": `${ASSET}/characters/turtle/hide-generated/turtle-hide-pond-rocks-20260716.png`,
   fruit: `${ASSET}/characters/turtle/hide-generated/turtle-hide-fruit-20260716.png`,
   "path-rock": `${ASSET}/characters/turtle/hide-generated/turtle-hide-path-rock-20260716.png`,
+  "tree-root": `${ASSET}/characters/turtle/hide-generated/turtle-hide-tree-root-20260716.png`,
+  "flower-bank": `${ASSET}/characters/turtle/hide-generated/turtle-hide-flower-bank-20260716.png`,
+  "lily-pad": `${ASSET}/characters/turtle/hide-generated/turtle-hide-lily-pad-20260716.png`,
+  "cave-door": `${ASSET}/characters/turtle/hide-generated/turtle-hide-cave-door-20260716.png`,
+  "cave-flowers": `${ASSET}/characters/turtle/hide-generated/turtle-hide-cave-flowers-20260716.png`,
+  "blue-flowers": `${ASSET}/characters/turtle/hide-generated/turtle-hide-blue-flowers-20260716.png`,
+  hedge: `${ASSET}/characters/turtle/hide-generated/turtle-hide-hedge-20260716.png`,
+  "path-grass": `${ASSET}/characters/turtle/hide-generated/turtle-hide-path-grass-20260716.png`,
+  "pond-cobbles": `${ASSET}/characters/turtle/hide-generated/turtle-hide-pond-cobbles-20260716.png`,
+  boulder: `${ASSET}/characters/turtle/hide-generated/turtle-hide-boulder-20260716.png`,
 };
 
 function randomHidePlace(previous?: HidePlace) {
@@ -616,6 +650,15 @@ function ensureDailyFruitPicking(state: Pick<GameState, "fruitPicking">): DailyF
   const saved = state.fruitPicking;
   if (!saved || saved.dateKey !== currentDayKey()) return { dateKey: currentDayKey(), picked: 0 };
   return { dateKey: saved.dateKey, picked: Math.max(0, Math.min(5, Math.floor(Number(saved.picked) || 0))) };
+}
+
+function ensureDailyHideAndSeek(state: Pick<GameState, "hideAndSeekDaily">): DailyHideAndSeek {
+  const saved = state.hideAndSeekDaily;
+  if (!saved || saved.dateKey !== currentDayKey()) return { dateKey: currentDayKey(), completed: 0 };
+  return {
+    dateKey: saved.dateKey,
+    completed: Math.max(0, Math.min(DAILY_HIDE_AND_SEEK_LIMIT, Math.floor(Number(saved.completed) || 0))),
+  };
 }
 
 function createDailyPlan(state: Pick<GameState, "mistakes">): DailyPlan {
@@ -995,6 +1038,7 @@ export default function ReadingApp({
           ...restored,
           dailyPlan: ensureDailyPlan(restored),
           fruitPicking: ensureDailyFruitPicking(restored),
+          hideAndSeekDaily: ensureDailyHideAndSeek(restored),
         });
         accountStateLoadedRef.current = true;
       })
@@ -1087,13 +1131,22 @@ export default function ReadingApp({
   useEffect(() => {
     if (!hydrated) return;
     const syncDay = () => {
-      setGame((current) => current.dailyPlan.dateKey === currentDayKey()
-        ? current
-        : {
-            ...current,
-            dailyPlan: createDailyPlan(current),
-            fruitPicking: { dateKey: currentDayKey(), picked: 0 },
-          });
+      setGame((current) => {
+        const dateKey = currentDayKey();
+        if (
+          current.dailyPlan.dateKey === dateKey
+          && current.fruitPicking.dateKey === dateKey
+          && current.hideAndSeekDaily.dateKey === dateKey
+        ) return current;
+        return {
+          ...current,
+          dailyPlan: current.dailyPlan.dateKey === dateKey ? current.dailyPlan : createDailyPlan(current),
+          fruitPicking: current.fruitPicking.dateKey === dateKey ? current.fruitPicking : { dateKey, picked: 0 },
+          hideAndSeekDaily: current.hideAndSeekDaily.dateKey === dateKey
+            ? current.hideAndSeekDaily
+            : { dateKey, completed: 0 },
+        };
+      });
     };
     const interval = window.setInterval(syncDay, 60_000);
     return () => window.clearInterval(interval);
@@ -1199,6 +1252,8 @@ export default function ReadingApp({
 
   const dailyFruitPicking = ensureDailyFruitPicking(game);
   const fruitPickingRemaining = Math.max(0, 5 - dailyFruitPicking.picked);
+  const dailyHideAndSeek = ensureDailyHideAndSeek(game);
+  const hideGamesRemaining = Math.max(0, DAILY_HIDE_AND_SEEK_LIMIT - dailyHideAndSeek.completed);
 
   const pickFruitAndOpen = () => {
     if (fruitPickingRemaining > 0) {
@@ -1283,6 +1338,10 @@ export default function ReadingApp({
 
   const startHideAndSeek = () => {
     if (busy || traveling) return;
+    if (hideGamesRemaining <= 0) {
+      showToast("今天已经完成 5 局捉迷藏啦，明天再一起玩吧");
+      return;
+    }
     if (hideAdvanceTimerRef.current) clearTimeout(hideAdvanceTimerRef.current);
     setHideTarget(randomHidePlace());
     setHideRound(1);
@@ -1317,7 +1376,7 @@ export default function ReadingApp({
         showToast(`第 ${completedRound + 1} 轮开始，龟龟又藏好啦！`);
         return;
       }
-      const starReward = HIDE_TOTAL_ROUNDS + nextFastRounds;
+      const nextCompletedToday = Math.min(DAILY_HIDE_AND_SEEK_LIMIT, dailyHideAndSeek.completed + 1);
       setHideTarget(null);
       setHideRound(0);
       setHideSeconds(HIDE_ROUND_SECONDS);
@@ -1326,10 +1385,14 @@ export default function ReadingApp({
       setGame((current) => ({
         ...current,
         boredom: clamp(current.boredom - 30),
-        stars: current.stars + starReward,
+        stars: current.stars + 1,
+        hideAndSeekDaily: {
+          dateKey: currentDayKey(),
+          completed: Math.min(DAILY_HIDE_AND_SEEK_LIMIT, ensureDailyHideAndSeek(current).completed + 1),
+        },
       }));
-      showToast(`三轮全找到！奖励 ${starReward} 颗星星`);
-      void remember({ type: "activity", activity: "捉迷藏", detail: `完成三轮捉迷藏，${nextFastRounds}轮在5秒内找到，获得${starReward}颗星星` });
+      showToast(`五次全找到！奖励 1 颗星星，今天已完成 ${nextCompletedToday}/5 局`);
+      void remember({ type: "activity", activity: "捉迷藏", detail: `完成一局捉迷藏，连续找到5次，获得1颗星星；其中${nextFastRounds}次在5秒内找到` });
       window.setTimeout(() => setTurtleSprite(null), 2400);
     }, 1200);
   };
@@ -2092,7 +2155,7 @@ export default function ReadingApp({
                 <button className="scene-action tree-action" type="button" onClick={pickFruitAndOpen} aria-label={`摘果喂食，今天还可以摘${fruitPickingRemaining}个`} title="摘果喂食" disabled={!!busy}>
                   <img src={`${ASSET}/ui/home-refresh/actions/feed.png`} alt="" />
                 </button>
-                <button className="scene-action hide-action" type="button" onClick={startHideAndSeek} aria-label="捉迷藏" title="捉迷藏" disabled={!!busy}>
+                <button className="scene-action hide-action" type="button" onClick={startHideAndSeek} aria-label={`捉迷藏，今天还可以完成${hideGamesRemaining}局`} title={hideGamesRemaining > 0 ? `捉迷藏（今天还可以完成 ${hideGamesRemaining} 局）` : "今天已经完成 5 局捉迷藏"} disabled={!!busy}>
                   <img src={`${ASSET}/ui/home-refresh/actions/hide.png`} alt="" />
                 </button>
                 <button className="scene-action cave-action" type="button" onClick={startSleep} aria-label="睡一会" title="睡一会" disabled={!!busy}>
@@ -2116,7 +2179,7 @@ export default function ReadingApp({
                     <button className="hide-cancel" type="button" onClick={cancelHideAndSeek} aria-label="结束捉迷藏"><X /></button>
                   </div>
                   <p className="hide-game-instruction">仔细看场景，直接点藏起来的龟龟</p>
-                  <div className="hide-game-score"><Star /> 5秒内找到：{hideFastRounds} 轮 <span>完成三轮奖励 3～6 颗星</span></div>
+                  <div className="hide-game-score"><Star /> 5秒内找到：{hideFastRounds} 次 <span>连续找到 5 次奖励 1 颗星 · 今日已完成 {dailyHideAndSeek.completed}/5 局</span></div>
                 </section>
                 {activeHideHint && !hideFound && (
                   <div className="hide-clue-card" role="status">

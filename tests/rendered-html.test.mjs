@@ -220,7 +220,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   for (const threshold of [10, 15, 50, 70, 100, 150]) {
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
-  assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock"\]/);
+  assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock", "tree-root", "flower-bank", "lily-pad", "cave-door", "cave-flowers", "blue-flowers", "hedge", "path-grass", "pond-cobbles", "boulder"\]/);
   assert.match(page, /landHomeSpots: HomeSpot\[\] = \["center", "tree-shade", "cave-door"\]/);
   assert.doesNotMatch(page, /HomeSpot = [^;]*pond-edge/);
   assert.match(styles, /width: clamp\(106px, 10\.5vw, 165px\)/);
@@ -299,7 +299,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /label: "小"/);
   assert.match(page, /label: "中"/);
   assert.match(page, /label: "大"/);
-  assert.match(page, /HIDE_TOTAL_ROUNDS = 3/);
+  assert.match(page, /HIDE_TOTAL_ROUNDS = 5/);
+  assert.match(page, /DAILY_HIDE_AND_SEEK_LIMIT = 5/);
+  assert.match(page, /hideAndSeekDaily/);
+  assert.match(page, /hideGamesRemaining/);
   assert.match(page, /hideSeconds <= HIDE_ROUND_SECONDS - 5/);
   assert.match(page, /className={`hide-countdown/);
   assert.match(page, /\{hideSeconds\}/);
@@ -307,13 +310,19 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /onClick=\{findHiddenTurtle\}/);
   assert.match(page, /直接点藏起来的龟龟/);
   assert.doesNotMatch(page, /className={`world-hotspot/);
-  assert.match(page, /完成三轮奖励 3～6 颗星/);
+  assert.match(page, /连续找到 5 次奖励 1 颗星/);
+  assert.match(page, /今天已经完成 5 局捉迷藏啦/);
+  assert.match(page, /stars: current\.stars \+ 1/);
+  assert.doesNotMatch(page, /完成三轮奖励 3～6 颗星|stars: current\.stars \+ starReward/);
   assert.match(styles, /\.hide-game-hud \{/);
   assert.match(styles, /\.hide-countdown \{/);
   assert.match(styles, /\.hide-clue-card \{/);
   assert.match(styles, /bottom: 116px/);
   assert.match(styles, /font-size: clamp\(20px, 1\.45vw, 25px\)/);
   assert.match(styles, /\.hidden-turtle\.generated-hide \{ clip-path: inset\(15%\); \}/);
+  assert.match(styles, /\.hidden-tree-root \{/);
+  assert.match(styles, /\.hidden-boulder \{/);
+  assert.match(styles, /\.turtle-wrap\.in-pond \.turtle-sprite \{[\s\S]*?height: clamp\(112px, 18vh, 190px\)/);
   assert.match(styles, /@keyframes turtlePeek/);
   assert.match(styles, /\.reading-font-medium \.original-book-text p \{ font-size: 18px; \}/);
   assert.match(styles, /\.reading-font-large \.original-book-text p \{ font-size: 20px; \}/);
@@ -527,6 +536,16 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/characters/turtle/hide-generated/turtle-hide-pond-rocks-20260716.png",
     "../public/assets/characters/turtle/hide-generated/turtle-hide-fruit-20260716.png",
     "../public/assets/characters/turtle/hide-generated/turtle-hide-path-rock-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-tree-root-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-flower-bank-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-lily-pad-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-cave-door-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-cave-flowers-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-blue-flowers-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-hedge-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-path-grass-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-pond-cobbles-20260716.png",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-boulder-20260716.png",
     "../public/books/scarecrow-zh.md",
     "../public/books/grimms-fairy-tales-zh.md",
     "../public/books/andersens-fairy-tales-zh.md",

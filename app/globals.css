@@ -7123,3 +7123,40 @@ button:disabled {
   .hidden-behind { left: 46%; top: 38%; width: 96px; }
   .hidden-lotus { bottom: auto; left: 9%; top: 66%; width: 118px; }
 }
+
+/* The additional hide places use scene-matched foreground art so the turtle
+   stays discoverable without looking pasted on top of the landscape. */
+.hidden-tree-root { left: 38%; top: 34%; width: clamp(175px, 17vw, 275px); }
+.hidden-flower-bank { left: 1%; top: 31%; width: clamp(155px, 15vw, 235px); }
+.hidden-lily-pad { left: 7%; top: 54%; width: clamp(170px, 17vw, 265px); }
+.hidden-cave-door { left: 66%; top: 25%; width: clamp(180px, 18vw, 285px); }
+.hidden-cave-flowers { left: 72%; top: 45%; width: clamp(160px, 15vw, 235px); }
+.hidden-blue-flowers { left: 54%; top: 37%; width: clamp(150px, 14vw, 220px); }
+.hidden-hedge { left: 81%; top: 22%; width: clamp(155px, 15vw, 235px); }
+.hidden-path-grass { left: 50%; top: 60%; width: clamp(145px, 14vw, 215px); }
+.hidden-pond-cobbles { left: 1%; top: 45%; width: clamp(165px, 16vw, 250px); }
+.hidden-boulder { left: 64%; top: 65%; width: clamp(145px, 14vw, 215px); }
+
+/* Swimming uses the same character art at a smaller scene scale. */
+.turtle-wrap.in-pond .turtle-sprite {
+  height: clamp(112px, 18vh, 190px);
+  width: clamp(116px, 15vw, 205px);
+}
+
+@media (max-width: 820px) {
+  .hidden-tree-root { left: 40%; top: 32%; width: 145px; }
+  .hidden-flower-bank { left: 0; top: 35%; width: 135px; }
+  .hidden-lily-pad { left: 2%; top: 55%; width: 145px; }
+  .hidden-cave-door { left: 66%; top: 32%; width: 140px; }
+  .hidden-cave-flowers { left: 65%; top: 48%; width: 135px; }
+  .hidden-blue-flowers { left: 49%; top: 41%; width: 125px; }
+  .hidden-hedge { left: 71%; top: 26%; width: 135px; }
+  .hidden-path-grass { left: 43%; top: 60%; width: 125px; }
+  .hidden-pond-cobbles { left: 0; top: 47%; width: 145px; }
+  .hidden-boulder { left: 59%; top: 67%; width: 125px; }
+
+  .turtle-wrap.in-pond .turtle-sprite {
+    height: clamp(92px, 14.5vh, 122px);
+    width: clamp(96px, 25vw, 116px);
+  }
+}
