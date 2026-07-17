@@ -456,6 +456,17 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(companionRoute, /MIMO_API_KEY/);
   assert.match(companionRoute, /mimo-v2\.5/);
   assert.match(companionRoute, /source: "mimo"/);
+  assert.match(companionRoute, /DEFAULT_MIMO_TIMEOUT_MS = 25_000/);
+  assert.match(companionRoute, /DEFAULT_DEEPSEEK_TIMEOUT_MS = 20_000/);
+  assert.match(companionRoute, /MIMO_TIMEOUT_MS/);
+  assert.match(companionRoute, /DEEPSEEK_TIMEOUT_MS/);
+  assert.match(companionRoute, /fetchWithTimeout/);
+  assert.match(companionRoute, /evaluateReadingWithDeepSeek/);
+  assert.match(companionRoute, /retryable: true/);
+  assert.match(companionRoute, /source: "deepseek"/);
+  assert.match(companionRoute, /MiMo is the preferred judge/);
+  assert.match(page, /const data = await response\.json\(\)\.catch[\s\S]*?if \(!response\.ok\)/);
+  assert.match(page, /error instanceof Error && error\.message/);
   assert.match(companionRoute, /本章完整原文/);
   assert.match(companionRoute, /referenceAnswer/);
   assert.match(companionRoute, /thinking: \{ type: "disabled" \}/);

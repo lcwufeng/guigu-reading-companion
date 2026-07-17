@@ -19,6 +19,15 @@ type CompanionRequest = {
   history?: CompanionMessage[];
 };
 
+type ReadingEvaluation = {
+  correct: boolean;
+  feedback: string;
+};
+
+const DEFAULT_MIMO_TIMEOUT_MS = 25_000;
+const DEFAULT_DEEPSEEK_TIMEOUT_MS = 20_000;
+const READING_RETRY_MESSAGE = "龟龟这次没能完成判断，可能是网络有点慢。你的答案还在，请稍后点击“重新发送”再试一次；这次不会发放或扣除奖励。";
+
 const personalInfoPattern = /(?:身份证|家庭住址|住在|手机号|电话号码|微信号|QQ号|学校.*班|1[3-9]\d{9})/i;
 const urgentSafetyPattern = /(?:想死|自杀|伤害自己|不想活|杀了我)/i;
 
@@ -54,7 +63,7 @@ function localReply(body: CompanionRequest) {
   return "谢谢你讲给我听。发生这件事时，你有什么感受，又发现了什么呢？";
 }
 
-function parseReadingEvaluation(content: string) {
+function parseReadingEvaluation(content: string): ReadingEvaluation {
   const normalized = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
   const parsed = JSON.parse(normalized) as { correct?: unknown; feedback?: unknown };
   if (typeof parsed.correct !== "boolean" || typeof parsed.feedback !== "string") {
@@ -63,6 +72,73 @@ function parseReadingEvaluation(content: string) {
   const feedback = clean(parsed.feedback, 240);
   if (!feedback) throw new Error("empty reading feedback");
   return { correct: parsed.correct, feedback };
+}
+
+function modelTimeout(value: string | undefined, fallback: number) {
+  const parsed = Number.parseInt(value || "", 10);
+  return Number.isFinite(parsed) ? Math.min(60_000, Math.max(3_000, parsed)) : fallback;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function evaluateReadingWithMiMo(apiKey: string, name: string, userContext: string) {
+  const response = await fetchWithTimeout("https://api.xiaomimimo.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: process.env.MIMO_MODEL || "mimo-v2.5",
+      messages: [
+        { role: "system", content: buildSystemPrompt(name, "reading") },
+        { role: "user", content: userContext },
+      ],
+      thinking: { type: "disabled" },
+      response_format: { type: "json_object" },
+      max_completion_tokens: 360,
+      stream: false,
+    }),
+  }, modelTimeout(process.env.MIMO_TIMEOUT_MS, DEFAULT_MIMO_TIMEOUT_MS));
+  if (!response.ok) throw new Error(`mimo api ${response.status}`);
+  const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const rawReply = clean(data.choices?.[0]?.message?.content, 800);
+  if (!rawReply) throw new Error("empty mimo response");
+  return parseReadingEvaluation(rawReply);
+}
+
+async function evaluateReadingWithDeepSeek(apiKey: string, name: string, userContext: string) {
+  const response = await fetchWithTimeout("https://api.deepseek.com/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
+      messages: [
+        { role: "system", content: buildSystemPrompt(name, "reading") },
+        { role: "user", content: userContext },
+      ],
+      thinking: { type: "disabled" },
+      response_format: { type: "json_object" },
+      max_tokens: 360,
+      stream: false,
+    }),
+  }, modelTimeout(process.env.DEEPSEEK_TIMEOUT_MS, DEFAULT_DEEPSEEK_TIMEOUT_MS));
+  if (!response.ok) throw new Error(`deepseek reading api ${response.status}`);
+  const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const rawReply = clean(data.choices?.[0]?.message?.content, 800);
+  if (!rawReply) throw new Error("empty deepseek reading response");
+  return parseReadingEvaluation(rawReply);
 }
 
 function formatStudentMemory(memory: StudentMemory | null) {
@@ -142,10 +218,6 @@ export async function POST(request: Request) {
     }
   }
   if (body.mode === "reading") {
-    const apiKey = process.env.MIMO_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ reply: "龟龟暂时没能想好这次回答。这次不会扣除或发放星星，请稍后再发一次。", source: "unavailable" }, { status: 503 });
-    }
     const userContext = [
       `书名与章节：${clean(body.title, 80)}`,
       `本章完整原文：${clean(body.excerpt, 16_000)}`,
@@ -154,41 +226,37 @@ export async function POST(request: Request) {
       `孩子的回答：${input}`,
     ].join("\n");
 
-    try {
-      const response = await fetch("https://api.xiaomimimo.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "api-key": apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: process.env.MIMO_MODEL || "mimo-v2.5",
-          messages: [
-            { role: "system", content: buildSystemPrompt(name, "reading") },
-            { role: "user", content: userContext },
-          ],
-          thinking: { type: "disabled" },
-          response_format: { type: "json_object" },
-          max_completion_tokens: 360,
-          stream: false,
-        }),
-      });
-      if (!response.ok) throw new Error(`mimo api ${response.status}`);
-      const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-      const rawReply = clean(data.choices?.[0]?.message?.content, 800);
-      if (!rawReply) throw new Error("empty response");
-      const evaluation = parseReadingEvaluation(rawReply);
-      return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "mimo" });
-    } catch {
-      return NextResponse.json({ reply: "龟龟暂时没能完成判断。这次不会扣除或发放星星，你可以重新发送或先跳过。", source: "unavailable" }, { status: 503 });
+    const mimoApiKey = process.env.MIMO_API_KEY;
+    if (mimoApiKey) {
+      try {
+        const evaluation = await evaluateReadingWithMiMo(mimoApiKey, name, userContext);
+        return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "mimo" });
+      } catch {
+        // MiMo is the preferred judge. Any timeout, upstream error, empty reply or invalid JSON falls through to DeepSeek.
+      }
     }
+
+    const deepSeekApiKey = process.env.DEEPSEEK_API_KEY;
+    if (deepSeekApiKey) {
+      try {
+        const evaluation = await evaluateReadingWithDeepSeek(deepSeekApiKey, name, userContext);
+        return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "deepseek" });
+      } catch {
+        // The client receives a retryable response below instead of waiting for the hosting layer to return a 504.
+      }
+    }
+
+    return NextResponse.json(
+      { reply: READING_RETRY_MESSAGE, source: "unavailable", retryable: true },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) return NextResponse.json({ reply: localReply(body), source: "local" });
 
   try {
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
+    const response = await fetchWithTimeout("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -205,7 +273,7 @@ export async function POST(request: Request) {
         max_tokens: 220,
         stream: false,
       }),
-    });
+    }, modelTimeout(process.env.DEEPSEEK_TIMEOUT_MS, DEFAULT_DEEPSEEK_TIMEOUT_MS));
     if (!response.ok) throw new Error(`deepseek api ${response.status}`);
     const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const rawReply = clean(data.choices?.[0]?.message?.content, 500);

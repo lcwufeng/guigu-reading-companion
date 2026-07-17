@@ -869,8 +869,8 @@ async function askCompanion(payload: CompanionPayload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!response.ok) throw new Error("companion unavailable");
-  const data = (await response.json()) as Partial<CompanionResponse>;
+  const data = await response.json().catch(() => ({})) as Partial<CompanionResponse>;
+  if (!response.ok) throw new Error(data.reply || "龟龟暂时没能完成判断，请稍后重新发送。");
   if (!data.reply) throw new Error("empty companion reply");
   return data as CompanionResponse;
 }
@@ -1759,8 +1759,10 @@ export default function ReadingApp({
         setReadingEvaluation("incorrect");
         showToast("龟龟把这一章的思考整理给你啦");
       }
-    } catch {
-      setReadingFeedback("龟龟暂时没有听懂这次回答。这次不会发放奖励，你可以重新发送或先跳过。");
+    } catch (error) {
+      setReadingFeedback(error instanceof Error && error.message
+        ? error.message
+        : "龟龟这次没能完成判断。你的答案还在，请稍后重新发送；这次不会发放或扣除奖励。");
       setReadingEvaluation("error");
     }
     setCompanionLoading(false);
