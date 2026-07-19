@@ -160,6 +160,35 @@ export const userMistakeReviewEvents = sqliteTable("user_mistake_review_events",
   reviewedAt: integer("reviewed_at").notNull(),
 }, (table) => [index("user_mistake_reviews_user_date_idx").on(table.userId, table.reviewedAt)]);
 
+export const userMistakeAnalyses = sqliteTable("user_mistake_analyses", {
+  userId: text("user_id").notNull(),
+  mistakeId: text("mistake_id").notNull(),
+  modelSource: text("model_source").notNull(),
+  notice: text("notice").notNull().default(""),
+  analyzedAt: integer("analyzed_at").notNull(),
+  confirmedAt: integer("confirmed_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.mistakeId] }),
+  index("user_mistake_analyses_user_date_idx").on(table.userId, table.confirmedAt),
+]);
+
+export const userMistakeAnswerAttempts = sqliteTable("user_mistake_answer_attempts", {
+  attemptId: text("attempt_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  mistakeId: text("mistake_id").notNull(),
+  answerImageUrl: text("answer_image_url").notNull(),
+  recognizedAnswer: text("recognized_answer").notNull(),
+  recognizedSteps: text("recognized_steps").notNull(),
+  correct: integer("correct", { mode: "boolean" }).notNull().default(false),
+  feedback: text("feedback").notNull(),
+  notice: text("notice").notNull().default(""),
+  modelSource: text("model_source").notNull(),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("user_mistake_answers_user_date_idx").on(table.userId, table.createdAt),
+  index("user_mistake_answers_user_mistake_idx").on(table.userId, table.mistakeId, table.createdAt),
+]);
+
 export const userDailyState = sqliteTable("user_daily_state", {
   userId: text("user_id").notNull(),
   dateKey: text("date_key").notNull(),

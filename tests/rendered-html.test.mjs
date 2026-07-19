@@ -112,6 +112,10 @@ test("forces first-login password reset and isolates every student's data", asyn
   assert.equal(unauthorized.status, 401);
   const unauthorizedAudio = await fetchApp("/api/book-audio?bookId=scarecrow-zh&chapter=0");
   assert.equal(unauthorizedAudio.status, 401);
+  const unauthorizedMistakeSave = await fetchApp("/api/mistakes", { method: "POST" });
+  assert.equal(unauthorizedMistakeSave.status, 401);
+  const unauthorizedMistakeReview = await fetchApp("/api/mistake-review", { method: "POST" });
+  assert.equal(unauthorizedMistakeReview.status, 401);
 
   const login = await fetchApp("/api/auth/login", {
     method: "POST",
@@ -199,7 +203,7 @@ test("forces first-login password reset and isolates every student's data", asyn
 });
 
 test("keeps the product loops, account safeguards, and required art assets", async () => {
-  const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, bookPrompts, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, schemaStatements, hosting] = await Promise.all([
+  const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, mistakesRoute, mistakeReviewRoute, mistakesDb, mistakeAi, studentMemoryRoute, studentMemoryDb, bookKnowledge, bookPrompts, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, schemaStatements, hosting] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -209,6 +213,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../lib/volc-speech.ts", import.meta.url), "utf8"),
     readFile(new URL("../dist/server/index.js", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mistake-scan/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mistakes/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/mistake-review/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/mistakes.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/mistake-ai.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/student-memory/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/student-memory.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/book-knowledge.ts", import.meta.url), "utf8"),
@@ -276,15 +284,23 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /ui\/daily-tasks\/title\.png/);
   assert.doesNotMatch(page, /ui\/daily-tasks\/task-row\.png/);
   assert.doesNotMatch(styles, /--daily-task-row|var\(--daily-task-row\)/);
-  assert.match(page, /firstMastery \? 2 : 0/);
+  assert.match(page, /review\.rewardStars/);
   assert.match(page, /复习一道错题胜过做 2 道新题/);
   assert.match(page, /记一道错题/);
   assert.match(page, /api\/mistake-scan/);
+  assert.match(page, /api\/mistakes/);
+  assert.match(page, /api\/mistake-review/);
   assert.match(page, /拍照录题/);
   assert.match(page, /上传图片/);
-  assert.match(page, /整理完成后会直接收进错题屋/);
+  assert.match(page, /确认收进错题本/);
+  assert.match(page, /拍答案照片/);
+  assert.match(page, /写好答案和完整步骤/);
+  assert.match(page, /龟龟认出的步骤/);
+  assert.match(page, /龟龟的称赞/);
+  assert.match(page, /龟龟的思考/);
   assert.match(page, /mistakes: \[record, \.\.\.current\.mistakes\]/);
-  assert.doesNotMatch(page, /mistakeDraft|saveMistake/);
+  assert.match(page, /mistakeDraft/);
+  assert.doesNotMatch(page, /reviewAnswer|我掌握了|对照正确思路/);
   for (const threshold of [10, 15, 50, 70, 100, 150]) {
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
@@ -502,11 +518,21 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.doesNotMatch(speechClient, /import WebSocket from "ws"/);
   assert.match(serverBundle, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
   assert.doesNotMatch(serverBundle, /ws does not work in the browser|node_modules\/ws\/browser\.js/);
-  assert.match(mistakeScanRoute, /api\.xiaomimimo\.com\/v1\/chat\/completions/);
-  assert.match(mistakeScanRoute, /MIMO_API_KEY/);
-  assert.match(mistakeScanRoute, /mimo-v2\.5/);
-  assert.match(mistakeScanRoute, /response_format: \{ type: "json_object" \}/);
-  assert.match(mistakeScanRoute, /MAX_IMAGE_DATA_LENGTH/);
+  assert.match(mistakeScanRoute, /analyzeMistakeImage/);
+  assert.match(mistakeScanRoute, /getActiveStudent/);
+  assert.match(mistakesRoute, /createMistakeForUser/);
+  assert.match(mistakesRoute, /deleteMistakeForUser/);
+  assert.match(mistakesRoute, /saveMistakeImage\(student\.id/);
+  assert.match(mistakeReviewRoute, /evaluateMistakeAnswer/);
+  assert.match(mistakeReviewRoute, /recordMistakeReviewForUser\(student\.id/);
+  assert.match(mistakesDb, /WHERE user_id = \? AND mistake_id = \?/);
+  assert.match(mistakesDb, /user_mistake_answer_attempts/);
+  assert.match(mistakesDb, /user_reward_ledger/);
+  assert.match(mistakeAi, /api\.xiaomimimo\.com\/v1\/chat\/completions/);
+  assert.match(mistakeAi, /MIMO_API_KEY/);
+  assert.match(mistakeAi, /mimo-v2\.5/);
+  assert.match(mistakeAi, /response_format: \{ type: "json_object" \}/);
+  assert.match(mistakeAi, /MAX_IMAGE_DATA_LENGTH/);
   for (const account of ["同学一", "同学二", "同学三"]) assert.match(authDb, new RegExp(account));
   assert.match(authDb, /initialPassword = "123456"/);
   assert.match(authDb, /PBKDF2/);

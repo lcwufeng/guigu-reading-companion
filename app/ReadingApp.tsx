@@ -72,6 +72,27 @@ type MistakeRecord = {
 };
 
 type MistakeScanResult = Pick<MistakeRecord, "subject" | "question" | "wrongAnswer" | "correction" | "cause"> & { notice?: string };
+type MistakeDraft = { imageData: string; result: MistakeScanResult };
+type MistakeReviewResult = {
+  readable: boolean;
+  recognizedAnswer: string;
+  recognizedSteps: string;
+  correct: boolean;
+  feedback: string;
+  notice: string;
+};
+type MistakeReviewSave = {
+  reviewNumber: number;
+  status: MistakeStatus;
+  rewardStars: number;
+  stars: number;
+  boredom: number;
+  attemptId: string;
+};
+type MistakeReviewOutcome = { result: MistakeReviewResult; saved: boolean; review?: MistakeReviewSave };
+
+const mistakeSubjects = ["数学", "语文", "英语", "科学", "其他"];
+const mistakeCauses = ["知识点没记牢", "题目没读懂", "计算或书写失误", "方法没有想到", "还不确定"];
 
 type DailyTaskKey = "feed" | "swim" | "reading" | "mistake";
 type DailyMistakeMode = "add" | "review";
@@ -1041,10 +1062,14 @@ export default function ReadingApp({
   const [mistakeFilter, setMistakeFilter] = useState<"all" | "review" | "mastered">("all");
   const [mistakeFormOpen, setMistakeFormOpen] = useState(false);
   const [mistakeScanning, setMistakeScanning] = useState(false);
+  const [mistakeSaving, setMistakeSaving] = useState(false);
   const [mistakeScanNotice, setMistakeScanNotice] = useState("");
+  const [mistakeDraft, setMistakeDraft] = useState<MistakeDraft | null>(null);
   const [reviewMistake, setReviewMistake] = useState<MistakeRecord | null>(null);
-  const [reviewAnswer, setReviewAnswer] = useState("");
-  const [correctionRevealed, setCorrectionRevealed] = useState(false);
+  const [reviewScanning, setReviewScanning] = useState(false);
+  const [reviewScanNotice, setReviewScanNotice] = useState("");
+  const [reviewPhotoPreview, setReviewPhotoPreview] = useState("");
+  const [reviewOutcome, setReviewOutcome] = useState<MistakeReviewOutcome | null>(null);
   const [dailyTasksOpen, setDailyTasksOpen] = useState(false);
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
   const dailyTasksExpanded = mobileLayout ? dailyTasksOpen : true;
@@ -2028,7 +2053,15 @@ export default function ReadingApp({
 
   const openMistakeForm = () => {
     setMistakeScanNotice("");
+    setMistakeDraft(null);
     setMistakeFormOpen(true);
+  };
+
+  const closeMistakeForm = () => {
+    if (mistakeScanning || mistakeSaving) return;
+    setMistakeFormOpen(false);
+    setMistakeDraft(null);
+    setMistakeScanNotice("");
   };
 
   const attachMistakePhoto = async (file?: File) => {
@@ -2044,29 +2077,8 @@ export default function ReadingApp({
       });
       const data = (await response.json()) as { result?: MistakeScanResult; error?: string };
       if (!response.ok || !data.result) throw new Error(data.error || "照片识别失败");
-      const uploadResponse = await fetch(`${BASE_PATH}/api/mistake-image`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageData }),
-      });
-      const uploadData = (await uploadResponse.json()) as { id?: string; error?: string };
-      if (!uploadResponse.ok || !uploadData.id) throw new Error(uploadData.error || "错题照片保存失败");
-      const record: MistakeRecord = {
-        id: Date.now(),
-        subject: data.result.subject,
-        question: data.result.question,
-        wrongAnswer: data.result.wrongAnswer,
-        correction: data.result.correction,
-        cause: data.result.cause,
-        imageData: `${BASE_PATH}/api/mistake-image?id=${encodeURIComponent(uploadData.id)}`,
-        status: "new",
-        date: formatDate(),
-        reviewCount: 0,
-      };
-      setGame((current) => advanceDailyTask({ ...current, mistakes: [record, ...current.mistakes] }, "mistake", "add"));
-      void remember({ type: "activity", activity: "整理错题", detail: `收录了一道${record.subject}错题：${record.question.slice(0, 45)}` });
-      setMistakeFormOpen(false);
-      showToast("MiMo 已经整理好错题，之后可以回来挑战它");
+      setMistakeDraft({ imageData, result: data.result });
+      setMistakeScanNotice(data.result.notice || "");
     } catch (error) {
       setMistakeScanNotice("这张照片没有读清楚，请重新拍照或换一张图片。" );
       showToast(error instanceof Error ? error.message : "图片读取失败，请换一张试试");
@@ -2075,48 +2087,125 @@ export default function ReadingApp({
     }
   };
 
-  const startMistakeReview = (mistake: MistakeRecord) => {
-    setGame((current) => ({
-      ...current,
-      mistakes: current.mistakes.map((item) => item.id === mistake.id && item.status === "new" ? { ...item, status: "reviewing" } : item),
-    }));
-    setReviewMistake({ ...mistake, status: mistake.status === "new" ? "reviewing" : mistake.status });
-    setReviewAnswer("");
-    setCorrectionRevealed(false);
+  const updateMistakeDraft = (field: keyof MistakeScanResult, value: string) => {
+    setMistakeDraft((current) => current ? { ...current, result: { ...current.result, [field]: value } } : current);
   };
 
-  const finishMistakeReview = (mastered: boolean) => {
-    if (!reviewMistake) return;
-    const firstMastery = mastered && reviewMistake.status !== "mastered";
-    setGame((current) => advanceDailyTask({
-      ...current,
-      stars: current.stars + (firstMastery ? 2 : 0),
-      boredom: clamp(current.boredom - (firstMastery ? 5 : 2)),
-      mistakes: current.mistakes.map((item) => item.id === reviewMistake.id ? {
-        ...item,
-        status: mastered ? "mastered" : "reviewing",
-        reviewCount: item.reviewCount + 1,
-      } : item),
-    }, "mistake", "review"));
-    setReviewMistake(null);
-    setCorrectionRevealed(false);
-    void remember({
-      type: mastered ? "learning" : "activity",
-      ...(mastered
-        ? { detail: `复习并掌握一道${reviewMistake.subject}错题` }
-        : { activity: "整理错题", detail: `复习了一道${reviewMistake.subject}错题，准备下次再挑战` }),
-    });
-    showToast(mastered ? `掌握啦！${firstMastery ? "获得 2 颗成长星星" : "这道题依然很稳"}` : "先放回待复习，下次再挑战");
-  };
-
-  const deleteMistake = (mistake: MistakeRecord) => {
-    if (!window.confirm("确定要删除这道错题吗？删除后不能恢复。")) return;
-    setGame((current) => ({ ...current, mistakes: current.mistakes.filter((item) => item.id !== mistake.id) }));
-    if (mistake.imageData?.startsWith(`${BASE_PATH}/api/mistake-image?`)) {
-      const id = new URL(mistake.imageData, window.location.origin).searchParams.get("id");
-      if (id) void fetch(`${BASE_PATH}/api/mistake-image?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => undefined);
+  const confirmMistakeDraft = async () => {
+    if (!mistakeDraft || mistakeSaving) return;
+    if (!mistakeDraft.result.question.trim() || !mistakeDraft.result.correction.trim()) {
+      setMistakeScanNotice("请先把题目和正确思路补充完整，再收进错题本。");
+      return;
     }
-    showToast("这道错题已经删除");
+    setMistakeSaving(true);
+    setMistakeScanNotice("");
+    try {
+      const response = await fetch(`${BASE_PATH}/api/mistakes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageData: mistakeDraft.imageData, analysis: mistakeDraft.result }),
+      });
+      const data = (await response.json()) as { record?: MistakeRecord; error?: string };
+      if (!response.ok || !data.record) throw new Error(data.error || "错题保存失败");
+      const record = data.record;
+      setGame((current) => advanceDailyTask({ ...current, mistakes: [record, ...current.mistakes] }, "mistake", "add"));
+      void remember({ type: "activity", activity: "整理错题", detail: `收录了一道${record.subject}错题：${record.question.slice(0, 45)}` });
+      setMistakeFormOpen(false);
+      setMistakeDraft(null);
+      showToast("龟龟已经收好这道错题，之后可以回来挑战它");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "错题保存失败，请稍后再试";
+      setMistakeScanNotice(message);
+      showToast(message);
+    } finally {
+      setMistakeSaving(false);
+    }
+  };
+
+  const startMistakeReview = (mistake: MistakeRecord) => {
+    setReviewMistake(mistake);
+    setReviewScanning(false);
+    setReviewScanNotice("");
+    setReviewPhotoPreview("");
+    setReviewOutcome(null);
+  };
+
+  const closeMistakeReview = () => {
+    if (reviewScanning) return;
+    setReviewMistake(null);
+    setReviewScanNotice("");
+    setReviewPhotoPreview("");
+    setReviewOutcome(null);
+  };
+
+  const resetMistakeReviewPhoto = () => {
+    if (reviewScanning) return;
+    setReviewPhotoPreview("");
+    setReviewOutcome(null);
+    setReviewScanNotice("");
+  };
+
+  const attachMistakeReviewPhoto = async (file?: File) => {
+    if (!file || !reviewMistake || reviewScanning) return;
+    try {
+      const imageData = await prepareMistakePhoto(file);
+      setReviewPhotoPreview(imageData);
+      setReviewOutcome(null);
+      setReviewScanning(true);
+      setReviewScanNotice("");
+      const response = await fetch(`${BASE_PATH}/api/mistake-review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mistakeId: reviewMistake.id, imageData }),
+      });
+      const data = (await response.json()) as MistakeReviewOutcome & { error?: string };
+      if (!response.ok || !data.result) throw new Error(data.error || "答案识别失败");
+      setReviewOutcome({ result: data.result, saved: data.saved, review: data.review });
+      if (!data.saved || !data.result.readable || !data.review) {
+        setReviewScanNotice(data.result.notice || "龟龟没有看清，请把答案和完整步骤重新拍清楚。");
+        return;
+      }
+      const review = data.review;
+      setReviewMistake((current) => current ? { ...current, status: review.status, reviewCount: review.reviewNumber } : current);
+      setGame((current) => advanceDailyTask({
+        ...current,
+        stars: review.stars,
+        boredom: review.boredom,
+        mistakes: current.mistakes.map((item) => item.id === reviewMistake.id ? {
+          ...item,
+          status: review.status,
+          reviewCount: review.reviewNumber,
+        } : item),
+      }, "mistake", "review"));
+      void remember({
+        type: data.result.correct ? "learning" : "activity",
+        ...(data.result.correct
+          ? { detail: `拍照复习并掌握一道${reviewMistake.subject}错题` }
+          : { activity: "整理错题", detail: `拍照复习了一道${reviewMistake.subject}错题，龟龟给出了修改建议` }),
+      });
+      showToast(data.result.correct
+        ? (review.rewardStars ? `掌握啦！获得 ${review.rewardStars} 颗成长星星` : "答对啦，这道题依然很稳")
+        : "龟龟找到了一处可以改进的地方，再试一次吧");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "龟龟暂时没有看清答案，请重新拍照";
+      setReviewScanNotice(message);
+      showToast(message);
+    } finally {
+      setReviewScanning(false);
+    }
+  };
+
+  const deleteMistake = async (mistake: MistakeRecord) => {
+    if (!window.confirm("确定要删除这道错题吗？删除后不能恢复。")) return;
+    try {
+      const response = await fetch(`${BASE_PATH}/api/mistakes?id=${encodeURIComponent(mistake.id)}`, { method: "DELETE" });
+      const data = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "错题删除失败");
+      setGame((current) => ({ ...current, mistakes: current.mistakes.filter((item) => item.id !== mistake.id) }));
+      showToast("这道错题已经删除");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "错题删除失败，请稍后再试");
+    }
   };
 
   const startTravel = () => {
@@ -3017,15 +3106,32 @@ export default function ReadingApp({
       )}
 
       {mistakeFormOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => !mistakeScanning && setMistakeFormOpen(false)}>
-          <section className="modal mistake-form-modal mistake-capture-modal" role="dialog" aria-modal="true" aria-labelledby="mistake-form-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" type="button" disabled={mistakeScanning} onClick={() => setMistakeFormOpen(false)} aria-label="关闭"><X /></button>
-            <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="帮你整理错题的龟龟" />
+        <div className="modal-backdrop" role="presentation" onMouseDown={closeMistakeForm}>
+          <section className={`modal mistake-form-modal mistake-capture-modal${mistakeDraft ? " has-draft" : ""}`} role="dialog" aria-modal="true" aria-labelledby="mistake-form-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" disabled={mistakeScanning || mistakeSaving} onClick={closeMistakeForm} aria-label="关闭"><X /></button>
+            {!mistakeDraft && <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="帮你整理错题的龟龟" />}
             <span className="modal-kicker">龟龟错题屋</span>
-            <h2 id="mistake-form-title">拍下错题，剩下的交给 MiMo</h2>
-            <p>学科、题目、原答案、正确思路和错因都会自动整理。</p>
+            <h2 id="mistake-form-title">{mistakeDraft ? "和龟龟一起核对一下" : "拍下错题，龟龟来整理"}</h2>
+            <p>{mistakeDraft ? "识别结果可以修改。确认无误后，才会收进你的错题本。" : "龟龟会整理题目、原答案、正确思路和可能的错因。"}</p>
             {mistakeScanning ? (
-              <div className="mistake-capture-loading" role="status"><Sparkles /><strong>正在读题和整理步骤…</strong><span>整理完成后会直接收进错题屋</span></div>
+              <div className="mistake-capture-loading" role="status"><Sparkles /><strong>正在读题和整理步骤…</strong><span>等一下还可以亲自核对和修改</span></div>
+            ) : mistakeDraft ? (
+              <div className="mistake-draft-review">
+                <img className="mistake-draft-photo" src={mistakeDraft.imageData} alt="准备收录的错题照片" />
+                {mistakeDraft.result.notice && <p className="mistake-draft-notice"><Lightbulb /> <span><strong>这里请你特别核对</strong>{mistakeDraft.result.notice}</span></p>}
+                <div className="mistake-draft-fields">
+                  <label><span>学科</span><select value={mistakeDraft.result.subject} onChange={(event) => updateMistakeDraft("subject", event.target.value)}>{mistakeSubjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}</select></label>
+                  <label><span>可能的错因</span><select value={mistakeDraft.result.cause} onChange={(event) => updateMistakeDraft("cause", event.target.value)}>{mistakeCauses.map((cause) => <option key={cause} value={cause}>{cause}</option>)}</select></label>
+                  <label className="full"><span>题目</span><textarea value={mistakeDraft.result.question} onChange={(event) => updateMistakeDraft("question", event.target.value)} maxLength={600} /></label>
+                  <label className="full"><span>上次写的答案</span><textarea value={mistakeDraft.result.wrongAnswer} onChange={(event) => updateMistakeDraft("wrongAnswer", event.target.value)} maxLength={500} placeholder="照片里没有写答案，可以留空" /></label>
+                  <label className="full"><span>正确思路和答案</span><textarea value={mistakeDraft.result.correction} onChange={(event) => updateMistakeDraft("correction", event.target.value)} maxLength={800} /></label>
+                </div>
+                {mistakeScanNotice && mistakeScanNotice !== mistakeDraft.result.notice && <p className="mistake-capture-error" role="alert">{mistakeScanNotice}</p>}
+                <div className="mistake-modal-actions">
+                  <button type="button" disabled={mistakeSaving} onClick={() => { setMistakeDraft(null); setMistakeScanNotice(""); }}><RotateCcw /> 重新拍照</button>
+                  <button type="button" disabled={mistakeSaving} onClick={() => void confirmMistakeDraft()}>{mistakeSaving ? <Sparkles /> : <Check />} {mistakeSaving ? "正在收好…" : "确认收进错题本"}</button>
+                </div>
+              </div>
             ) : (
               <div className="mistake-capture-actions">
                 <label><Camera /><strong>拍照录题</strong><span>打开摄像头拍下错题</span><input type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void attachMistakePhoto(file); }} /></label>
@@ -3041,22 +3147,47 @@ export default function ReadingApp({
       {reviewMistake && (
         <div className="modal-backdrop" role="presentation">
           <section className="modal mistake-review-modal" role="dialog" aria-modal="true" aria-labelledby="mistake-review-title">
-            <button className="modal-close" type="button" onClick={() => setReviewMistake(null)} aria-label="关闭"><X /></button>
+            <button className="modal-close" type="button" disabled={reviewScanning} onClick={closeMistakeReview} aria-label="关闭"><X /></button>
             <div className="mistake-review-heading">
               <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪你复习的龟龟" />
-              <div><span className="modal-kicker">{reviewMistake.subject} · 第 {reviewMistake.reviewCount + 1} 次挑战</span><h2 id="mistake-review-title">先自己再想一次</h2></div>
+              <div><span className="modal-kicker">{reviewMistake.subject} · 第 {reviewMistake.reviewCount + (reviewOutcome?.saved ? 0 : 1)} 次挑战</span><h2 id="mistake-review-title">在纸上重新做一遍</h2></div>
             </div>
             {reviewMistake.imageData && <img className="review-question-photo" src={reviewMistake.imageData} alt="错题照片" />}
             <div className="review-question"><small>题目</small><p>{reviewMistake.question}</p></div>
-            <label className="mistake-field"><span>这次我的答案</span><textarea value={reviewAnswer} onChange={(event) => setReviewAnswer(event.target.value)} maxLength={600} placeholder="把这次的想法和步骤写下来…" disabled={correctionRevealed} /></label>
-            {!correctionRevealed ? (
-              <button className="reveal-correction-button" type="button" onClick={() => setCorrectionRevealed(true)}><Check /> 对照正确思路</button>
+            {!reviewOutcome && !reviewScanning && <div className="mistake-review-instruction"><Camera /><div><strong>写好答案和完整步骤，再拍一张清晰照片</strong><span>请拍全整张纸，避开姓名和学校信息。龟龟会识别步骤并帮你检查。</span></div></div>}
+            {reviewPhotoPreview && <img className="review-answer-photo" src={reviewPhotoPreview} alt="这次重新作答的照片" />}
+            {reviewScanning ? (
+              <div className="mistake-capture-loading" role="status"><Sparkles /><strong>龟龟正在看你的答案和步骤…</strong><span>会独立验算，不只看最后答案</span></div>
+            ) : reviewOutcome ? (
+              <div className={`mistake-review-result ${reviewOutcome.result.readable ? (reviewOutcome.result.correct ? "correct" : "incorrect") : "unreadable"}`}>
+                {!reviewOutcome.result.readable ? (
+                  <>
+                    <h3><Camera /> 再拍清楚一点</h3>
+                    <p>{reviewOutcome.result.notice || reviewScanNotice || "龟龟没有看清答案或完整步骤。"}</p>
+                    <button className="review-retry-button" type="button" onClick={resetMistakeReviewPhoto}><RotateCcw /> 重新拍照</button>
+                  </>
+                ) : (
+                  <>
+                    <h3>{reviewOutcome.result.correct ? <Star /> : <Lightbulb />} {reviewOutcome.result.correct ? "龟龟的称赞" : "龟龟的思考"}</h3>
+                    {reviewOutcome.result.recognizedAnswer && <div className="recognized-answer"><small>龟龟认出的答案</small><p>{reviewOutcome.result.recognizedAnswer}</p></div>}
+                    {reviewOutcome.result.recognizedSteps && <div className="recognized-steps"><small>龟龟认出的步骤</small><p>{reviewOutcome.result.recognizedSteps}</p></div>}
+                    <div className="review-ai-feedback"><strong>{reviewOutcome.result.correct ? "做得真棒！" : "可以这样修改"}</strong><p>{reviewOutcome.result.feedback}</p></div>
+                    {!reviewOutcome.result.correct && <div className="correction-panel"><small>上次卡住：{reviewMistake.cause}</small><strong>参考思路</strong><p>{reviewMistake.correction}</p></div>}
+                    {reviewOutcome.result.correct && Boolean(reviewOutcome.review?.rewardStars) && <p className="mistake-review-reward"><Star fill="currentColor" /> 第一次掌握，获得 {reviewOutcome.review?.rewardStars} 颗成长星星</p>}
+                    <div className="review-result-actions">
+                      {!reviewOutcome.result.correct && <button type="button" onClick={resetMistakeReviewPhoto}><RotateCcw /> 重新拍照再试</button>}
+                      <button type="button" onClick={closeMistakeReview}><Check /> {reviewOutcome.result.correct ? "完成复习" : "稍后再练"}</button>
+                    </div>
+                  </>
+                )}
+              </div>
             ) : (
-              <>
-                <div className="correction-panel"><small>上次卡住：{reviewMistake.cause}</small><strong>正确思路</strong><p>{reviewMistake.correction}</p>{reviewMistake.wrongAnswer && <span>上次答案：{reviewMistake.wrongAnswer}</span>}</div>
-                <div className="review-result-actions"><button type="button" onClick={() => finishMistakeReview(false)}><RotateCcw /> 还要再练</button><button type="button" onClick={() => finishMistakeReview(true)}><Star /> 我掌握了</button></div>
-              </>
+              <div className="mistake-review-upload mistake-capture-actions">
+                <label><Camera /><strong>拍答案照片</strong><span>拍下手写答案和步骤</span><input type="file" accept="image/*" capture="environment" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void attachMistakeReviewPhoto(file); }} /></label>
+                <label><Upload /><strong>从相册选择</strong><span>选择刚拍好的作答照片</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void attachMistakeReviewPhoto(file); }} /></label>
+              </div>
             )}
+            {!reviewScanning && reviewScanNotice && !reviewOutcome && <p className="mistake-capture-error" role="alert">{reviewScanNotice}</p>}
           </section>
         </div>
       )}

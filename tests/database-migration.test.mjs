@@ -166,10 +166,64 @@ test("JSON data migrates to isolated SQLite rows and can build a parent report",
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM user_reading_progress WHERE user_id = 'student-a' AND book_id = 'scarecrow-zh'").get().count, 1);
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM user_reading_progress WHERE user_id = 'student-b' AND book_id = 'scarecrow-zh'").get().count, 0);
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM user_mistakes WHERE user_id = 'student-a'").get().count, 1);
+    assert.equal(database.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'user_mistake_answer_attempts'").get().count, 1);
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM user_memory_facts WHERE user_id = 'student-a' AND fact_type = 'interest' AND fact_value = '恐龙'").get().count, 1);
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM legacy_unassigned_data WHERE source_key = 'legacy-device'").get().count, 2);
     assert.equal(database.prepare("PRAGMA integrity_check").get().integrity_check, "ok");
     database.close();
+
+    const mistakeRun = await run(tsx, ["-e", `
+      process.env.APP_DATABASE_FILE = ${JSON.stringify(databasePath)};
+      (async () => {
+        const { createMistakeForUser, getMistakeForUser, recordMistakeReviewForUser, deleteMistakeForUser } = await import("./db/mistakes.ts");
+        const record = await createMistakeForUser({
+          userId: "student-a", subject: "数学", question: "6 × 7 等于多少？", wrongAnswer: "36",
+          correction: "6 × 7 = 42", cause: "知识点没记牢", date: "7月19日",
+          imageUrl: "/api/mistake-image?id=11111111-1111-4111-8111-111111111111",
+          modelSource: "mimo-v2.5", notice: ""
+        });
+        const invisibleToOtherAccount = await getMistakeForUser("student-b", String(record.id));
+        const otherAccountReview = await recordMistakeReviewForUser("student-b", String(record.id), {
+          answerImageUrl: "/api/mistake-image?id=22222222-2222-4222-8222-222222222222",
+          recognizedAnswer: "42", recognizedSteps: "6 × 7 = 42", correct: true,
+          feedback: "正确", notice: "", modelSource: "mimo-v2.5"
+        });
+        const otherAccountDelete = await deleteMistakeForUser("student-b", String(record.id));
+        const wrong = await recordMistakeReviewForUser("student-a", String(record.id), {
+          answerImageUrl: "/api/mistake-image?id=33333333-3333-4333-8333-333333333333",
+          recognizedAnswer: "36", recognizedSteps: "6 × 6 = 36", correct: false,
+          feedback: "再检查乘法口诀", notice: "", modelSource: "mimo-v2.5"
+        });
+        const correct = await recordMistakeReviewForUser("student-a", String(record.id), {
+          answerImageUrl: "/api/mistake-image?id=44444444-4444-4444-8444-444444444444",
+          recognizedAnswer: "42", recognizedSteps: "6 × 7 = 42", correct: true,
+          feedback: "答案和步骤都正确", notice: "", modelSource: "mimo-v2.5"
+        });
+        const repeatedCorrect = await recordMistakeReviewForUser("student-a", String(record.id), {
+          answerImageUrl: "/api/mistake-image?id=55555555-5555-4555-8555-555555555555",
+          recognizedAnswer: "42", recognizedSteps: "7 + 7 + 7 + 7 + 7 + 7 = 42", correct: true,
+          feedback: "另一种方法也正确", notice: "", modelSource: "mimo-v2.5"
+        });
+        process.stdout.write(JSON.stringify({ record, invisibleToOtherAccount, otherAccountReview, otherAccountDelete, wrong, correct, repeatedCorrect }));
+      })();
+    `]);
+    const mistakeResult = JSON.parse(mistakeRun.stdout);
+    assert.equal(mistakeResult.invisibleToOtherAccount, null);
+    assert.equal(mistakeResult.otherAccountReview, null);
+    assert.equal(mistakeResult.otherAccountDelete, null);
+    assert.equal(mistakeResult.wrong.rewardStars, 0);
+    assert.equal(mistakeResult.correct.rewardStars, 2);
+    assert.equal(mistakeResult.repeatedCorrect.rewardStars, 0);
+
+    const reviewedDatabase = new DatabaseSync(databasePath);
+    assert.equal(reviewedDatabase.prepare("SELECT COUNT(*) AS count FROM user_mistake_answer_attempts WHERE user_id = 'student-a'").get().count, 3);
+    assert.equal(reviewedDatabase.prepare("SELECT COUNT(*) AS count FROM user_mistake_answer_attempts WHERE user_id = 'student-b'").get().count, 0);
+    assert.equal(reviewedDatabase.prepare("SELECT stars FROM user_pet_state WHERE user_id = 'student-a'").get().stars, 19);
+    assert.equal(reviewedDatabase.prepare("SELECT stars FROM user_pet_state WHERE user_id = 'student-b'").get().stars, 2);
+    assert.equal(reviewedDatabase.prepare("SELECT model_source FROM user_mistake_analyses WHERE user_id = 'student-a' AND mistake_id = ?").get(String(mistakeResult.record.id)).model_source, "mimo-v2.5");
+    assert.equal(reviewedDatabase.prepare("SELECT COUNT(*) AS count FROM user_reward_ledger WHERE user_id = 'student-a' AND source_type = 'mistake-mastered'").get().count, 1);
+    assert.equal(reviewedDatabase.prepare("PRAGMA integrity_check").get().integrity_check, "ok");
+    reviewedDatabase.close();
 
     const reportRun = await run(tsx, ["-e", `
       process.env.APP_DATABASE_FILE = ${JSON.stringify(databasePath)};
@@ -183,6 +237,8 @@ test("JSON data migrates to isolated SQLite rows and can build a parent report",
     assert.equal(report.username, "甲同学");
     assert.equal(report.dailyTasks.fullyCompletedDays, 1);
     assert.equal(report.reading.books[0].bookId, "scarecrow-zh");
+    assert.equal(report.mistakes.photoAnswerAttempts, 3);
+    assert.equal(report.mistakes.correctPhotoAnswers, 2);
     assert.deepEqual(report.interests, ["恐龙"]);
     assert.equal("chatMessages" in report, false);
 

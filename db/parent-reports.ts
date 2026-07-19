@@ -19,6 +19,8 @@ export type ParentReportData = {
   mistakes: {
     currentByStatus: Record<string, number>;
     reviewEvents: number;
+    photoAnswerAttempts: number;
+    correctPhotoAnswers: number;
   };
   rewardChanges: Record<string, number>;
   learned: string[];
@@ -48,7 +50,7 @@ export async function buildParentReport(
   const user = await database.first<{ username: string }>("SELECT username FROM app_users WHERE id = ?", [userId]);
   if (!user) return null;
 
-  const [pet, daily, books, answers, mistakeRows, reviews, rewards, facts, activities] = await Promise.all([
+  const [pet, daily, books, answers, mistakeRows, reviews, photoAnswers, rewards, facts, activities] = await Promise.all([
     database.first<{ stars: number; fruits: number; tickets: number }>(
       "SELECT stars, fruits, tickets FROM user_pet_state WHERE user_id = ?",
       [userId],
@@ -69,6 +71,9 @@ export async function buildParentReport(
     ),
     database.first<{ count: number }>(`SELECT COUNT(*) AS count FROM user_mistake_review_events
       WHERE user_id = ? AND reviewed_at BETWEEN ? AND ?`, [userId, range.from, range.to]),
+    database.first<{ attempts: number; correct_answers: number }>(`SELECT COUNT(*) AS attempts,
+      COALESCE(SUM(CASE WHEN correct = 1 THEN 1 ELSE 0 END), 0) AS correct_answers
+      FROM user_mistake_answer_attempts WHERE user_id = ? AND created_at BETWEEN ? AND ?`, [userId, range.from, range.to]),
     database.all<{ resource_type: string; amount: number }>(`SELECT resource_type, COALESCE(SUM(amount), 0) AS amount
       FROM user_reward_ledger WHERE user_id = ? AND created_at BETWEEN ? AND ? GROUP BY resource_type`,
     [userId, range.from, range.to]),
@@ -106,6 +111,8 @@ export async function buildParentReport(
     mistakes: {
       currentByStatus: Object.fromEntries(mistakeRows.map((row) => [row.status, row.count])),
       reviewEvents: reviews?.count || 0,
+      photoAnswerAttempts: photoAnswers?.attempts || 0,
+      correctPhotoAnswers: photoAnswers?.correct_answers || 0,
     },
     rewardChanges: Object.fromEntries(rewards.map((row) => [row.resource_type, row.amount])),
     learned: facts.filter((fact) => fact.fact_type === "learned").map((fact) => fact.fact_value).slice(0, 12),

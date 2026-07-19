@@ -123,6 +123,31 @@ export const SCHEMA_STATEMENTS = [
     reviewed_at INTEGER NOT NULL
   )`,
   "CREATE INDEX IF NOT EXISTS user_mistake_reviews_user_date_idx ON user_mistake_review_events(user_id, reviewed_at DESC)",
+  `CREATE TABLE IF NOT EXISTS user_mistake_analyses (
+    user_id TEXT NOT NULL,
+    mistake_id TEXT NOT NULL,
+    model_source TEXT NOT NULL,
+    notice TEXT NOT NULL DEFAULT '',
+    analyzed_at INTEGER NOT NULL,
+    confirmed_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, mistake_id)
+  )`,
+  "CREATE INDEX IF NOT EXISTS user_mistake_analyses_user_date_idx ON user_mistake_analyses(user_id, confirmed_at DESC)",
+  `CREATE TABLE IF NOT EXISTS user_mistake_answer_attempts (
+    attempt_id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    mistake_id TEXT NOT NULL,
+    answer_image_url TEXT NOT NULL,
+    recognized_answer TEXT NOT NULL,
+    recognized_steps TEXT NOT NULL,
+    correct INTEGER NOT NULL DEFAULT 0,
+    feedback TEXT NOT NULL,
+    notice TEXT NOT NULL DEFAULT '',
+    model_source TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS user_mistake_answers_user_date_idx ON user_mistake_answer_attempts(user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS user_mistake_answers_user_mistake_idx ON user_mistake_answer_attempts(user_id, mistake_id, created_at DESC)",
   `CREATE TABLE IF NOT EXISTS user_daily_state (
     user_id TEXT NOT NULL,
     date_key TEXT NOT NULL,
