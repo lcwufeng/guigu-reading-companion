@@ -51,7 +51,7 @@ test("server-renders the internal beta login before the reading companion", asyn
   assert.match(html, /assets\/ui\/login\/background\.png/);
   assert.match(html, /assets\/ui\/supplied\/brand\/logo-20260715\.png/);
   assert.doesNotMatch(html, /选择内测账号/);
-  assert.doesNotMatch(html, /同学一|同学二|同学三/);
+  assert.doesNotMatch(html, /同学一|同学二|同学三|同学四|同学五|同学六|同学七/);
   assert.doesNotMatch(html, /我的伙伴/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
@@ -200,6 +200,16 @@ test("forces first-login password reset and isolates every student's data", asyn
   assert.equal(secondState.status, 200);
   assert.equal((await secondState.json()).state, null, "同学二不能看到同学一保存的数据");
   assert.notEqual(secondCookie, activeCookie);
+
+  for (const username of ["同学四", "同学五", "同学六", "同学七"]) {
+    const newAccountLogin = await fetchApp("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username, password: "123456" }),
+    });
+    assert.equal(newAccountLogin.status, 200, `${username} can use the initial password`);
+    assert.equal((await newAccountLogin.json()).mustResetPassword, true, `${username} must reset the initial password`);
+  }
 });
 
 test("keeps the product loops, account safeguards, and required art assets", async () => {
@@ -533,7 +543,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(mistakeAi, /mimo-v2\.5/);
   assert.match(mistakeAi, /response_format: \{ type: "json_object" \}/);
   assert.match(mistakeAi, /MAX_IMAGE_DATA_LENGTH/);
-  for (const account of ["同学一", "同学二", "同学三"]) assert.match(authDb, new RegExp(account));
+  for (const account of ["同学一", "同学二", "同学三", "同学四", "同学五", "同学六", "同学七"]) assert.match(authDb, new RegExp(account));
   assert.match(authDb, /initialPassword = "123456"/);
   assert.match(authDb, /PBKDF2/);
   assert.match(authDb, /passwordIterations = 210_000/);

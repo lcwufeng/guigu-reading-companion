@@ -14,6 +14,10 @@ const initialAccounts = [
   { id: "student-demo-1", username: "同学一" },
   { id: "student-demo-2", username: "同学二" },
   { id: "student-demo-3", username: "同学三" },
+  { id: "student-demo-4", username: "同学四" },
+  { id: "student-demo-5", username: "同学五" },
+  { id: "student-demo-6", username: "同学六" },
+  { id: "student-demo-7", username: "同学七" },
 ] as const;
 const initialPassword = "123456";
 const sessionLifetime = 30 * 24 * 60 * 60 * 1000;
