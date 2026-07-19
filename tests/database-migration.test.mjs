@@ -59,6 +59,64 @@ function gameState(overrides = {}) {
   };
 }
 
+test("handwritten-answer OCR cannot see the question or reference answer before recognition", async () => {
+  const evaluation = await run(tsx, ["-e", `
+    process.env.MIMO_API_KEY = "test-key";
+    (async () => {
+      const { evaluateMistakeAnswer } = await import("./lib/mistake-ai.ts");
+      const calls = [];
+      const replies = [
+        { readable: true, recognizedAnswer: "42", recognizedSteps: "6×7=42", notice: "" },
+        { correct: true, feedback: "答案和步骤都正确", notice: "" }
+      ];
+      globalThis.fetch = async (_url, init) => {
+        calls.push(JSON.parse(String(init.body)));
+        const reply = replies.shift();
+        return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(reply) } }] }), {
+          status: 200, headers: { "content-type": "application/json" }
+        });
+      };
+      const result = await evaluateMistakeAnswer({
+        imageData: "data:image/png;base64,AAAA",
+        question: "秘密原题-8491", wrongAnswer: "旧答案-2233", correction: "参考答案-9876"
+      });
+      process.stdout.write(JSON.stringify({ calls, result }));
+    })();
+  `]);
+  const { calls, result } = JSON.parse(evaluation.stdout);
+  assert.equal(calls.length, 2);
+  const recognitionRequest = JSON.stringify(calls[0]);
+  assert.doesNotMatch(recognitionRequest, /秘密原题-8491|旧答案-2233|参考答案-9876/);
+  const judgmentRequest = JSON.stringify(calls[1]);
+  assert.match(judgmentRequest, /秘密原题-8491/);
+  assert.match(judgmentRequest, /参考答案-9876/);
+  assert.equal(result.readable, true);
+  assert.equal(result.correct, true);
+  assert.equal(result.recognizedSteps, "6×7=42");
+
+  const unreadable = await run(tsx, ["-e", `
+    process.env.MIMO_API_KEY = "test-key";
+    (async () => {
+      const { evaluateMistakeAnswer } = await import("./lib/mistake-ai.ts");
+      let calls = 0;
+      globalThis.fetch = async () => {
+        calls += 1;
+        return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+          readable: false, recognizedAnswer: "", recognizedSteps: "", notice: "没有手写作答"
+        }) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+      };
+      const result = await evaluateMistakeAnswer({
+        imageData: "data:image/png;base64,AAAA", question: "1+1=?", wrongAnswer: "3", correction: "2"
+      });
+      process.stdout.write(JSON.stringify({ calls, result }));
+    })();
+  `]);
+  const unreadableResult = JSON.parse(unreadable.stdout);
+  assert.equal(unreadableResult.calls, 1, "unreadable photos must not proceed to answer judgment");
+  assert.equal(unreadableResult.result.readable, false);
+  assert.equal(unreadableResult.result.correct, false);
+});
+
 test("JSON data migrates to isolated SQLite rows and can build a parent report", async () => {
   const root = await mkdtemp(join(tmpdir(), "guigu-db-test-"));
   try {

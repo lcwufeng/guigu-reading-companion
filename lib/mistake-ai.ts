@@ -70,7 +70,11 @@ export function normalizeConfirmedMistake(value: unknown): MistakeAnalysis {
   };
 }
 
-async function requestMiMo(systemPrompt: string, imageData: string, textPrompt: string, maxCompletionTokens: number) {
+async function requestMiMo(
+  systemPrompt: string,
+  userContent: string | Array<{ type: "image_url"; image_url: { url: string } } | { type: "text"; text: string }>,
+  maxCompletionTokens: number,
+) {
   const apiKey = process.env.MIMO_API_KEY;
   if (!apiKey) throw new Error("mimo unavailable");
   const controller = new AbortController();
@@ -83,13 +87,7 @@ async function requestMiMo(systemPrompt: string, imageData: string, textPrompt: 
         model: process.env.MIMO_MODEL || "mimo-v2.5",
         messages: [
           { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              { type: "image_url", image_url: { url: imageData } },
-              { type: "text", text: textPrompt },
-            ],
-          },
+          { role: "user", content: userContent },
         ],
         response_format: { type: "json_object" },
         thinking: { type: "disabled" },
@@ -120,7 +118,10 @@ export async function analyzeMistakeImage(imageData: string): Promise<MistakeAna
     "仅返回 JSON，不要使用 Markdown。固定格式：",
     '{"subject":"数学|语文|英语|科学|其他","question":"完整题目文字","wrongAnswer":"图片中可见的学生原答案，没有则为空字符串","correction":"正确思路与答案","cause":"知识点没记牢|题目没读懂|计算或书写失误|方法没有想到|还不确定","notice":"需要学生核对的模糊处，没有则为空字符串"}',
     "subject 和 cause 必须使用给定选项。题目不完整时在 notice 中说明；无法可靠判断错因时使用还不确定。",
-  ].join("\n"), imageData, "识别并整理这张错题照片。", 1200);
+  ].join("\n"), [
+    { type: "image_url", image_url: { url: imageData } },
+    { type: "text", text: "识别并整理这张错题照片。" },
+  ], 1200);
   const result = normalizeConfirmedMistake(parsed);
   if (!result.question || !result.correction) throw new Error("incomplete recognition");
   return result;
@@ -132,31 +133,54 @@ export async function evaluateMistakeAnswer(input: {
   wrongAnswer: string;
   correction: string;
 }): Promise<MistakeReviewAnalysis> {
-  const parsed = await requestMiMo([
-    "你是龟龟伴读的错题复习老师，服务对象是小学生。",
-    "图片里是学生重新手写的答案和解题步骤。先识别内容，再独立验算或核对，不能只看最终答案，也不要因为写法与参考思路不同就判错。",
-    "最终答案和关键推理都正确才判为 correct=true；有可修正的错误时判为 false，并用温和、具体的中文指出错在哪里、下一步怎么改。",
-    "如果图片模糊、答案不完整或无法可靠识别，readable=false、correct=false，并在 notice 中请学生重新拍摄；这种情况不要猜测。",
-    "不要输出或复述图片中的姓名、学校等个人信息。只返回 JSON，不要 Markdown。固定格式：",
-    '{"readable":true或false,"recognizedAnswer":"识别出的最终答案","recognizedSteps":"识别出的主要步骤","correct":true或false,"feedback":"给学生的具体反馈","notice":"需要重拍或核对的模糊处，没有则为空字符串"}',
-  ].join("\n"), input.imageData, [
-    `原题：${clean(input.question, 600)}`,
-    `上次错误答案：${clean(input.wrongAnswer, 500) || "未识别到"}`,
-    `参考正确思路：${clean(input.correction, 800)}`,
-    "请识别这次手写答案和步骤，独立判断是否正确。",
-  ].join("\n"), 1000);
-  const readable = parsed.readable === true;
-  const feedback = clean(parsed.feedback, 500);
-  const result = {
-    readable,
-    recognizedAnswer: clean(parsed.recognizedAnswer, 600),
-    recognizedSteps: clean(parsed.recognizedSteps, 1_200),
-    correct: readable && parsed.correct === true,
-    feedback,
-    notice: clean(parsed.notice, 220),
-  };
-  if (!result.feedback || (readable && !result.recognizedAnswer && !result.recognizedSteps)) {
-    throw new Error("incomplete review recognition");
+  const recognized = await requestMiMo([
+    "你是严格的手写作业图片识别器。你不知道原题，也不知道正确答案，只能逐字读取图片中实际可见的学生书写内容。",
+    "绝对不能推测、补全、计算或编造图片里没有的答案。插画、人物、空白纸、印刷题目或其他无关图片都不算学生作答。",
+    "只有清楚看见学生手写的最终答案或解题步骤时，readable 才能为 true。看不清、内容被截断、没有手写作答或图片与作业无关时必须为 false。",
+    "不要输出或复述姓名、学校等个人信息。只返回 JSON，不要 Markdown。固定格式：",
+    '{"readable":true或false,"recognizedAnswer":"图片中实际可见的最终答案，没有则为空字符串","recognizedSteps":"图片中实际可见的主要步骤，没有则为空字符串","notice":"需要重拍或核对的模糊处，没有则为空字符串"}',
+  ].join("\n"), [
+    { type: "image_url", image_url: { url: input.imageData } },
+    { type: "text", text: "只识别这张图片里实际可见的手写答案和步骤，不要猜测原题或答案。" },
+  ], 700);
+  const readable = recognized.readable === true;
+  const recognizedAnswer = clean(recognized.recognizedAnswer, 600);
+  const recognizedSteps = clean(recognized.recognizedSteps, 1_200);
+  const recognitionNotice = clean(recognized.notice, 220);
+  if (!readable || (!recognizedAnswer && !recognizedSteps)) {
+    return {
+      readable: false,
+      recognizedAnswer,
+      recognizedSteps,
+      correct: false,
+      feedback: "请把手写答案和完整步骤拍清楚后再试一次。",
+      notice: recognitionNotice || "没有识别到清晰、完整的手写答案和步骤，请重新拍照。",
+    };
   }
+
+  const judged = await requestMiMo([
+    "你是龟龟伴读的错题复习老师，服务对象是小学生。",
+    "手写内容已经由独立的图片识别步骤提取完成。请根据原题独立验算，再判断学生答案和关键步骤是否正确。",
+    "不要因为写法与参考思路不同就判错；最终答案和题目要求的关键推理都正确才判为 correct=true。",
+    "有错误时用温和、具体的中文指出错在哪里、下一步怎么改。只返回 JSON，不要 Markdown。固定格式：",
+    '{"correct":true或false,"feedback":"给学生的具体反馈","notice":"仍需学生核对的地方，没有则为空字符串"}',
+  ].join("\n"), [
+    `原题：${clean(input.question, 600)}`,
+    `本次照片中实际识别出的最终答案：${recognizedAnswer || "未单独写明"}`,
+    `本次照片中实际识别出的步骤：${recognizedSteps || "未写步骤"}`,
+    `参考思路（只用于复核，不可改写学生作答）：${clean(input.correction, 800)}`,
+    `上次错误答案（只用于了解易错点）：${clean(input.wrongAnswer, 500) || "未记录"}`,
+    "请独立验算并判断本次作答。",
+  ].join("\n"), 800);
+  const feedback = clean(judged.feedback, 500);
+  const result = {
+    readable: true,
+    recognizedAnswer,
+    recognizedSteps,
+    correct: judged.correct === true,
+    feedback,
+    notice: clean(judged.notice, 220) || recognitionNotice,
+  };
+  if (!result.feedback) throw new Error("incomplete review judgment");
   return result;
 }
