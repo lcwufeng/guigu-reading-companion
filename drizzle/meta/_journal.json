@@ -50,6 +50,13 @@
       "when": 1784462134068,
       "tag": "0006_brave_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1784466561719,
+      "tag": "0007_overjoyed_lethal_legion",
+      "breakpoints": true
     }
   ]
 }

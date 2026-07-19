@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authenticateParent, createParentSession } from "../../../../../db/parent-auth";
+import { refreshParentCompanionSuggestions } from "../../../../../lib/parent-companion-refresh";
 import { PARENT_SESSION_COOKIE, parentSessionCookieOptions } from "../../../../parent-auth-user";
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -24,7 +25,14 @@ export async function POST(request: Request) {
     }
     attempts.delete(key);
     const token = await createParentSession(parent.id);
-    const response = NextResponse.json({ loggedIn: true, mustResetPassword: parent.mustResetPassword });
+    let suggestionRefresh: "refreshed" | "reused-today" | "retained-previous" = "retained-previous";
+    try {
+      const result = await refreshParentCompanionSuggestions(parent.id);
+      suggestionRefresh = result.refreshed > 0 ? "refreshed" : result.reusedToday > 0 ? "reused-today" : "retained-previous";
+    } catch {
+      // Parent authentication must remain available even if the reporting database or AI provider is temporarily unavailable.
+    }
+    const response = NextResponse.json({ loggedIn: true, mustResetPassword: parent.mustResetPassword, suggestionRefresh });
     response.cookies.set(PARENT_SESSION_COOKIE, token, parentSessionCookieOptions(request));
     return response;
   } catch {

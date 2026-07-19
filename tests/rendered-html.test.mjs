@@ -548,6 +548,17 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(companionRoute, /parseReadingEvaluation/);
   assert.match(companionRoute, /correct: evaluation\.correct/);
   assert.match(companionRoute, /DEEPSEEK_API_KEY/);
+  const parentLoginRoute = await readFile(new URL("../app/api/parent/auth/login/route.ts", import.meta.url), "utf8");
+  const parentCompanionAi = await readFile(new URL("../lib/parent-companion-ai.ts", import.meta.url), "utf8");
+  const parentCompanionRefresh = await readFile(new URL("../lib/parent-companion-refresh.ts", import.meta.url), "utf8");
+  const parentCenter = await readFile(new URL("../app/parent/ParentCenter.tsx", import.meta.url), "utf8");
+  assert.match(parentLoginRoute, /refreshParentCompanionSuggestions/);
+  assert.match(parentCompanionRefresh, /claimDailyParentCompanionRefresh/);
+  assert.match(parentCompanionAi, /不包含聊天原文/);
+  assert.match(parentCompanionAi, /PARENT_SUGGESTION_MIMO_TIMEOUT_MS/);
+  assert.match(parentCompanionAi, /PARENT_SUGGESTION_DEEPSEEK_TIMEOUT_MS/);
+  assert.match(parentCenter, /dashboard\.companionSuggestion\.text/);
+  assert.match(parentCenter, /每天最多一次/);
   assert.match(companionRoute, /cleanPetName/);
   assert.match(companionRoute, /function localReply/);
   assert.match(companionRoute, /formatStudentMemory/);

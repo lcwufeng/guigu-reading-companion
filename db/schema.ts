@@ -105,6 +105,25 @@ export const parentDeletionRequests = sqliteTable("parent_deletion_requests", {
   index("parent_deletion_requests_student_idx").on(table.studentId, table.status),
 ]);
 
+export const parentCompanionSuggestions = sqliteTable("parent_companion_suggestions", {
+  userId: text("user_id").primaryKey(),
+  suggestion: text("suggestion").notNull(),
+  modelSource: text("model_source").notNull(),
+  generatedAt: integer("generated_at").notNull(),
+  generatedByParentId: text("generated_by_parent_id").notNull(),
+});
+
+export const parentCompanionRefreshes = sqliteTable("parent_companion_refreshes", {
+  userId: text("user_id").notNull(),
+  dateKey: text("date_key").notNull(),
+  refreshId: text("refresh_id").notNull(),
+  parentId: text("parent_id").notNull(),
+  requestedAt: integer("requested_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.dateKey] }),
+  index("parent_companion_refreshes_parent_idx").on(table.parentId, table.requestedAt),
+]);
+
 export const appDataMigrations = sqliteTable("app_data_migrations", {
   migrationId: text("migration_id").primaryKey(),
   completedAt: integer("completed_at").notNull(),

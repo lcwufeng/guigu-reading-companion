@@ -1,6 +1,7 @@
 import classicBookManifest from "../app/classic-books-manifest.json";
 import { deleteMistakeForUser, removeMistakeAnswerPhotoForUser, removeMistakeQuestionPhotoForUser } from "./mistakes";
 import { deleteMistakeImage } from "./mistake-images";
+import { getStoredParentCompanionSuggestion } from "./parent-companion";
 import { buildParentReport, type ParentReportData } from "./parent-reports";
 import { getStudentMemory, type StudentMemory } from "./student-memory";
 import { readyRuntimeDatabase, type RuntimeDatabase } from "./runtime-database";
@@ -17,6 +18,11 @@ export type ParentDashboard = {
   parent: { id: string; displayName: string };
   children: ParentChild[];
   selectedChild: ParentChild;
+  companionSuggestion: {
+    text: string;
+    modelSource: string;
+    generatedAt: number;
+  };
   overview: ParentReportData;
   reading: {
     books: Array<{
@@ -139,7 +145,7 @@ export async function getParentDashboard(
   const overview = await buildParentReport(selectedChild.id, { from, to });
   if (!overview) return null;
 
-  const [progress, metrics, answerRows, recordRows, mistakeRows, analysisRows, attemptRows, memory, controls, deletionRequest] = await Promise.all([
+  const [progress, metrics, answerRows, recordRows, mistakeRows, analysisRows, attemptRows, memory, controls, deletionRequest, companionSuggestion] = await Promise.all([
     database.all<{ book_id: string; chapter_index: number; page_index: number; completed: number; updated_at: number }>(
       "SELECT * FROM user_reading_progress WHERE user_id = ? ORDER BY updated_at DESC",
       [selectedChild.id],
@@ -162,6 +168,7 @@ export async function getParentDashboard(
     controlsFor(database, selectedChild.id),
     database.first<{ request_id: string; status: string; requested_at: number }>(`SELECT request_id, status, requested_at FROM parent_deletion_requests
       WHERE parent_id = ? AND student_id = ? ORDER BY requested_at DESC LIMIT 1`, [parentId, selectedChild.id]),
+    getStoredParentCompanionSuggestion(selectedChild.id),
   ]);
 
   const metricMap = new Map(metrics.map((row) => [row.book_id, row]));
@@ -174,6 +181,11 @@ export async function getParentDashboard(
     parent: { id: parentId, displayName: parentDisplayName },
     children,
     selectedChild,
+    companionSuggestion: companionSuggestion || {
+      text: `今天可以和${selectedChild.displayName}一起选一篇短故事，安静共读十分钟。把选择权交给孩子，读完只问一句：“哪个地方让你最想讲给我听？”`,
+      modelSource: "local-fallback",
+      generatedAt: 0,
+    },
     overview,
     reading: {
       books: progress.map((row) => {

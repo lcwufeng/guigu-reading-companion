@@ -24,7 +24,7 @@ import {
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import type { ParentDashboard } from "../../db/parent-center";
 import styles from "./ParentCenter.module.css";
 
@@ -113,12 +113,6 @@ export default function ParentCenter({ initialSection }: { initialSection: Paren
     window.location.href = `${BASE_PATH}/parent`;
   }
 
-  const companionSuggestion = useMemo(() => {
-    if (!dashboard) return "这周可以问问孩子：“最想和龟龟一起做什么？”";
-    if (dashboard.overview.reading.books.length) return `晚上可以请${dashboard.selectedChild.displayName}讲讲最近读到的一个人物，不必考记忆，多问“你为什么这样想”。`;
-    return `可以和${dashboard.selectedChild.displayName}一起选一章短故事，由孩子决定从哪本开始。`;
-  }, [dashboard]);
-
   if (loading && !dashboard) return <main className={styles.loadingPage}><RefreshCw className={styles.spin} /><p>正在整理孩子的成长记录…</p></main>;
 
   return (
@@ -154,7 +148,7 @@ export default function ParentCenter({ initialSection }: { initialSection: Paren
         <section className={styles.content}>
           {(message || error) && <div className={error ? styles.toastError : styles.toast}>{error || message}</div>}
           {!dashboard ? <Empty>{error || "暂时没有可显示的数据。"}</Empty> : <>
-            {initialSection === "overview" && <Overview dashboard={dashboard} suggestion={companionSuggestion} />}
+            {initialSection === "overview" && <Overview dashboard={dashboard} />}
             {initialSection === "binding" && <Binding dashboard={dashboard} />}
             {initialSection === "reading" && <Reading dashboard={dashboard} />}
             {initialSection === "mistakes" && <Mistakes dashboard={dashboard} act={act} />}
@@ -170,7 +164,7 @@ function PageTitle({ eyebrow, title, children }: { eyebrow: string; title: strin
   return <div className={styles.pageTitle}><span>{eyebrow}</span><h1>{title}</h1><p>{children}</p></div>;
 }
 
-function Overview({ dashboard, suggestion }: { dashboard: ParentDashboard; suggestion: string }) {
+function Overview({ dashboard }: { dashboard: ParentDashboard }) {
   const status = dashboard.overview.mistakes.currentByStatus;
   return <>
     <PageTitle eyebrow="本周概览" title={`${dashboard.selectedChild.displayName}的一周成长`}>看趋势，不做排名；找到一个适合今天的陪伴动作就好。</PageTitle>
@@ -187,8 +181,11 @@ function Overview({ dashboard, suggestion }: { dashboard: ParentDashboard; sugge
         <div className={styles.softStats}><span>新错题 {status.new || 0}</span><span>练习中 {status.reviewing || 0}</span><span>已掌握 {status.mastered || 0}</span></div>
       </article>
       <article className={styles.suggestionCard}>
-        <h2><HeartHandshake /> 今天可以这样陪</h2><p>{suggestion}</p>
-        <small>建议只是提醒，不是对孩子的评价。</small>
+        <h2><HeartHandshake /> 今天可以这样陪</h2><p>{dashboard.companionSuggestion.text}</p>
+        <small>
+          {dashboard.companionSuggestion.generatedAt ? `最近更新：${date(dashboard.companionSuggestion.generatedAt, true)} · ` : ""}
+          家长登录时结合近期记录更新，每天最多一次。建议只是提醒，不是对孩子的评价。
+        </small>
       </article>
     </div>
     <article className={styles.paperCard}>

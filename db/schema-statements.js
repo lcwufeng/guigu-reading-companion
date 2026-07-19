@@ -57,6 +57,22 @@ export const SCHEMA_STATEMENTS = [
   )`,
   "CREATE INDEX IF NOT EXISTS parent_deletion_requests_parent_idx ON parent_deletion_requests(parent_id, requested_at DESC)",
   "CREATE INDEX IF NOT EXISTS parent_deletion_requests_student_idx ON parent_deletion_requests(student_id, status)",
+  `CREATE TABLE IF NOT EXISTS parent_companion_suggestions (
+    user_id TEXT PRIMARY KEY NOT NULL,
+    suggestion TEXT NOT NULL,
+    model_source TEXT NOT NULL,
+    generated_at INTEGER NOT NULL,
+    generated_by_parent_id TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS parent_companion_refreshes (
+    user_id TEXT NOT NULL,
+    date_key TEXT NOT NULL,
+    refresh_id TEXT NOT NULL,
+    parent_id TEXT NOT NULL,
+    requested_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, date_key)
+  )`,
+  "CREATE INDEX IF NOT EXISTS parent_companion_refreshes_parent_idx ON parent_companion_refreshes(parent_id, requested_at)",
   `CREATE TABLE IF NOT EXISTS app_data_migrations (
     migration_id TEXT PRIMARY KEY NOT NULL,
     completed_at INTEGER NOT NULL,
