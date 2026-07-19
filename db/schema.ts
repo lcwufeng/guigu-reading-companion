@@ -74,6 +74,69 @@ export const appParentSessions = sqliteTable("app_parent_sessions", {
   index("app_parent_sessions_expiry_idx").on(table.expiresAt),
 ]);
 
+export const appAdminUsers = sqliteTable("app_admin_users", {
+  id: text("id").primaryKey(),
+  username: text("username").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  role: text("role").notNull().default("super_admin"),
+  status: text("status").notNull().default("active"),
+  mustResetPassword: integer("must_reset_password", { mode: "boolean" }).notNull().default(true),
+  lastLoginAt: integer("last_login_at").notNull().default(0),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [uniqueIndex("app_admin_users_username_idx").on(table.username)]);
+
+export const appAdminSessions = sqliteTable("app_admin_sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  adminId: text("admin_id").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("app_admin_sessions_admin_idx").on(table.adminId),
+  index("app_admin_sessions_expiry_idx").on(table.expiresAt),
+]);
+
+export const accountAdminState = sqliteTable("account_admin_state", {
+  accountType: text("account_type").notNull(),
+  accountId: text("account_id").notNull(),
+  status: text("status").notNull().default("active"),
+  lastLoginAt: integer("last_login_at").notNull().default(0),
+  createdByAdminId: text("created_by_admin_id"),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.accountType, table.accountId] }),
+  index("account_admin_state_status_idx").on(table.accountType, table.status),
+]);
+
+export const adminAuditLogs = sqliteTable("admin_audit_logs", {
+  eventId: text("event_id").primaryKey(),
+  adminId: text("admin_id").notNull(),
+  adminUsername: text("admin_username").notNull(),
+  action: text("action").notNull(),
+  targetType: text("target_type").notNull(),
+  targetId: text("target_id").notNull(),
+  summary: text("summary").notNull(),
+  ipAddress: text("ip_address").notNull().default(""),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("admin_audit_logs_date_idx").on(table.createdAt),
+  index("admin_audit_logs_admin_idx").on(table.adminId, table.createdAt),
+]);
+
+export const serviceHealthEvents = sqliteTable("service_health_events", {
+  eventId: text("event_id").primaryKey(),
+  service: text("service").notNull(),
+  operation: text("operation").notNull(),
+  provider: text("provider").notNull(),
+  status: text("status").notNull(),
+  durationMs: integer("duration_ms").notNull(),
+  detail: text("detail").notNull().default(""),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("service_health_events_service_date_idx").on(table.service, table.createdAt),
+  index("service_health_events_status_date_idx").on(table.status, table.createdAt),
+]);
+
 export const parentStudentLinks = sqliteTable("parent_student_links", {
   parentId: text("parent_id").notNull(),
   studentId: text("student_id").notNull(),

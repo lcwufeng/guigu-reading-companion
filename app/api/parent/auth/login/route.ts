@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authenticateParent, createParentSession } from "../../../../../db/parent-auth";
+import { recordManagedAccountLogin } from "../../../../../db/admin-center";
 import { refreshParentCompanionSuggestions } from "../../../../../lib/parent-companion-refresh";
 import { PARENT_SESSION_COOKIE, parentSessionCookieOptions } from "../../../../parent-auth-user";
 
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "家长账号或密码不正确。" }, { status: 401 });
     }
     attempts.delete(key);
+    await recordManagedAccountLogin("parent", parent.id);
     const token = await createParentSession(parent.id);
     let suggestionRefresh: "refreshed" | "reused-today" | "retained-previous" = "retained-previous";
     try {

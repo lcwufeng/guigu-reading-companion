@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActiveStudent } from "../../auth-user";
 import { recognizeVolcSpeech } from "../../../lib/volc-speech";
+import { recordServiceHealthEvent } from "../../../db/service-health";
 
 const MAX_AUDIO_BYTES = 2_500_000;
 const speechRateLimits = new Map<string, { count: number; resetAt: number }>();
@@ -30,11 +31,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "录音长度不合适，请录制 1 到 30 秒" }, { status: 400 });
   }
 
+  const startedAt = Date.now();
   try {
     const transcript = await recognizeVolcSpeech(audio);
-    if (!transcript) return NextResponse.json({ error: "没有听清楚，请再试一次" }, { status: 422 });
+    if (!transcript) {
+      await recordServiceHealthEvent({ service: "speech", operation: "speech-to-text", provider: "volc-doubao", status: "failed", durationMs: Date.now() - startedAt, detail: "empty-transcript" });
+      return NextResponse.json({ error: "没有听清楚，请再试一次" }, { status: 422 });
+    }
+    await recordServiceHealthEvent({ service: "speech", operation: "speech-to-text", provider: "volc-doubao", status: "success", durationMs: Date.now() - startedAt });
     return NextResponse.json({ transcript, source: "volc-doubao" });
   } catch (error) {
+    await recordServiceHealthEvent({ service: "speech", operation: "speech-to-text", provider: "volc-doubao", status: "failed", durationMs: Date.now() - startedAt, detail: "provider-error" });
     console.error("Volc speech recognition failed", error instanceof Error ? error.message : "unknown error");
     return NextResponse.json({ error: "语音识别暂时不可用，请稍后再试" }, { status: 502 });
   }

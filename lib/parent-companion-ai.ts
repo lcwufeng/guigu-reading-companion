@@ -1,3 +1,5 @@
+import { recordServiceHealthEvent } from "../db/service-health";
+
 export type ParentCompanionAiInput = {
   childName: string;
   activeDays: number;
@@ -112,13 +114,27 @@ export async function generateParentCompanionSuggestion(input: ParentCompanionAi
   const userPrompt = prompt(input);
   const mimoKey = process.env.MIMO_API_KEY?.trim();
   if (mimoKey) {
+    const startedAt = Date.now();
     try {
-      return await requestMiMo(mimoKey, userPrompt);
+      const result = await requestMiMo(mimoKey, userPrompt);
+      await recordServiceHealthEvent({ service: "parent-ai", operation: "companion-suggestion", provider: "mimo", status: "success", durationMs: Date.now() - startedAt });
+      return result;
     } catch {
+      await recordServiceHealthEvent({ service: "parent-ai", operation: "companion-suggestion", provider: "mimo", status: "failed", durationMs: Date.now() - startedAt, detail: "provider-error-or-timeout" });
       // DeepSeek remains a bounded fallback so a temporary MiMo failure does not block parent login indefinitely.
     }
   }
   const deepSeekKey = process.env.DEEPSEEK_API_KEY?.trim();
-  if (deepSeekKey) return requestDeepSeek(deepSeekKey, userPrompt);
+  if (deepSeekKey) {
+    const startedAt = Date.now();
+    try {
+      const result = await requestDeepSeek(deepSeekKey, userPrompt);
+      await recordServiceHealthEvent({ service: "parent-ai", operation: "companion-suggestion", provider: "deepseek", status: "fallback", durationMs: Date.now() - startedAt });
+      return result;
+    } catch (error) {
+      await recordServiceHealthEvent({ service: "parent-ai", operation: "companion-suggestion", provider: "deepseek", status: "failed", durationMs: Date.now() - startedAt, detail: "provider-error-or-timeout" });
+      throw error;
+    }
+  }
   throw new Error("parent companion AI unavailable");
 }

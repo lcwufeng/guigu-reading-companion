@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getActiveStudent } from "../../auth-user";
 import { rememberStudentEvent, type StudentMemory } from "../../../db/student-memory";
 import { recordChapterAnswer } from "../../../db/learning-records";
+import { recordServiceHealthEvent } from "../../../db/service-health";
 
 type CompanionMessage = {
   role?: "user" | "assistant";
@@ -256,22 +257,28 @@ export async function POST(request: Request) {
 
     const mimoApiKey = process.env.MIMO_API_KEY;
     if (mimoApiKey) {
+      const startedAt = Date.now();
       try {
         const evaluation = await evaluateReadingWithMiMo(mimoApiKey, name, userContext);
+        await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "mimo", status: "success", durationMs: Date.now() - startedAt });
         await saveReadingAttempt(student.id, body, evaluation, "mimo");
         return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "mimo" });
       } catch {
+        await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "mimo", status: "failed", durationMs: Date.now() - startedAt, detail: "provider-error-or-timeout" });
         // MiMo is the preferred judge. Any timeout, upstream error, empty reply or invalid JSON falls through to DeepSeek.
       }
     }
 
     const deepSeekApiKey = process.env.DEEPSEEK_API_KEY;
     if (deepSeekApiKey) {
+      const startedAt = Date.now();
       try {
         const evaluation = await evaluateReadingWithDeepSeek(deepSeekApiKey, name, userContext);
+        await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "deepseek", status: "fallback", durationMs: Date.now() - startedAt });
         await saveReadingAttempt(student.id, body, evaluation, "deepseek");
         return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "deepseek" });
       } catch {
+        await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "deepseek", status: "failed", durationMs: Date.now() - startedAt, detail: "provider-error-or-timeout" });
         // The client receives a retryable response below instead of waiting for the hosting layer to return a 504.
       }
     }
@@ -286,6 +293,7 @@ export async function POST(request: Request) {
   if (!apiKey) return NextResponse.json({ reply: localReply(body), source: "local" });
 
   try {
+    const startedAt = Date.now();
     const response = await fetchWithTimeout("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: {
@@ -308,8 +316,10 @@ export async function POST(request: Request) {
     const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const rawReply = clean(data.choices?.[0]?.message?.content, 500);
     if (!rawReply) throw new Error("empty response");
+    await recordServiceHealthEvent({ service: "chat-ai", operation: "companion-chat", provider: "deepseek", status: "success", durationMs: Date.now() - startedAt });
     return NextResponse.json({ reply: rawReply, source: "deepseek" });
   } catch {
+    await recordServiceHealthEvent({ service: "chat-ai", operation: "companion-chat", provider: "local", status: "fallback", durationMs: 0, detail: "deepseek-unavailable" });
     return NextResponse.json({ reply: localReply(body), source: "local" });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActiveStudent } from "../../auth-user";
 import { analyzeMistakeImage, mistakeModelSource, validateMistakeImageData } from "../../../lib/mistake-ai";
+import { recordServiceHealthEvent } from "../../../db/service-health";
 
 type ScanRequest = { imageData?: string };
 
@@ -23,10 +24,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "错题扫描服务尚未配置" }, { status: 503 });
   }
 
+  const startedAt = Date.now();
   try {
     const result = await analyzeMistakeImage(imageData);
+    await recordServiceHealthEvent({ service: "mistake-ai", operation: "question-scan", provider: "mimo", status: "success", durationMs: Date.now() - startedAt });
     return NextResponse.json({ result, source: mistakeModelSource() });
   } catch {
+    await recordServiceHealthEvent({ service: "mistake-ai", operation: "question-scan", provider: "mimo", status: "failed", durationMs: Date.now() - startedAt, detail: "recognition-failed" });
     return NextResponse.json({ error: "这张照片暂时没有识别清楚，请重新拍照或换一张图片" }, { status: 502 });
   }
 }

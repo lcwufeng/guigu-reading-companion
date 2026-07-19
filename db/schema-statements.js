@@ -31,6 +31,60 @@ export const SCHEMA_STATEMENTS = [
   )`,
   "CREATE INDEX IF NOT EXISTS app_parent_sessions_parent_idx ON app_parent_sessions(parent_id)",
   "CREATE INDEX IF NOT EXISTS app_parent_sessions_expiry_idx ON app_parent_sessions(expires_at)",
+  `CREATE TABLE IF NOT EXISTS app_admin_users (
+    id TEXT PRIMARY KEY NOT NULL,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'super_admin',
+    status TEXT NOT NULL DEFAULT 'active',
+    must_reset_password INTEGER NOT NULL DEFAULT 1,
+    last_login_at INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS app_admin_sessions (
+    token_hash TEXT PRIMARY KEY NOT NULL,
+    admin_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS app_admin_sessions_admin_idx ON app_admin_sessions(admin_id)",
+  "CREATE INDEX IF NOT EXISTS app_admin_sessions_expiry_idx ON app_admin_sessions(expires_at)",
+  `CREATE TABLE IF NOT EXISTS account_admin_state (
+    account_type TEXT NOT NULL,
+    account_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    last_login_at INTEGER NOT NULL DEFAULT 0,
+    created_by_admin_id TEXT,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (account_type, account_id)
+  )`,
+  "CREATE INDEX IF NOT EXISTS account_admin_state_status_idx ON account_admin_state(account_type, status)",
+  `CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    event_id TEXT PRIMARY KEY NOT NULL,
+    admin_id TEXT NOT NULL,
+    admin_username TEXT NOT NULL,
+    action TEXT NOT NULL,
+    target_type TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    ip_address TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS admin_audit_logs_date_idx ON admin_audit_logs(created_at)",
+  "CREATE INDEX IF NOT EXISTS admin_audit_logs_admin_idx ON admin_audit_logs(admin_id, created_at)",
+  `CREATE TABLE IF NOT EXISTS service_health_events (
+    event_id TEXT PRIMARY KEY NOT NULL,
+    service TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    status TEXT NOT NULL,
+    duration_ms INTEGER NOT NULL,
+    detail TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS service_health_events_service_date_idx ON service_health_events(service, created_at)",
+  "CREATE INDEX IF NOT EXISTS service_health_events_status_date_idx ON service_health_events(status, created_at)",
   `CREATE TABLE IF NOT EXISTS parent_student_links (
     parent_id TEXT NOT NULL,
     student_id TEXT NOT NULL,

@@ -134,6 +134,8 @@ export async function authenticateUser(username: string, password: string): Prom
     const row = await database.first<{ id: string; username: string; password_hash: string; must_reset_password: number }>(`SELECT id, username, password_hash, must_reset_password
       FROM app_users WHERE username = ?`, [username]);
     if (!row || !await verifyPassword(password, row.password_hash)) return null;
+    const state = await database.first<{ status: string }>("SELECT status FROM account_admin_state WHERE account_type = 'student' AND account_id = ?", [row.id]);
+    if (state?.status === "disabled") return null;
     return { id: row.id, username: row.username, passwordHash: row.password_hash, mustResetPassword: Boolean(row.must_reset_password) };
   }
   return withLocalStore(async (store) => {
@@ -171,7 +173,8 @@ export async function getSessionUser(token: string): Promise<AuthUser | null> {
   if (database) {
     const row = await database.first<{ id: string; username: string; password_hash: string; must_reset_password: number }>(`SELECT u.id, u.username, u.password_hash, u.must_reset_password
       FROM app_sessions s JOIN app_users u ON u.id = s.user_id
-      WHERE s.token_hash = ? AND s.expires_at > ?`, [tokenHash, now]);
+      LEFT JOIN account_admin_state a ON a.account_type = 'student' AND a.account_id = u.id
+      WHERE s.token_hash = ? AND s.expires_at > ? AND COALESCE(a.status, 'active') = 'active'`, [tokenHash, now]);
     if (!row) return null;
     return { id: row.id, username: row.username, passwordHash: row.password_hash, mustResetPassword: Boolean(row.must_reset_password) };
   }

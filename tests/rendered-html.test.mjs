@@ -12,6 +12,8 @@ process.env.READING_PROGRESS_FILE = join(testRoot, "reading-progress.json");
 process.env.STUDENT_MEMORY_FILE = join(testRoot, "student-memory.json");
 process.env.MISTAKE_IMAGE_DIR = join(testRoot, "mistake-images");
 process.env.BOOK_AUDIO_DIR = join(testRoot, "book-audio");
+process.env.ADMIN_INITIAL_USERNAME = "admin";
+process.env.ADMIN_INITIAL_PASSWORD = "AdminTest1234";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 let workerPromise;
@@ -95,6 +97,18 @@ test("provides a separate forced-reset parent login and five parent-center pages
     assert.match(html, /initialSection/);
     assert.match(html, new RegExp(section));
   }
+});
+
+test("provides a protected administration center with account operations", async () => {
+  const loginPage = await fetchApp("/admin", { headers: { accept: "text/html" } });
+  assert.equal(loginPage.status, 200);
+  const loginHtml = await loginPage.text();
+  assert.match(loginHtml, /管理员登录/);
+  assert.match(loginHtml, /平台管理后台/);
+
+  const protectedData = await fetchApp("/api/admin/data?section=accounts");
+  assert.equal(protectedData.status, 401);
+  assert.match(JSON.stringify(await protectedData.json()), /请先登录管理后台/);
 });
 
 test("imports the complete graded ebook shelf with chapters, paragraphs, illustrations, and journal art", async () => {
@@ -287,6 +301,13 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../app/api/book-audio/file/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/book-audio-store.ts", import.meta.url), "utf8"),
     readFile(new URL("../scripts/pregenerate-book-audio.mjs", import.meta.url), "utf8"),
+  ]);
+  const [adminCenter, adminAuth, adminActions, adminData, serviceHealth] = await Promise.all([
+    readFile(new URL("../app/admin/AdminCenter.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../db/admin-auth.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/admin/actions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/admin/data/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/service-health.ts", import.meta.url), "utf8"),
   ]);
 
   for (const feature of [
@@ -548,6 +569,18 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(companionRoute, /parseReadingEvaluation/);
   assert.match(companionRoute, /correct: evaluation\.correct/);
   assert.match(companionRoute, /DEEPSEEK_API_KEY/);
+  assert.match(adminCenter, /数据总览/);
+  assert.match(adminCenter, /账号与绑定/);
+  assert.match(adminCenter, /学习数据/);
+  assert.match(adminCenter, /AI 服务/);
+  assert.match(adminCenter, /操作审计/);
+  assert.doesNotMatch(adminCenter, /chatMessages|message_text/);
+  assert.match(adminAuth, /ADMIN_INITIAL_PASSWORD/);
+  assert.match(adminAuth, /sessionLifetime = 8 \* 60 \* 60 \* 1000/);
+  assert.match(adminActions, /recordAdminAudit/);
+  assert.match(adminActions, /resetManagedAccountPassword/);
+  assert.match(adminData, /getActiveAdmin/);
+  assert.match(serviceHealth, /DELETE FROM service_health_events WHERE created_at < \?/);
   const parentLoginRoute = await readFile(new URL("../app/api/parent/auth/login/route.ts", import.meta.url), "utf8");
   const parentCompanionAi = await readFile(new URL("../lib/parent-companion-ai.ts", import.meta.url), "utf8");
   const parentCompanionRefresh = await readFile(new URL("../lib/parent-companion-refresh.ts", import.meta.url), "utf8");
