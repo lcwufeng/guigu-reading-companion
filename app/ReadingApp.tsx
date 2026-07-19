@@ -919,6 +919,14 @@ function KnowledgeArt({ card }: { card: KnowledgeCard }) {
   return <img src={card.image} alt={card.title} />;
 }
 
+function KnowledgeCardPreview({ card, className = "" }: { card: KnowledgeCard; className?: string }) {
+  return (
+    <div className={`knowledge-card-preview ${className}`.trim()}>
+      <img src={card.image} alt={`${card.title}里的龟龟主画面`} />
+    </div>
+  );
+}
+
 function StatusPill({
   icon,
   label,
@@ -2784,7 +2792,11 @@ export default function ReadingApp({
                               <img className="journal-card-frame" src={`${ASSET}/ui/journal/travel-card-frame.png`} alt="" />
                               <img className="journal-card-pin" src={`${ASSET}/ui/journal/pushpin.png`} alt="" />
                               <img className="journal-card-sticker" src={`${ASSET}/ui/journal/location-sticker.png`} alt="" />
-                              <img className="journal-card-photo" src={record.photo} alt={`${record.destination}旅行照片`} />
+                              {discovery ? (
+                                <KnowledgeCardPreview card={discovery.card} className="journal-card-photo" />
+                              ) : (
+                                <img className="journal-card-photo" src={record.photo} alt={`${record.destination}旅行照片`} />
+                              )}
                               <div className="journal-card-copy">
                                 <small>{record.date}</small>
                                 <h2>{record.destination}</h2>
@@ -2854,7 +2866,7 @@ export default function ReadingApp({
                         const discovery = discoveryForRecord(record);
                         return discovery ? (
                           <button className="inventory-card" type="button" key={record.id} onClick={() => setKnowledgeOpen(discovery)}>
-                            <div className="item-art"><KnowledgeArt card={discovery.card} /></div>
+                            <div className="item-art"><KnowledgeCardPreview card={discovery.card} /></div>
                             <strong>{record.reward}</strong><span>来自{record.destination}</span>
                           </button>
                         ) : null;

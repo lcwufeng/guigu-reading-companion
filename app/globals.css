@@ -2832,6 +2832,23 @@ button:disabled {
   width: 100%;
 }
 
+.knowledge-card-preview {
+  background: #dcefd2;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.knowledge-card-preview > img {
+  display: block;
+  height: 100%;
+  image-rendering: auto;
+  object-fit: cover;
+  object-position: center 34%;
+  width: 100%;
+}
+
 .space-knowledge-art {
   align-items: center;
   background: #dff3ff;
@@ -3122,10 +3139,16 @@ button:disabled {
 }
 
 .journal-card-photo {
+  background: #dcefd2;
   border: 2px solid rgba(111, 76, 30, 0.2);
   height: 47%;
   object-fit: cover;
+  overflow: hidden;
   width: 100%;
+}
+
+.journal-card-photo.knowledge-card-preview > img {
+  object-position: center 34%;
 }
 
 .journal-card-copy {
@@ -3434,6 +3457,18 @@ button:disabled {
   image-rendering: pixelated;
   max-height: 112px;
   max-width: 90%;
+}
+
+.journal-inventory-grid .item-art > .knowledge-card-preview {
+  height: 100%;
+  width: 100%;
+}
+
+.journal-inventory-grid .knowledge-card-preview > img {
+  image-rendering: auto;
+  max-height: none;
+  max-width: none;
+  object-position: center 28%;
 }
 
 .journal-inventory-grid strong { color: #292019; font-size: 20px; }

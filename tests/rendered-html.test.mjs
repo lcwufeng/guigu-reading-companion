@@ -427,6 +427,11 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /journal-travel-card/);
   assert.match(page, /journal-reading-card/);
   assert.match(page, /journal-inventory-grid/);
+  assert.match(page, /function KnowledgeCardPreview/);
+  assert.match(page, /KnowledgeCardPreview card=\{discovery\.card\} className="journal-card-photo"/);
+  assert.match(page, /<div className="item-art"><KnowledgeCardPreview card=\{discovery\.card\} \/><\/div>/);
+  assert.match(styles, /\.knowledge-card-preview > img \{[\s\S]*?object-position: center 34%;/);
+  assert.match(styles, /\.journal-inventory-grid \.knowledge-card-preview > img \{[\s\S]*?object-position: center 28%;/);
   assert.match(page, /第一张旅行照片正在等你/);
   assert.match(page, /下一次阅读记录会出现在这里/);
   assert.match(page, /等待新发现/);
