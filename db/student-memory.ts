@@ -98,7 +98,7 @@ function extractInterest(message: string) {
   return "";
 }
 
-function mergeEvent(current: StudentMemory, rawEvent: StudentMemoryEvent): StudentMemory {
+function mergeEvent(current: StudentMemory, rawEvent: StudentMemoryEvent, allowInterestAnalysis = true): StudentMemory {
   const memory = safeMemory(current);
   const now = Date.now();
   const type = rawEvent.type;
@@ -132,7 +132,7 @@ function mergeEvent(current: StudentMemory, rawEvent: StudentMemoryEvent): Stude
     const message = cleanText(rawEvent.message, 500);
     const studentName = extractStudentName(message);
     if (studentName) memory.studentName = studentName;
-    memory.interests = addUnique(memory.interests, extractInterest(message), 10);
+    if (allowInterestAnalysis) memory.interests = addUnique(memory.interests, extractInterest(message), 10);
   }
   memory.updatedAt = now;
   return memory;
@@ -252,7 +252,16 @@ export async function rememberStudentEvent(userId: string, event: StudentMemoryE
   const database = await readyDatabase();
   if (database) {
     const current = await getStudentMemory(userId);
-    const memory = mergeEvent(current, event);
+    let allowInterestAnalysis = true;
+    if (event.type === "chat") {
+      const controls = await database.first<{ chat_memory_enabled: number; interest_analysis_enabled: number }>(
+        "SELECT chat_memory_enabled, interest_analysis_enabled FROM user_parent_controls WHERE user_id = ?",
+        [userId],
+      );
+      if (controls && !controls.chat_memory_enabled) return current;
+      allowInterestAnalysis = !controls || Boolean(controls.interest_analysis_enabled);
+    }
+    const memory = mergeEvent(current, event, allowInterestAnalysis);
     const statements = memoryStatements(userId, memory, event.type || "derived", false);
     const latest = memory.recentActivities.at(-1);
     const previousLatest = current.recentActivities.at(-1);

@@ -300,6 +300,61 @@ test("JSON data migrates to isolated SQLite rows and can build a parent report",
     assert.deepEqual(report.interests, ["恐龙"]);
     assert.equal("chatMessages" in report, false);
 
+    const parentRun = await run(tsx, ["-e", `
+      process.env.APP_DATABASE_FILE = ${JSON.stringify(databasePath)};
+      (async () => {
+        const { authenticateParent, resetParentPassword } = await import("./db/parent-auth.ts");
+        const { parentCanAccessStudent, getParentDashboard, clearStudentChat, updateParentControls } = await import("./db/parent-center.ts");
+        const { rememberStudentEvent, getStudentMemory } = await import("./db/student-memory.ts");
+        const { saveUserState } = await import("./db/user-state.ts");
+        const { readyRuntimeDatabase } = await import("./db/runtime-database.ts");
+        const initial = await authenticateParent("同学一家长", "123456");
+        const ownDefault = initial ? await parentCanAccessStudent(initial.id, "student-demo-1") : false;
+        const forbidden = initial ? await parentCanAccessStudent(initial.id, "student-b") : true;
+        const database = await readyRuntimeDatabase();
+        await database.run("INSERT OR IGNORE INTO parent_student_links (parent_id, student_id, relationship, created_at) VALUES (?, ?, ?, ?)", [initial.id, "student-a", "母亲", Date.now()]);
+        const dashboard = await getParentDashboard(initial.id, initial.username, "student-a", 7);
+        await updateParentControls("student-a", { chatMemoryEnabled: false, interestAnalysisEnabled: false });
+        await rememberStudentEvent("student-a", { type: "chat", message: "我喜欢火星" });
+        const memoryAfterDisabledChat = await getStudentMemory("student-a");
+        await clearStudentChat("student-a");
+        const clearedAt = Date.now();
+        await saveUserState("student-a", ${JSON.stringify(gameState({
+          chatMessages: [
+            { id: now - 1_000, role: "user", text: "我喜欢恐龙" },
+            { id: now - 900, role: "turtle", text: "恐龙很有意思！" },
+          ],
+        }))}, clearedAt + 1000);
+        const chatCount = await database.first("SELECT COUNT(*) AS count FROM user_chat_messages WHERE user_id = ?", ["student-a"]);
+        await resetParentPassword(initial.id, "parent-secure-789");
+        const oldPassword = await authenticateParent("同学一家长", "123456");
+        const newPassword = await authenticateParent("同学一家长", "parent-secure-789");
+        process.stdout.write(JSON.stringify({
+          initial: { username: initial?.username, mustResetPassword: initial?.mustResetPassword },
+          ownDefault, forbidden,
+          children: dashboard?.children.map((child) => child.id),
+          selectedChild: dashboard?.selectedChild.id,
+          dashboardHasChatMessages: dashboard ? "chatMessages" in dashboard : true,
+          serializedContainsRawChat: JSON.stringify(dashboard).includes("我喜欢恐龙"),
+          interestsAfterDisabledChat: memoryAfterDisabledChat.interests,
+          chatCount: chatCount.count,
+          oldPassword: Boolean(oldPassword), newPasswordReset: newPassword?.mustResetPassword,
+        }));
+      })();
+    `]);
+    const parent = JSON.parse(parentRun.stdout);
+    assert.deepEqual(parent.initial, { username: "同学一家长", mustResetPassword: true });
+    assert.equal(parent.ownDefault, true);
+    assert.equal(parent.forbidden, false);
+    assert.deepEqual(parent.children.sort(), ["student-a", "student-demo-1"]);
+    assert.equal(parent.selectedChild, "student-a");
+    assert.equal(parent.dashboardHasChatMessages, false);
+    assert.equal(parent.serializedContainsRawChat, false);
+    assert.deepEqual(parent.interestsAfterDisabledChat, ["恐龙"]);
+    assert.equal(parent.chatCount, 0, "cleared chat cannot be re-uploaded by an already-open student client");
+    assert.equal(parent.oldPassword, false);
+    assert.equal(parent.newPasswordReset, false);
+
     const backupDirectories = await readdir(backupRoot);
     assert.equal(backupDirectories.length, 1);
     const backupFiles = await readdir(join(backupRoot, backupDirectories[0]));

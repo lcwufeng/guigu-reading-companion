@@ -104,6 +104,11 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
   if (!pet) return null;
   const now = Date.now();
   await database.run("DELETE FROM user_chat_messages WHERE expires_at <= ?", [now]);
+  const parentControls = await database.first<{ chat_cleared_at: number }>(
+    "SELECT chat_cleared_at FROM user_parent_controls WHERE user_id = ?",
+    [userId],
+  );
+  const chatClearedAt = parentControls?.chat_cleared_at || 0;
   const [readingRecords, readingRewards, travelRecords, activeTravel, mistakes, dailyRows, chatRows] = await Promise.all([
     database.all<{ record_id: string; title: string; read_date: string; answer: string; summary: string }>(
       "SELECT record_id, title, read_date, answer, summary FROM user_reading_records WHERE user_id = ? ORDER BY created_at DESC",
@@ -132,8 +137,8 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     }>("SELECT * FROM user_daily_state WHERE user_id = ? ORDER BY date_key DESC LIMIT 1", [userId]),
     database.all<{ message_id: string; role: string; message_text: string; created_at: number }>(`SELECT message_id, role, message_text, created_at FROM (
       SELECT message_id, role, message_text, created_at FROM user_chat_messages
-      WHERE user_id = ? AND expires_at > ? ORDER BY created_at DESC LIMIT 16
-    ) ORDER BY created_at ASC`, [userId, now]),
+      WHERE user_id = ? AND expires_at > ? AND created_at > ? ORDER BY created_at DESC LIMIT 16
+    ) ORDER BY created_at ASC`, [userId, now, chatClearedAt]),
   ]);
   const daily = dailyRows[0];
   return {
@@ -333,12 +338,17 @@ async function saveNormalizedState(
   });
 
   statements.push({ sql: "DELETE FROM user_chat_messages WHERE expires_at <= ?", params: [updatedAt] });
+  const parentControls = await database.first<{ chat_cleared_at: number }>(
+    "SELECT chat_cleared_at FROM user_parent_controls WHERE user_id = ?",
+    [userId],
+  );
+  const chatClearedAt = parentControls?.chat_cleared_at || 0;
   const retentionMs = chatRetentionMs();
   for (const rawMessage of list(state.chatMessages).slice(-64)) {
     const message = object(rawMessage);
     const idNumber = integer(message.id, updatedAt);
     const createdAt = idNumber > 1_500_000_000_000 ? idNumber : updatedAt;
-    if (createdAt + retentionMs <= updatedAt) continue;
+    if (createdAt + retentionMs <= updatedAt || createdAt <= chatClearedAt) continue;
     statements.push({
       sql: `INSERT INTO user_chat_messages (user_id, message_id, role, message_text, created_at, expires_at)
         VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, message_id) DO UPDATE SET

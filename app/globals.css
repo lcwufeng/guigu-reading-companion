@@ -433,6 +433,25 @@ button:disabled {
   text-decoration: underline;
 }
 
+.login-parent-link {
+  align-items: center;
+  border: 1px solid #b9c99f;
+  border-radius: 11px;
+  color: #2f6547;
+  display: flex;
+  font-size: 14px;
+  font-weight: 850;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.login-parent-link svg {
+  height: 18px;
+  width: 18px;
+}
+
 .login-button:hover {
   box-shadow: 0 4px 0 #0b4d30, 0 9px 18px rgba(25, 90, 57, 0.24);
   transform: translateY(3px);

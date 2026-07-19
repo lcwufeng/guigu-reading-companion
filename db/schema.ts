@@ -55,6 +55,56 @@ export const appSessions = sqliteTable("app_sessions", {
   index("app_sessions_expiry_idx").on(table.expiresAt),
 ]);
 
+export const appParentUsers = sqliteTable("app_parent_users", {
+  id: text("id").primaryKey(),
+  username: text("username").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  mustResetPassword: integer("must_reset_password", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [uniqueIndex("app_parent_users_username_idx").on(table.username)]);
+
+export const appParentSessions = sqliteTable("app_parent_sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  parentId: text("parent_id").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("app_parent_sessions_parent_idx").on(table.parentId),
+  index("app_parent_sessions_expiry_idx").on(table.expiresAt),
+]);
+
+export const parentStudentLinks = sqliteTable("parent_student_links", {
+  parentId: text("parent_id").notNull(),
+  studentId: text("student_id").notNull(),
+  relationship: text("relationship").notNull().default("监护人"),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.parentId, table.studentId] }),
+  index("parent_student_links_student_idx").on(table.studentId),
+]);
+
+export const userParentControls = sqliteTable("user_parent_controls", {
+  userId: text("user_id").primaryKey(),
+  interestAnalysisEnabled: integer("interest_analysis_enabled", { mode: "boolean" }).notNull().default(true),
+  chatMemoryEnabled: integer("chat_memory_enabled", { mode: "boolean" }).notNull().default(true),
+  mistakePhotoRetentionDays: integer("mistake_photo_retention_days").notNull().default(365),
+  chatClearedAt: integer("chat_cleared_at").notNull().default(0),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const parentDeletionRequests = sqliteTable("parent_deletion_requests", {
+  requestId: text("request_id").primaryKey(),
+  parentId: text("parent_id").notNull(),
+  studentId: text("student_id").notNull(),
+  status: text("status").notNull().default("pending"),
+  requestedAt: integer("requested_at").notNull(),
+  resolvedAt: integer("resolved_at"),
+}, (table) => [
+  index("parent_deletion_requests_parent_idx").on(table.parentId, table.requestedAt),
+  index("parent_deletion_requests_student_idx").on(table.studentId, table.status),
+]);
+
 export const appDataMigrations = sqliteTable("app_data_migrations", {
   migrationId: text("migration_id").primaryKey(),
   completedAt: integer("completed_at").notNull(),

@@ -83,6 +83,7 @@ export default function LoginPanel({ mode, displayName = "" }: { mode: "login" |
             {mode === "reset" ? <KeyRound aria-hidden="true" /> : <LogIn aria-hidden="true" />}
             {submitting ? "请稍等…" : mode === "reset" ? "保存新密码并进入" : "登录学习屋"}
           </button>
+          {mode === "login" && <a className="login-parent-link" href={`${BASE_PATH}/parent`}><ShieldCheck aria-hidden="true" />家长中心入口</a>}
           {mode === "reset" && <button className="login-logout" type="button" onClick={logout}>退出并换一个账号</button>}
         </form>
         <small className="login-privacy"><ShieldCheck aria-hidden="true" /> 密码会加密校验，平台不会保存可直接读取的明文密码。</small>

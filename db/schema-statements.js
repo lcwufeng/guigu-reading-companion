@@ -15,6 +15,48 @@ export const SCHEMA_STATEMENTS = [
   )`,
   "CREATE INDEX IF NOT EXISTS app_sessions_user_idx ON app_sessions(user_id)",
   "CREATE INDEX IF NOT EXISTS app_sessions_expiry_idx ON app_sessions(expires_at)",
+  `CREATE TABLE IF NOT EXISTS app_parent_users (
+    id TEXT PRIMARY KEY NOT NULL,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    must_reset_password INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS app_parent_sessions (
+    token_hash TEXT PRIMARY KEY NOT NULL,
+    parent_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS app_parent_sessions_parent_idx ON app_parent_sessions(parent_id)",
+  "CREATE INDEX IF NOT EXISTS app_parent_sessions_expiry_idx ON app_parent_sessions(expires_at)",
+  `CREATE TABLE IF NOT EXISTS parent_student_links (
+    parent_id TEXT NOT NULL,
+    student_id TEXT NOT NULL,
+    relationship TEXT NOT NULL DEFAULT '监护人',
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (parent_id, student_id)
+  )`,
+  "CREATE INDEX IF NOT EXISTS parent_student_links_student_idx ON parent_student_links(student_id)",
+  `CREATE TABLE IF NOT EXISTS user_parent_controls (
+    user_id TEXT PRIMARY KEY NOT NULL,
+    interest_analysis_enabled INTEGER NOT NULL DEFAULT 1,
+    chat_memory_enabled INTEGER NOT NULL DEFAULT 1,
+    mistake_photo_retention_days INTEGER NOT NULL DEFAULT 365,
+    chat_cleared_at INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS parent_deletion_requests (
+    request_id TEXT PRIMARY KEY NOT NULL,
+    parent_id TEXT NOT NULL,
+    student_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    requested_at INTEGER NOT NULL,
+    resolved_at INTEGER
+  )`,
+  "CREATE INDEX IF NOT EXISTS parent_deletion_requests_parent_idx ON parent_deletion_requests(parent_id, requested_at DESC)",
+  "CREATE INDEX IF NOT EXISTS parent_deletion_requests_student_idx ON parent_deletion_requests(student_id, status)",
   `CREATE TABLE IF NOT EXISTS app_data_migrations (
     migration_id TEXT PRIMARY KEY NOT NULL,
     completed_at INTEGER NOT NULL,

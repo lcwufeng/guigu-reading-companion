@@ -6,6 +6,7 @@ import test, { after } from "node:test";
 
 const testRoot = join(tmpdir(), `guigu-account-tests-${process.pid}-${Date.now()}`);
 process.env.AUTH_STORE_FILE = join(testRoot, "auth.json");
+process.env.PARENT_AUTH_STORE_FILE = join(testRoot, "parent-auth.json");
 process.env.USER_STATE_FILE = join(testRoot, "user-state.json");
 process.env.READING_PROGRESS_FILE = join(testRoot, "reading-progress.json");
 process.env.STUDENT_MEMORY_FILE = join(testRoot, "student-memory.json");
@@ -54,6 +55,46 @@ test("server-renders the internal beta login before the reading companion", asyn
   assert.doesNotMatch(html, /同学一|同学二|同学三|同学四|同学五|同学六|同学七/);
   assert.doesNotMatch(html, /我的伙伴/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
+});
+
+test("provides a separate forced-reset parent login and five parent-center pages", async () => {
+  const loginPage = await fetchApp("/parent", { headers: { accept: "text/html" } });
+  assert.equal(loginPage.status, 200);
+  const loginHtml = await loginPage.text();
+  assert.match(loginHtml, /家长中心/);
+  assert.match(loginHtml, /家长账号/);
+  assert.doesNotMatch(loginHtml, /同学一家长|同学二家长/);
+
+  const login = await fetchApp("/api/parent/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username: "同学一家长", password: "123456" }),
+  });
+  assert.equal(login.status, 200);
+  assert.equal((await login.json()).mustResetPassword, true);
+  const firstCookie = cookieFrom(login);
+  assert.match(firstCookie, /^guigu_parent_session=/);
+
+  const resetPage = await fetchApp("/parent", { headers: { accept: "text/html", cookie: firstCookie } });
+  assert.match(await resetPage.text(), /首次登录请设置一个新密码/);
+  const blockedDashboard = await fetchApp("/api/parent/dashboard", { headers: { cookie: firstCookie } });
+  assert.equal(blockedDashboard.status, 401);
+
+  const reset = await fetchApp("/api/parent/auth/reset-password", {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: firstCookie },
+    body: JSON.stringify({ newPassword: "parent789", confirmPassword: "parent789" }),
+  });
+  assert.equal(reset.status, 200);
+  const activeCookie = cookieFrom(reset);
+
+  for (const [path, section] of [["/parent", "overview"], ["/parent/binding", "binding"], ["/parent/reading", "reading"], ["/parent/mistakes", "mistakes"], ["/parent/data", "data"]]) {
+    const page = await fetchApp(path, { headers: { accept: "text/html", cookie: activeCookie } });
+    assert.equal(page.status, 200, path);
+    const html = await page.text();
+    assert.match(html, /initialSection/);
+    assert.match(html, new RegExp(section));
+  }
 });
 
 test("imports the complete graded ebook shelf with chapters, paragraphs, illustrations, and journal art", async () => {

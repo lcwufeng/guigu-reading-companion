@@ -43,6 +43,13 @@
       "when": 1784450996303,
       "tag": "0005_unknown_smasher",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1784462134068,
+      "tag": "0006_brave_abomination",
+      "breakpoints": true
     }
   ]
 }

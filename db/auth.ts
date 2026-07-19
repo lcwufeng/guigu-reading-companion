@@ -10,7 +10,7 @@ type AuthUser = {
 type LocalSession = { userId: string; expiresAt: number; createdAt: number };
 type LocalAuthStore = { users: Record<string, AuthUser>; sessions: Record<string, LocalSession> };
 
-const initialAccounts = [
+export const initialStudentAccounts = [
   { id: "student-demo-1", username: "同学一" },
   { id: "student-demo-2", username: "同学二" },
   { id: "student-demo-3", username: "同学三" },
@@ -38,14 +38,14 @@ function fromBase64(value: string) {
   return bytes;
 }
 
-async function passwordHash(password: string) {
+export async function passwordHash(password: string) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations: passwordIterations }, key, 256);
   return `pbkdf2-sha256$${passwordIterations}$${toBase64(salt)}$${toBase64(new Uint8Array(bits))}`;
 }
 
-async function verifyPassword(password: string, stored: string) {
+export async function verifyPassword(password: string, stored: string) {
   const [algorithm, iterationsRaw, saltRaw, hashRaw] = stored.split("$");
   if (algorithm !== "pbkdf2-sha256" || !saltRaw || !hashRaw) return false;
   const iterations = Number(iterationsRaw);
@@ -60,14 +60,25 @@ async function verifyPassword(password: string, stored: string) {
   return difference === 0;
 }
 
-async function sha256(value: string) {
+export async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function createToken() {
+export function createToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   return toBase64(bytes).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+export async function ensureInitialStudentAccounts(database: RuntimeDatabase) {
+  for (const account of initialStudentAccounts) {
+    const exists = await database.first("SELECT id FROM app_users WHERE id = ? OR username = ?", [account.id, account.username]);
+    if (!exists) {
+      const now = Date.now();
+      await database.run(`INSERT INTO app_users (id, username, password_hash, must_reset_password, created_at, updated_at)
+        VALUES (?, ?, ?, 1, ?, ?)`, [account.id, account.username, await passwordHash(initialPassword), now, now]);
+    }
+  }
 }
 
 async function readyDatabase() {
@@ -75,14 +86,7 @@ async function readyDatabase() {
   databaseReadyPromise = (async () => {
     const database = await readyRuntimeDatabase();
     if (!database) return null;
-    for (const account of initialAccounts) {
-      const exists = await database.first("SELECT id FROM app_users WHERE id = ? OR username = ?", [account.id, account.username]);
-      if (!exists) {
-        const now = Date.now();
-        await database.run(`INSERT INTO app_users (id, username, password_hash, must_reset_password, created_at, updated_at)
-          VALUES (?, ?, ?, 1, ?, ?)`, [account.id, account.username, await passwordHash(initialPassword), now, now]);
-      }
-    }
+    await ensureInitialStudentAccounts(database);
     return database;
   })();
   return databaseReadyPromise;
@@ -106,7 +110,7 @@ async function withLocalStore<T>(update: (store: LocalAuthStore) => Promise<{ re
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     let seeded = false;
-    for (const account of initialAccounts) {
+    for (const account of initialStudentAccounts) {
       if (!store.users[account.id] && !Object.values(store.users).some((user) => user.username === account.username)) {
         store.users[account.id] = { id: account.id, username: account.username, passwordHash: await passwordHash(initialPassword), mustResetPassword: true };
         seeded = true;

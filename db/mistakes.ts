@@ -250,3 +250,51 @@ export async function deleteMistakeForUser(userId: string, mistakeId: string) {
   }, Date.now());
   return images;
 }
+
+export async function removeMistakeQuestionPhotoForUser(userId: string, mistakeId: string) {
+  const database = await readyRuntimeDatabase();
+  if (database) {
+    const row = await database.first<{ image_url: string | null }>(
+      "SELECT image_url FROM user_mistakes WHERE user_id = ? AND mistake_id = ?",
+      [userId, mistakeId],
+    );
+    if (!row?.image_url) return "";
+    await database.run("UPDATE user_mistakes SET image_url = NULL, updated_at = ? WHERE user_id = ? AND mistake_id = ?", [Date.now(), userId, mistakeId]);
+    return row.image_url;
+  }
+  const state = object(await getUserState(userId));
+  let imageUrl = "";
+  const mistakes = list(state.mistakes).map((item) => {
+    const parsed = mistakeFromObject(item);
+    if (parsed?.id !== Number(mistakeId)) return item;
+    imageUrl = parsed.imageData || "";
+    const { imageData: _imageData, ...withoutImage } = parsed;
+    void _imageData;
+    return withoutImage;
+  });
+  await saveUserState(userId, { ...state, mistakes }, Date.now());
+  return imageUrl;
+}
+
+export async function removeMistakeAnswerPhotoForUser(userId: string, attemptId: string) {
+  const database = await readyRuntimeDatabase();
+  if (database) {
+    const row = await database.first<{ answer_image_url: string }>(
+      "SELECT answer_image_url FROM user_mistake_answer_attempts WHERE user_id = ? AND attempt_id = ?",
+      [userId, attemptId],
+    );
+    if (!row?.answer_image_url) return "";
+    await database.run("UPDATE user_mistake_answer_attempts SET answer_image_url = '' WHERE user_id = ? AND attempt_id = ?", [userId, attemptId]);
+    return row.answer_image_url;
+  }
+  const state = object(await getUserState(userId));
+  let imageUrl = "";
+  const attempts = list(state.mistakeAnswerAttempts).map((item) => {
+    const record = object(item);
+    if (String(record.attemptId) !== attemptId) return item;
+    imageUrl = text(record.answerImageUrl, 600);
+    return { ...record, answerImageUrl: "" };
+  });
+  await saveUserState(userId, { ...state, mistakeAnswerAttempts: attempts }, Date.now());
+  return imageUrl;
+}
