@@ -20,7 +20,12 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "账户数据无效" }, { status: 400 });
   }
   try {
-    await saveUserState(student.id, body.state, Number(body.updatedAt) || Date.now());
+    const now = Date.now();
+    const requestedUpdatedAt = Number(body.updatedAt);
+    const updatedAt = Number.isFinite(requestedUpdatedAt)
+      ? Math.min(now + 5 * 60 * 1000, Math.max(1, Math.floor(requestedUpdatedAt)))
+      : now;
+    await saveUserState(student.id, body.state, updatedAt);
     return NextResponse.json({ saved: true });
   } catch (error) {
     const tooLarge = error instanceof Error && error.message === "user state too large";

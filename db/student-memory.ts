@@ -1,3 +1,5 @@
+import { readyRuntimeDatabase, type RuntimeDatabase, type SqlStatement } from "./runtime-database";
+
 export type StudentBookMemory = {
   title: string;
   category: string;
@@ -80,6 +82,22 @@ function extractStudentName(message: string) {
   return name;
 }
 
+function extractInterest(message: string) {
+  const patterns = [
+    /(?:我)?(?:最喜欢|喜欢|最爱|爱看|想学|想知道)(?:的是)?([^，。！？!?]{1,48})/,
+    /(?:我)?对([^，。！？!?]{1,48})(?:感兴趣|很好奇|好奇)/,
+    /(?:我)?想去([^，。！？!?]{1,48})/,
+    /(?:我)?好奇(?:的是)?([^，。！？!?]{1,48})/,
+  ];
+  for (const pattern of patterns) {
+    const topic = cleanText(message.match(pattern)?.[1], 48)
+      .replace(/^(?:看|学|了解|知道|去)\s*/, "")
+      .replace(/\s*(?:的事情|的故事)$/, "");
+    if (topic) return topic;
+  }
+  return "";
+}
+
 function mergeEvent(current: StudentMemory, rawEvent: StudentMemoryEvent): StudentMemory {
   const memory = safeMemory(current);
   const now = Date.now();
@@ -114,35 +132,76 @@ function mergeEvent(current: StudentMemory, rawEvent: StudentMemoryEvent): Stude
     const message = cleanText(rawEvent.message, 500);
     const studentName = extractStudentName(message);
     if (studentName) memory.studentName = studentName;
-    if (/(?:喜欢|最爱|感兴趣|想学|爱看|想去|想知道|好奇)/.test(message)) {
-      memory.interests = addUnique(memory.interests, message.slice(0, 120), 10);
-    }
+    memory.interests = addUnique(memory.interests, extractInterest(message), 10);
   }
   memory.updatedAt = now;
   return memory;
 }
 
 async function readyDatabase() {
-  let database: D1Database | undefined;
-  try {
-    const { env } = await import("cloudflare:workers");
-    database = env.DB;
-  } catch {
-    return null;
+  return readyRuntimeDatabase();
+}
+
+async function readNormalizedMemory(database: RuntimeDatabase, userId: string): Promise<StudentMemory | null> {
+  const profile = await database.first<{ student_name: string; updated_at: number }>(
+    "SELECT student_name, updated_at FROM user_memory_profile WHERE user_id = ?",
+    [userId],
+  );
+  if (!profile) return null;
+  const [books, learned, interests, activities] = await Promise.all([
+    database.all<{ title: string; category: string; chapter: string; last_read_at: number }>(`SELECT title, category, chapter, last_read_at
+      FROM (SELECT title, category, chapter, last_read_at FROM user_memory_books WHERE user_id = ? ORDER BY last_read_at DESC LIMIT 12)
+      ORDER BY last_read_at ASC`, [userId]),
+    database.all<{ fact_value: string }>(`SELECT fact_value FROM (
+      SELECT fact_value, last_used_at FROM user_memory_facts WHERE user_id = ? AND fact_type = 'learned' ORDER BY last_used_at DESC LIMIT 16
+    ) ORDER BY last_used_at ASC`, [userId]),
+    database.all<{ fact_value: string }>(`SELECT fact_value FROM (
+      SELECT fact_value, last_used_at FROM user_memory_facts WHERE user_id = ? AND fact_type = 'interest' ORDER BY last_used_at DESC LIMIT 10
+    ) ORDER BY last_used_at ASC`, [userId]),
+    database.all<{ activity: string; detail: string; happened_at: number }>(`SELECT activity, detail, happened_at FROM (
+      SELECT activity, detail, happened_at FROM user_activity_log WHERE user_id = ? ORDER BY happened_at DESC LIMIT 20
+    ) ORDER BY happened_at ASC`, [userId]),
+  ]);
+  return safeMemory({
+    studentName: profile.student_name,
+    books: books.map((book) => ({ title: book.title, category: book.category, chapter: book.chapter, lastReadAt: book.last_read_at })),
+    learned: learned.map((fact) => fact.fact_value),
+    interests: interests.map((fact) => fact.fact_value),
+    recentActivities: activities.map((activity) => ({ activity: activity.activity, detail: activity.detail, at: activity.happened_at })),
+    updatedAt: profile.updated_at,
+  });
+}
+
+function memoryStatements(userId: string, memory: StudentMemory, sourceType: string, includeActivities: boolean): SqlStatement[] {
+  const statements: SqlStatement[] = [{
+    sql: `INSERT INTO user_memory_profile (user_id, student_name, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET student_name = excluded.student_name, updated_at = excluded.updated_at`,
+    params: [userId, memory.studentName, memory.updatedAt],
+  }];
+  for (const book of memory.books) statements.push({
+    sql: `INSERT INTO user_memory_books (user_id, title, category, chapter, last_read_at) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, title) DO UPDATE SET category = excluded.category, chapter = excluded.chapter, last_read_at = excluded.last_read_at`,
+    params: [userId, book.title, book.category, book.chapter, book.lastReadAt],
+  });
+  for (const [factType, facts] of [["learned", memory.learned], ["interest", memory.interests]] as const) {
+    for (const fact of facts) statements.push({
+      sql: `INSERT INTO user_memory_facts (user_id, fact_type, fact_value, source_type, created_at, last_used_at, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, NULL)
+        ON CONFLICT(user_id, fact_type, fact_value) DO UPDATE SET last_used_at = excluded.last_used_at`,
+      params: [userId, factType, fact, sourceType, memory.updatedAt, memory.updatedAt],
+    });
   }
-  if (!database) return null;
-  await database.prepare(`CREATE TABLE IF NOT EXISTS user_student_memory (
-    user_id TEXT PRIMARY KEY NOT NULL,
-    memory_json TEXT NOT NULL,
-    updated_at INTEGER NOT NULL
-  )`).run();
-  return database;
+  if (includeActivities) memory.recentActivities.forEach((activity, index) => statements.push({
+    sql: "INSERT OR IGNORE INTO user_activity_log (activity_id, user_id, activity, detail, happened_at) VALUES (?, ?, ?, ?, ?)",
+    params: [`legacy:${userId}:${activity.at}:${index}`, userId, activity.activity, activity.detail, activity.at],
+  }));
+  return statements;
 }
 
 async function withLocalStore<T>(update: (store: LocalMemoryStore) => { result: T; changed: boolean }): Promise<T> {
   const filePath = process.env.STUDENT_MEMORY_FILE?.trim();
   if (!filePath) throw new Error("student memory storage unavailable");
-  let releaseQueue = () => undefined;
+  let releaseQueue: () => void = () => {};
   const previous = localStoreQueue;
   localStoreQueue = new Promise<void>((resolve) => { releaseQueue = resolve; });
   await previous;
@@ -174,12 +233,14 @@ async function withLocalStore<T>(update: (store: LocalMemoryStore) => { result: 
 export async function getStudentMemory(userId: string): Promise<StudentMemory> {
   const database = await readyDatabase();
   if (database) {
-    const row = await database.prepare("SELECT memory_json FROM user_student_memory WHERE user_id = ?")
-      .bind(userId)
-      .first<{ memory_json: string }>();
+    const normalized = await readNormalizedMemory(database, userId);
+    if (normalized) return normalized;
+    const row = await database.first<{ memory_json: string }>("SELECT memory_json FROM user_student_memory WHERE user_id = ?", [userId]);
     if (!row?.memory_json) return emptyMemory();
     try {
-      return safeMemory(JSON.parse(row.memory_json));
+      const memory = safeMemory(JSON.parse(row.memory_json));
+      await database.batch(memoryStatements(userId, memory, "legacy-d1", true));
+      return memory;
     } catch {
       return emptyMemory();
     }
@@ -192,11 +253,16 @@ export async function rememberStudentEvent(userId: string, event: StudentMemoryE
   if (database) {
     const current = await getStudentMemory(userId);
     const memory = mergeEvent(current, event);
-    await database.prepare(`INSERT INTO user_student_memory (user_id, memory_json, updated_at)
-      VALUES (?, ?, ?)
-      ON CONFLICT(user_id) DO UPDATE SET memory_json = excluded.memory_json, updated_at = excluded.updated_at`)
-      .bind(userId, JSON.stringify(memory), memory.updatedAt)
-      .run();
+    const statements = memoryStatements(userId, memory, event.type || "derived", false);
+    const latest = memory.recentActivities.at(-1);
+    const previousLatest = current.recentActivities.at(-1);
+    if (latest && (latest.at !== previousLatest?.at || latest.detail !== previousLatest?.detail || latest.activity !== previousLatest?.activity)) {
+      statements.push({
+        sql: "INSERT INTO user_activity_log (activity_id, user_id, activity, detail, happened_at) VALUES (?, ?, ?, ?, ?)",
+        params: [crypto.randomUUID(), userId, latest.activity, latest.detail, latest.at],
+      });
+    }
+    await database.batch(statements);
     return memory;
   }
   return withLocalStore((store) => {

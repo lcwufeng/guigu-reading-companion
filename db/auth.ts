@@ -1,3 +1,5 @@
+import { readyRuntimeDatabase, type RuntimeDatabase } from "./runtime-database";
+
 type AuthUser = {
   id: string;
   username: string;
@@ -16,7 +18,7 @@ const initialAccounts = [
 const initialPassword = "123456";
 const sessionLifetime = 30 * 24 * 60 * 60 * 1000;
 const passwordIterations = 210_000;
-let databaseReadyPromise: Promise<D1Database | null> | null = null;
+let databaseReadyPromise: Promise<RuntimeDatabase | null> | null = null;
 let localStoreQueue = Promise.resolve();
 
 function toBase64(bytes: Uint8Array) {
@@ -67,40 +69,14 @@ function createToken() {
 async function readyDatabase() {
   if (databaseReadyPromise) return databaseReadyPromise;
   databaseReadyPromise = (async () => {
-    let database: D1Database | undefined;
-    try {
-      const { env } = await import("cloudflare:workers");
-      database = env.DB;
-    } catch {
-      return null;
-    }
+    const database = await readyRuntimeDatabase();
     if (!database) return null;
-    await database.batch([
-      database.prepare(`CREATE TABLE IF NOT EXISTS app_users (
-        id TEXT PRIMARY KEY NOT NULL,
-        username TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        must_reset_password INTEGER NOT NULL DEFAULT 1,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
-      )`),
-      database.prepare(`CREATE TABLE IF NOT EXISTS app_sessions (
-        token_hash TEXT PRIMARY KEY NOT NULL,
-        user_id TEXT NOT NULL,
-        expires_at INTEGER NOT NULL,
-        created_at INTEGER NOT NULL
-      )`),
-      database.prepare("CREATE INDEX IF NOT EXISTS app_sessions_user_idx ON app_sessions(user_id)"),
-      database.prepare("CREATE INDEX IF NOT EXISTS app_sessions_expiry_idx ON app_sessions(expires_at)"),
-    ]);
     for (const account of initialAccounts) {
-      const exists = await database.prepare("SELECT id FROM app_users WHERE id = ? OR username = ?").bind(account.id, account.username).first();
+      const exists = await database.first("SELECT id FROM app_users WHERE id = ? OR username = ?", [account.id, account.username]);
       if (!exists) {
         const now = Date.now();
-        await database.prepare(`INSERT INTO app_users (id, username, password_hash, must_reset_password, created_at, updated_at)
-          VALUES (?, ?, ?, 1, ?, ?)`)
-          .bind(account.id, account.username, await passwordHash(initialPassword), now, now)
-          .run();
+        await database.run(`INSERT INTO app_users (id, username, password_hash, must_reset_password, created_at, updated_at)
+          VALUES (?, ?, ?, 1, ?, ?)`, [account.id, account.username, await passwordHash(initialPassword), now, now]);
       }
     }
     return database;
@@ -111,7 +87,7 @@ async function readyDatabase() {
 async function withLocalStore<T>(update: (store: LocalAuthStore) => Promise<{ result: T; changed: boolean }> | { result: T; changed: boolean }): Promise<T> {
   const filePath = process.env.AUTH_STORE_FILE?.trim();
   if (!filePath) throw new Error("auth storage unavailable");
-  let releaseQueue = () => undefined;
+  let releaseQueue: () => void = () => {};
   const previous = localStoreQueue;
   localStoreQueue = new Promise<void>((resolve) => { releaseQueue = resolve; });
   await previous;
@@ -147,10 +123,8 @@ async function withLocalStore<T>(update: (store: LocalAuthStore) => Promise<{ re
 export async function authenticateUser(username: string, password: string): Promise<AuthUser | null> {
   const database = await readyDatabase();
   if (database) {
-    const row = await database.prepare(`SELECT id, username, password_hash, must_reset_password
-      FROM app_users WHERE username = ?`)
-      .bind(username)
-      .first<{ id: string; username: string; password_hash: string; must_reset_password: number }>();
+    const row = await database.first<{ id: string; username: string; password_hash: string; must_reset_password: number }>(`SELECT id, username, password_hash, must_reset_password
+      FROM app_users WHERE username = ?`, [username]);
     if (!row || !await verifyPassword(password, row.password_hash)) return null;
     return { id: row.id, username: row.username, passwordHash: row.password_hash, mustResetPassword: Boolean(row.must_reset_password) };
   }
@@ -168,8 +142,8 @@ export async function createSession(userId: string) {
   const database = await readyDatabase();
   if (database) {
     await database.batch([
-      database.prepare("DELETE FROM app_sessions WHERE expires_at <= ?").bind(now),
-      database.prepare("INSERT INTO app_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").bind(tokenHash, userId, expiresAt, now),
+      { sql: "DELETE FROM app_sessions WHERE expires_at <= ?", params: [now] },
+      { sql: "INSERT INTO app_sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)", params: [tokenHash, userId, expiresAt, now] },
     ]);
   } else {
     await withLocalStore((store) => {
@@ -187,11 +161,9 @@ export async function getSessionUser(token: string): Promise<AuthUser | null> {
   const now = Date.now();
   const database = await readyDatabase();
   if (database) {
-    const row = await database.prepare(`SELECT u.id, u.username, u.password_hash, u.must_reset_password
+    const row = await database.first<{ id: string; username: string; password_hash: string; must_reset_password: number }>(`SELECT u.id, u.username, u.password_hash, u.must_reset_password
       FROM app_sessions s JOIN app_users u ON u.id = s.user_id
-      WHERE s.token_hash = ? AND s.expires_at > ?`)
-      .bind(tokenHash, now)
-      .first<{ id: string; username: string; password_hash: string; must_reset_password: number }>();
+      WHERE s.token_hash = ? AND s.expires_at > ?`, [tokenHash, now]);
     if (!row) return null;
     return { id: row.id, username: row.username, passwordHash: row.password_hash, mustResetPassword: Boolean(row.must_reset_password) };
   }
@@ -210,7 +182,7 @@ export async function deleteSession(token: string) {
   const tokenHash = await sha256(token);
   const database = await readyDatabase();
   if (database) {
-    await database.prepare("DELETE FROM app_sessions WHERE token_hash = ?").bind(tokenHash).run();
+    await database.run("DELETE FROM app_sessions WHERE token_hash = ?", [tokenHash]);
   } else {
     await withLocalStore((store) => {
       const changed = Boolean(store.sessions[tokenHash]);
@@ -225,8 +197,8 @@ export async function resetPassword(userId: string, newPassword: string) {
   const database = await readyDatabase();
   if (database) {
     await database.batch([
-      database.prepare("UPDATE app_users SET password_hash = ?, must_reset_password = 0, updated_at = ? WHERE id = ?").bind(nextHash, Date.now(), userId),
-      database.prepare("DELETE FROM app_sessions WHERE user_id = ?").bind(userId),
+      { sql: "UPDATE app_users SET password_hash = ?, must_reset_password = 0, updated_at = ? WHERE id = ?", params: [nextHash, Date.now(), userId] },
+      { sql: "DELETE FROM app_sessions WHERE user_id = ?", params: [userId] },
     ]);
   } else {
     await withLocalStore((store) => {

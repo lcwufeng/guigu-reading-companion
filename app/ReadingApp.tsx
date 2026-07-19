@@ -186,6 +186,9 @@ type CompanionPayload = {
   name: string;
   message?: string;
   title?: string;
+  bookId?: string;
+  chapterTitle?: string;
+  questionKey?: string;
   excerpt?: string;
   question?: string;
   referenceAnswer?: string;
@@ -1038,7 +1041,7 @@ export default function ReadingApp({
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
   const dailyTasksExpanded = mobileLayout ? dailyTasksOpen : true;
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hideAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideAdvanceTimerRef = useRef<number | null>(null);
   const voiceSessionRef = useRef<VoiceSession | null>(null);
   const autoFinishVoiceRef = useRef<() => void>(() => undefined);
   const voiceAbortRef = useRef<AbortController | null>(null);
@@ -1727,6 +1730,9 @@ export default function ReadingApp({
         mode: "reading",
         name: game.name,
         title: `${selectedBook.title} · ${activeChapter?.title || ""}`,
+        bookId: selectedBook.id,
+        chapterTitle: activeChapter?.title || "",
+        questionKey: currentChapterQuestionKey,
         excerpt: activeChapterText,
         question: activeChapterPrompt.question,
         referenceAnswer: activeChapterPrompt.referenceAnswer,

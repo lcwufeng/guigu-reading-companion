@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActiveStudent } from "../../auth-user";
 import { rememberStudentEvent, type StudentMemory } from "../../../db/student-memory";
+import { recordChapterAnswer } from "../../../db/learning-records";
 
 type CompanionMessage = {
   role?: "user" | "assistant";
@@ -12,6 +13,9 @@ type CompanionRequest = {
   name?: string;
   message?: string;
   title?: string;
+  bookId?: string;
+  chapterTitle?: string;
+  questionKey?: string;
   excerpt?: string;
   question?: string;
   referenceAnswer?: string;
@@ -190,6 +194,30 @@ function safeHistory(history: unknown) {
     .filter((item) => item.content && !personalInfoPattern.test(item.content) && !urgentSafetyPattern.test(item.content));
 }
 
+async function saveReadingAttempt(
+  userId: string,
+  body: CompanionRequest,
+  evaluation: ReadingEvaluation,
+  modelSource: "mimo" | "deepseek",
+) {
+  try {
+    await recordChapterAnswer({
+      userId,
+      bookId: body.bookId,
+      questionKey: body.questionKey,
+      bookTitle: clean(body.title, 160),
+      chapterTitle: clean(body.chapterTitle, 160),
+      question: clean(body.question, 500),
+      answer: clean(body.answer, 1_000),
+      correct: evaluation.correct,
+      feedback: evaluation.feedback,
+      modelSource,
+    });
+  } catch {
+    // A reporting write must never prevent the child from receiving the completed reading evaluation.
+  }
+}
+
 export async function POST(request: Request) {
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
@@ -230,6 +258,7 @@ export async function POST(request: Request) {
     if (mimoApiKey) {
       try {
         const evaluation = await evaluateReadingWithMiMo(mimoApiKey, name, userContext);
+        await saveReadingAttempt(student.id, body, evaluation, "mimo");
         return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "mimo" });
       } catch {
         // MiMo is the preferred judge. Any timeout, upstream error, empty reply or invalid JSON falls through to DeepSeek.
@@ -240,6 +269,7 @@ export async function POST(request: Request) {
     if (deepSeekApiKey) {
       try {
         const evaluation = await evaluateReadingWithDeepSeek(deepSeekApiKey, name, userContext);
+        await saveReadingAttempt(student.id, body, evaluation, "deepseek");
         return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "deepseek" });
       } catch {
         // The client receives a retryable response below instead of waiting for the hosting layer to return a 504.

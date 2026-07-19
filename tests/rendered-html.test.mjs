@@ -11,6 +11,7 @@ process.env.READING_PROGRESS_FILE = join(testRoot, "reading-progress.json");
 process.env.STUDENT_MEMORY_FILE = join(testRoot, "student-memory.json");
 process.env.MISTAKE_IMAGE_DIR = join(testRoot, "mistake-images");
 process.env.BOOK_AUDIO_DIR = join(testRoot, "book-audio");
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 let workerPromise;
 async function getWorker() {
@@ -24,7 +25,7 @@ async function getWorker() {
 async function fetchApp(path = "/", init = {}) {
   const worker = await getWorker();
   return worker.fetch(
-    new Request(`http://localhost${path}`, init),
+    new Request(`http://localhost${basePath}${path}`, init),
     { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
     { waitUntil() {}, passThroughOnException() {} },
   );
@@ -198,7 +199,7 @@ test("forces first-login password reset and isolates every student's data", asyn
 });
 
 test("keeps the product loops, account safeguards, and required art assets", async () => {
-  const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, bookPrompts, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, hosting] = await Promise.all([
+  const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, studentMemoryRoute, studentMemoryDb, bookKnowledge, bookPrompts, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, schemaStatements, hosting] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -219,6 +220,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../app/api/auth/reset-password/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/user-state/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
   const [bookAudioRoute, bookAudioFileRoute, bookAudioStore, bookAudioGenerator] = await Promise.all([
@@ -513,7 +515,8 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(resetRoute, /newPassword === "123456"/);
   assert.match(resetRoute, /resetPassword/);
   assert.match(userStateRoute, /getActiveStudent/);
-  assert.match(userStateDb, /user_id TEXT PRIMARY KEY/);
+  assert.match(userStateDb, /readyRuntimeDatabase/);
+  assert.match(schemaStatements, /user_id TEXT PRIMARY KEY/);
   assert.match(hosting, /"d1": "DB"/);
   assert.match(hosting, /"r2": "UPLOADS"/);
   assert.match(packageJson, /"ws"/);
