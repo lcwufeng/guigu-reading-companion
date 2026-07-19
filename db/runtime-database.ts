@@ -9,6 +9,7 @@ export type RuntimeDatabase = {
   all<T>(sql: string, params?: SqlValue[]): Promise<T[]>;
   run(sql: string, params?: SqlValue[]): Promise<void>;
   batch(statements: SqlStatement[]): Promise<void>;
+  close?(): Promise<void>;
 };
 
 type D1PreparedStatementLike = {
@@ -62,6 +63,7 @@ async function sqliteDatabase(filePath: string): Promise<RuntimeDatabase> {
   const sqliteSpecifier = "node:sqlite";
   const sqliteModule = await import(/* @vite-ignore */ sqliteSpecifier) as unknown as {
     DatabaseSync: new (path: string) => {
+      close(): void;
       exec(sql: string): void;
       prepare(sql: string): {
         get(...params: SqlValue[]): unknown;
@@ -96,6 +98,9 @@ async function sqliteDatabase(filePath: string): Promise<RuntimeDatabase> {
         database.exec("ROLLBACK");
         throw error;
       }
+    },
+    async close() {
+      database.close();
     },
   };
 }

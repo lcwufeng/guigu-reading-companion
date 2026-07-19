@@ -199,5 +199,7 @@ await database.run(`INSERT OR REPLACE INTO app_data_migrations
   (migration_id, completed_at, source_backup_dir, details_json) VALUES (?, ?, ?, ?)`, [
   `json-to-sqlite-${timestamp}`, Date.now(), backupDirectory, JSON.stringify(details),
 ]);
+await database.all("PRAGMA wal_checkpoint(TRUNCATE)");
+await database.close?.();
 
 console.log(JSON.stringify({ databasePath, backupDirectory, integrity: "ok", ...details }, null, 2));
