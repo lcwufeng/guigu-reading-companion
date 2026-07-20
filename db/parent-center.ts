@@ -1,9 +1,9 @@
 import classicBookManifest from "../app/classic-books-manifest.json";
 import { deleteMistakeForUser, removeMistakeAnswerPhotoForUser, removeMistakeQuestionPhotoForUser } from "./mistakes";
 import { deleteMistakeImage } from "./mistake-images";
-import { getStoredParentCompanionSuggestion } from "./parent-companion";
+import { getParentCompanionSuggestionHistory, getStoredParentCompanionSuggestion, type StoredParentCompanionSuggestion } from "./parent-companion";
 import { buildParentReport, type ParentReportData } from "./parent-reports";
-import { getStudentMemory, type StudentMemory } from "./student-memory";
+import { extractInterestTopics, getStudentMemory, normalizeInterestTopics, type StudentMemory } from "./student-memory";
 import { readyRuntimeDatabase, type RuntimeDatabase } from "./runtime-database";
 
 export type ParentChild = { id: string; displayName: string; relationship: string; linkedAt: number };
@@ -23,6 +23,7 @@ export type ParentDashboard = {
     modelSource: string;
     generatedAt: number;
   };
+  companionSuggestions: StoredParentCompanionSuggestion[];
   overview: ParentReportData;
   reading: {
     books: Array<{
@@ -145,7 +146,7 @@ export async function getParentDashboard(
   const overview = await buildParentReport(selectedChild.id, { from, to });
   if (!overview) return null;
 
-  const [progress, metrics, answerRows, recordRows, mistakeRows, analysisRows, attemptRows, memory, controls, deletionRequest, companionSuggestion] = await Promise.all([
+  const [progress, metrics, answerRows, recordRows, mistakeRows, analysisRows, attemptRows, memory, controls, deletionRequest, companionSuggestion, companionSuggestions] = await Promise.all([
     database.all<{ book_id: string; chapter_index: number; page_index: number; completed: number; updated_at: number }>(
       "SELECT * FROM user_reading_progress WHERE user_id = ? ORDER BY updated_at DESC",
       [selectedChild.id],
@@ -169,6 +170,7 @@ export async function getParentDashboard(
     database.first<{ request_id: string; status: string; requested_at: number }>(`SELECT request_id, status, requested_at FROM parent_deletion_requests
       WHERE parent_id = ? AND student_id = ? ORDER BY requested_at DESC LIMIT 1`, [parentId, selectedChild.id]),
     getStoredParentCompanionSuggestion(selectedChild.id),
+    getParentCompanionSuggestionHistory(selectedChild.id, 8),
   ]);
 
   const metricMap = new Map(metrics.map((row) => [row.book_id, row]));
@@ -177,15 +179,18 @@ export async function getParentDashboard(
   const attemptsByMistake = new Map<string, typeof attemptRows>();
   for (const attempt of attemptRows) attemptsByMistake.set(attempt.mistake_id, [...(attemptsByMistake.get(attempt.mistake_id) || []), attempt]);
 
+  const effectiveCompanionSuggestion = companionSuggestion || {
+    text: `今天可以和${selectedChild.displayName}一起选一篇短故事，安静共读十分钟。把选择权交给孩子，读完只问一句：“哪个地方让你最想讲给我听？”`,
+    modelSource: "local-fallback",
+    generatedAt: 0,
+  };
+
   return {
     parent: { id: parentId, displayName: parentDisplayName },
     children,
     selectedChild,
-    companionSuggestion: companionSuggestion || {
-      text: `今天可以和${selectedChild.displayName}一起选一篇短故事，安静共读十分钟。把选择权交给孩子，读完只问一句：“哪个地方让你最想讲给我听？”`,
-      modelSource: "local-fallback",
-      generatedAt: 0,
-    },
+    companionSuggestion: effectiveCompanionSuggestion,
+    companionSuggestions: companionSuggestions.length ? companionSuggestions : [effectiveCompanionSuggestion].filter((item) => item.generatedAt > 0),
     overview,
     reading: {
       books: progress.map((row) => {
@@ -303,20 +308,29 @@ export async function clearStudentChat(studentId: string) {
 }
 
 export async function addParentMemoryFact(studentId: string, factType: "learned" | "interest", value: unknown) {
-  const fact = cleanFact(value);
-  if (!fact) throw new Error("empty fact");
+  const rawFact = cleanFact(value);
+  const explicitTopics = factType === "interest" ? extractInterestTopics(rawFact) : [];
+  const facts = factType === "interest" ? (explicitTopics.length ? explicitTopics : normalizeInterestTopics(rawFact)) : [rawFact].filter(Boolean);
+  if (!facts.length) throw new Error("empty fact");
   const database = await databaseOrThrow();
   const now = Date.now();
-  await database.run(`INSERT INTO user_memory_facts
-    (user_id, fact_type, fact_value, source_type, created_at, last_used_at, expires_at)
-    VALUES (?, ?, ?, 'parent', ?, ?, NULL)
-    ON CONFLICT(user_id, fact_type, fact_value) DO UPDATE SET last_used_at = excluded.last_used_at`, [studentId, factType, fact, now, now]);
+  await database.batch(facts.map((fact) => ({
+    sql: `INSERT INTO user_memory_facts
+      (user_id, fact_type, fact_value, source_type, created_at, last_used_at, expires_at)
+      VALUES (?, ?, ?, 'parent', ?, ?, NULL)
+      ON CONFLICT(user_id, fact_type, fact_value) DO UPDATE SET last_used_at = excluded.last_used_at`,
+    params: [studentId, factType, fact, now, now],
+  })));
 }
 
 export async function deleteParentMemoryItem(studentId: string, kind: "learned" | "interest" | "book" | "activity", value: string) {
   const database = await databaseOrThrow();
   if (kind === "learned" || kind === "interest") {
-    await database.run("DELETE FROM user_memory_facts WHERE user_id = ? AND fact_type = ? AND fact_value = ?", [studentId, kind, value]);
+    if (kind === "interest") {
+      const rows = await database.all<{ fact_value: string }>("SELECT fact_value FROM user_memory_facts WHERE user_id = ? AND fact_type = 'interest'", [studentId]);
+      const storedValues = rows.filter((row) => normalizeInterestTopics(row.fact_value).includes(value)).map((row) => row.fact_value);
+      await database.batch(storedValues.map((storedValue) => ({ sql: "DELETE FROM user_memory_facts WHERE user_id = ? AND fact_type = 'interest' AND fact_value = ?", params: [studentId, storedValue] })));
+    } else await database.run("DELETE FROM user_memory_facts WHERE user_id = ? AND fact_type = ? AND fact_value = ?", [studentId, kind, value]);
   } else if (kind === "book") {
     await database.run("DELETE FROM user_memory_books WHERE user_id = ? AND title = ?", [studentId, value]);
   } else {

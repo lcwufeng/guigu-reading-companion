@@ -36,6 +36,14 @@ export async function getStoredParentCompanionSuggestion(studentId: string): Pro
   return { text: row.suggestion, modelSource: row.model_source, generatedAt: row.generated_at };
 }
 
+export async function getParentCompanionSuggestionHistory(studentId: string, limit = 8): Promise<StoredParentCompanionSuggestion[]> {
+  const database = await readyRuntimeDatabase();
+  if (!database) return [];
+  const rows = await database.all<{ suggestion: string; model_source: string; generated_at: number }>(`SELECT suggestion, model_source, generated_at
+    FROM parent_companion_suggestion_history WHERE user_id = ? ORDER BY generated_at DESC LIMIT ?`, [studentId, Math.min(20, Math.max(1, limit))]);
+  return rows.map((row) => ({ text: row.suggestion, modelSource: row.model_source, generatedAt: row.generated_at }));
+}
+
 export async function saveParentCompanionSuggestion(
   parentId: string,
   studentId: string,
@@ -43,10 +51,25 @@ export async function saveParentCompanionSuggestion(
 ) {
   const database = await readyRuntimeDatabase();
   if (!database) throw new Error("parent companion database unavailable");
-  await database.run(`INSERT INTO parent_companion_suggestions
-    (user_id, suggestion, model_source, generated_at, generated_by_parent_id)
-    VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET
-    suggestion = excluded.suggestion, model_source = excluded.model_source,
-    generated_at = excluded.generated_at, generated_by_parent_id = excluded.generated_by_parent_id`,
-  [studentId, suggestion.text, suggestion.modelSource, suggestion.generatedAt, parentId]);
+  await database.batch([
+    {
+      sql: `INSERT INTO parent_companion_suggestions
+        (user_id, suggestion, model_source, generated_at, generated_by_parent_id)
+        VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET
+        suggestion = excluded.suggestion, model_source = excluded.model_source,
+        generated_at = excluded.generated_at, generated_by_parent_id = excluded.generated_by_parent_id`,
+      params: [studentId, suggestion.text, suggestion.modelSource, suggestion.generatedAt, parentId],
+    },
+    {
+      sql: `INSERT INTO parent_companion_suggestion_history
+        (history_id, user_id, suggestion, model_source, generated_at, generated_by_parent_id) VALUES (?, ?, ?, ?, ?, ?)`,
+      params: [crypto.randomUUID(), studentId, suggestion.text, suggestion.modelSource, suggestion.generatedAt, parentId],
+    },
+    {
+      sql: `DELETE FROM parent_companion_suggestion_history WHERE user_id = ? AND history_id NOT IN (
+        SELECT history_id FROM parent_companion_suggestion_history WHERE user_id = ? ORDER BY generated_at DESC LIMIT 30
+      )`,
+      params: [studentId, studentId],
+    },
+  ]);
 }

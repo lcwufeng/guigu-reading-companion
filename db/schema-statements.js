@@ -136,6 +136,15 @@ export const SCHEMA_STATEMENTS = [
     generated_at INTEGER NOT NULL,
     generated_by_parent_id TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS parent_companion_suggestion_history (
+    history_id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    suggestion TEXT NOT NULL,
+    model_source TEXT NOT NULL,
+    generated_at INTEGER NOT NULL,
+    generated_by_parent_id TEXT NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS parent_companion_suggestion_history_user_date_idx ON parent_companion_suggestion_history(user_id, generated_at DESC)",
   `CREATE TABLE IF NOT EXISTS parent_companion_refreshes (
     user_id TEXT NOT NULL,
     date_key TEXT NOT NULL,

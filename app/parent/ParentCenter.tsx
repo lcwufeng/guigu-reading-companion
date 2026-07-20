@@ -36,7 +36,7 @@ const navigation: Array<{ key: ParentSection; label: string; path: string; icon:
   { key: "overview", label: "本周概览", path: "", icon: <Sparkles /> },
   { key: "reading", label: "阅读报告", path: "reading", icon: <BookHeart /> },
   { key: "mistakes", label: "错题报告", path: "mistakes", icon: <FileQuestion /> },
-  { key: "data", label: "记忆与数据", path: "data", icon: <ShieldCheck /> },
+  { key: "data", label: "成长记忆", path: "data", icon: <ShieldCheck /> },
 ];
 
 function date(value: number | null | undefined, withTime = false) {
@@ -254,19 +254,63 @@ function Data({ dashboard, act, factType, setFactType, newFact, setNewFact, addF
   setNewFact: (value: string) => void;
   addFact: (event: FormEvent) => Promise<void>;
 }) {
-  const memoryGroups = [
-    { title: "最近学会", kind: "learned" as const, values: dashboard.memory.learned },
-    { title: "可能感兴趣", kind: "interest" as const, values: dashboard.memory.interests },
-    { title: "最近阅读", kind: "book" as const, values: dashboard.memory.books.map((book) => book.title) },
-  ];
+  const preferredName = dashboard.memory.studentName;
+  const learnedDetails = dashboard.memory.learnedDetails.length
+    ? [...dashboard.memory.learnedDetails].reverse()
+    : dashboard.memory.learned.map((value) => ({ value, sourceType: "derived", firstRecordedAt: 0, lastRecordedAt: 0 }));
+  const interestDetails = dashboard.memory.interestDetails.length
+    ? [...dashboard.memory.interestDetails].reverse()
+    : dashboard.memory.interests.map((value) => ({ value, sourceType: "derived", firstRecordedAt: 0, lastRecordedAt: 0 }));
+  function sourceLabel(sourceType: string) {
+    if (sourceType === "parent") return "家长补充";
+    if (sourceType === "chat-explicit") return "孩子明确表达";
+    if (sourceType === "learning-activity") return "学习记录";
+    return "历史提炼";
+  }
   return <>
-    <PageTitle eyebrow="记忆与数据" title="让龟龟记住有用的，忘掉不必要的">长期只保留提炼后的学习、兴趣和活动记忆；家长可查看、删除或暂停新的提炼。</PageTitle>
-    <div className={styles.memoryGrid}>{memoryGroups.map((group) => <article className={styles.paperCard} key={group.kind}><h2>{group.title}</h2>{group.values.length ? <div className={styles.chips}>{group.values.map((value) => <span key={value}>{value}<button aria-label={`删除${value}`} onClick={() => void act("delete-memory", { kind: group.kind, value }, `不再让龟龟记住“${value}”？`)}><Trash2 /></button></span>)}</div> : <p className={styles.muted}>还没有这类记忆。</p>}</article>)}</div>
+    <PageTitle eyebrow="兴趣和成长记忆" title={`龟龟记得的${dashboard.selectedChild.displayName}`}>这里整理龟龟长期保留的称呼、阅读、学习、兴趣和共同经历。兴趣只来自孩子明确表达或家长补充，不会因为读过一本书就直接给孩子贴标签。</PageTitle>
+
+    <article className={styles.memoryProfile}>
+      <div className={styles.memoryProfileAvatar}>{(preferredName || dashboard.selectedChild.displayName).slice(-1)}</div>
+      <div className={styles.memoryIdentity}><span>账号中的姓名或称呼</span><strong>{dashboard.selectedChild.displayName}</strong></div>
+      <div className={styles.memoryIdentity}><span>孩子希望龟龟怎样称呼</span><strong>{preferredName || "还没有主动告诉龟龟"}</strong><small>{preferredName ? "来自孩子在聊天中的明确表达" : "龟龟不会自行猜测昵称"}</small></div>
+      <div className={styles.memoryProfileNote}><LockKeyhole /><span>这里只展示提炼后的长期记忆，不展示聊天原文。</span></div>
+    </article>
+
+    <section className={styles.growthSection}>
+      <div className={styles.sectionIntro}><div><span>阅读足迹</span><h2><BookHeart /> 最近读过的书和类别</h2></div><p>阅读记录只说明近期接触过，不自动等同于兴趣偏好。</p></div>
+      {dashboard.memory.books.length ? <div className={styles.memoryBookGrid}>{[...dashboard.memory.books].reverse().map((book) => <article className={styles.memoryBookCard} key={book.title}>
+        <div className={styles.miniBookCover}>{book.title.slice(0, 1)}</div><div><span>{book.category || "未分类读物"}</span><h3>{book.title}</h3><p>{book.chapter ? `最近读到：${book.chapter}` : "已经打开阅读"}</p><small>最近阅读：{date(book.lastReadAt, true)}</small></div>
+        <button aria-label={`删除${book.title}的阅读记忆`} onClick={() => void act("delete-memory", { kind: "book", value: book.title }, `不再让龟龟记住《${book.title}》的阅读记忆？`)}><Trash2 /></button>
+      </article>)}</div> : <Empty>第一次打开书籍后，书名、类别和最近章节会出现在这里。</Empty>}
+    </section>
+
+    <section className={styles.growthSection}>
+      <div className={styles.sectionIntro}><div><span>学习成长</span><h2><CheckCircle2 /> 最近学习了什么</h2></div><p>记录完成阅读、依据原文思考和整理错题等学习过程。</p></div>
+      {learnedDetails.length ? <div className={styles.factCardGrid}>{learnedDetails.map((fact) => <article className={styles.factCard} key={fact.value}><header><em>{sourceLabel(fact.sourceType)}</em><button aria-label={`删除${fact.value}`} onClick={() => void act("delete-memory", { kind: "learned", value: fact.value }, `不再让龟龟记住“${fact.value}”？`)}><Trash2 /></button></header><p>{fact.value}</p>{fact.lastRecordedAt > 0 && <small>最近记录：{date(fact.lastRecordedAt, true)}</small>}</article>)}</div> : <Empty>完成阅读思考或家长补充后，学习记忆会出现在这里。</Empty>}
+    </section>
+
+    <section className={styles.growthSection}>
+      <div className={styles.sectionIntro}><div><span>兴趣线索</span><h2><Star /> 最近对什么感兴趣</h2></div><p>兴趣会随着孩子的表达变化，不代表固定性格或能力判断。</p></div>
+      <div className={styles.interestNote}><Sparkles /><p><strong>新的记录原则：</strong>只有孩子明确说“我喜欢……”“我对……感兴趣”，或者由家长补充，才会成为兴趣主题；偶然提问、去过的地方和读过的类别会分开记录。</p></div>
+      {interestDetails.length ? <div className={styles.factCardGrid}>{interestDetails.map((fact) => <article className={`${styles.factCard} ${styles.interestFact}`} key={fact.value}><header><em>{sourceLabel(fact.sourceType)}</em><button aria-label={`删除兴趣${fact.value}`} onClick={() => void act("delete-memory", { kind: "interest", value: fact.value }, `不再让龟龟记住“${fact.value}”这个兴趣主题？`)}><Trash2 /></button></header><strong>{fact.value}</strong>{fact.lastRecordedAt > 0 && <small>最近记录：{date(fact.lastRecordedAt, true)}</small>}</article>)}</div> : <Empty>还没有足够明确的兴趣表达，龟龟会继续耐心了解。</Empty>}
+    </section>
+
+    <section className={styles.growthSection}>
+      <div className={styles.sectionIntro}><div><span>共同经历</span><h2><Sparkles /> 最近和龟龟一起做过什么</h2></div><p>保留最近的阅读、旅行、捉迷藏、整理错题等活动摘要。</p></div>
+      {dashboard.memory.recentActivities.length ? <ul className={styles.activityMemory}>{[...dashboard.memory.recentActivities].reverse().slice(0, 12).map((item, index) => <li key={`${item.at}-${item.activity}-${index}`}><span>{item.activity}</span><p>{item.detail || "完成了一次活动"}</p><time>{date(item.at, true)}</time></li>)}</ul> : <Empty>和龟龟完成活动后，会在这里留下简短足迹。</Empty>}
+    </section>
+
+    <section className={styles.growthSection}>
+      <div className={styles.sectionIntro}><div><span>个性化陪伴</span><h2><HeartHandshake /> 龟龟据此生成的建议</h2></div><p>建议来自上述近期记忆，每次家长成功登录时检查更新，每天最多生成一次。</p></div>
+      {dashboard.companionSuggestions.length ? <div className={styles.suggestionHistory}>{dashboard.companionSuggestions.map((suggestion, index) => <article className={styles.suggestionHistoryCard} key={`${suggestion.generatedAt}-${index}`}><header><span>{index === 0 ? "最新建议" : "过往建议"}</span><time>{date(suggestion.generatedAt, true)}</time></header><p>{suggestion.text}</p></article>)}</div> : <article className={styles.suggestionHistoryCard}><header><span>当前建议</span><time>等待首次更新</time></header><p>{dashboard.companionSuggestion.text}</p></article>}
+    </section>
+
     <article className={styles.paperCard}><h2><Plus /> 家长补充一条有用记忆</h2><form className={styles.factForm} onSubmit={(event) => void addFact(event)}><select value={factType} onChange={(event) => setFactType(event.target.value as "learned" | "interest")}><option value="learned">学会的内容</option><option value="interest">感兴趣的主题</option></select><input value={newFact} onChange={(event) => setNewFact(event.target.value)} maxLength={140} placeholder="例如：最近对太空和行星很好奇" required /><button><Plus />添加</button></form></article>
     <h2 className={styles.sectionHeading}>隐私与保留设置</h2>
     <article className={styles.controlCard}>
-      <label><div><strong>从对话中提炼学生记忆</strong><p>关闭后，新对话不再提取姓名和兴趣；已提炼记忆可以在上方单独删除。</p></div><input type="checkbox" checked={dashboard.controls.chatMemoryEnabled} onChange={(event) => void act("update-controls", { chatMemoryEnabled: event.target.checked })} /></label>
-      <label><div><strong>兴趣偏好分析</strong><p>关闭后，对话中不再新增兴趣主题。</p></div><input type="checkbox" checked={dashboard.controls.interestAnalysisEnabled} onChange={(event) => void act("update-controls", { interestAnalysisEnabled: event.target.checked })} /></label>
+      <label><div><strong>从对话中提炼学生记忆</strong><p>关闭后，新对话不再提取孩子主动告诉龟龟的称呼和明确兴趣；已提炼记忆可以在上方单独删除。</p></div><input type="checkbox" checked={dashboard.controls.chatMemoryEnabled} onChange={(event) => void act("update-controls", { chatMemoryEnabled: event.target.checked })} /></label>
+      <label><div><strong>明确兴趣提炼</strong><p>只提炼孩子明确表达的喜欢或好奇主题，不根据一本书或一次活动推断兴趣。</p></div><input type="checkbox" checked={dashboard.controls.interestAnalysisEnabled} onChange={(event) => void act("update-controls", { interestAnalysisEnabled: event.target.checked })} /></label>
       <label><div><strong>错题照片建议保留期</strong><p>家长仍可以在错题报告中提前删除单张照片。</p></div><select value={dashboard.controls.mistakePhotoRetentionDays} onChange={(event) => void act("update-controls", { mistakePhotoRetentionDays: Number(event.target.value) })}><option value={30}>30 天</option><option value={90}>90 天</option><option value={180}>180 天</option><option value={365}>1 年</option></select></label>
     </article>
     <div className={styles.dataActions}>

@@ -1,4 +1,5 @@
 import { readyRuntimeDatabase } from "./runtime-database";
+import { normalizeInterestTopics } from "./student-memory";
 
 export type ParentReportRange = {
   from: number;
@@ -79,7 +80,7 @@ export async function buildParentReport(
     [userId, range.from, range.to]),
     database.all<{ fact_type: string; fact_value: string }>(`SELECT fact_type, fact_value FROM user_memory_facts
       WHERE user_id = ? AND fact_type IN ('learned', 'interest')
-      ORDER BY last_used_at DESC LIMIT 30`, [userId]),
+      ORDER BY last_used_at DESC LIMIT 80`, [userId]),
     database.all<{ activity: string; detail: string; happened_at: number }>(`SELECT activity, detail, happened_at
       FROM user_activity_log WHERE user_id = ? AND happened_at BETWEEN ? AND ?
       ORDER BY happened_at DESC LIMIT 30`, [userId, range.from, range.to]),
@@ -116,7 +117,9 @@ export async function buildParentReport(
     },
     rewardChanges: Object.fromEntries(rewards.map((row) => [row.resource_type, row.amount])),
     learned: facts.filter((fact) => fact.fact_type === "learned").map((fact) => fact.fact_value).slice(0, 12),
-    interests: facts.filter((fact) => fact.fact_type === "interest").map((fact) => fact.fact_value).slice(0, 10),
+    interests: [...new Set(facts
+      .filter((fact) => fact.fact_type === "interest")
+      .flatMap((fact) => normalizeInterestTopics(fact.fact_value)))].slice(0, 10),
     recentActivities: activities.map((activity) => ({
       activity: activity.activity,
       detail: activity.detail,

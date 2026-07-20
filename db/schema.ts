@@ -197,6 +197,15 @@ export const parentCompanionSuggestions = sqliteTable("parent_companion_suggesti
   generatedByParentId: text("generated_by_parent_id").notNull(),
 });
 
+export const parentCompanionSuggestionHistory = sqliteTable("parent_companion_suggestion_history", {
+  historyId: text("history_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  suggestion: text("suggestion").notNull(),
+  modelSource: text("model_source").notNull(),
+  generatedAt: integer("generated_at").notNull(),
+  generatedByParentId: text("generated_by_parent_id").notNull(),
+}, (table) => [index("parent_companion_suggestion_history_user_date_idx").on(table.userId, table.generatedAt)]);
+
 export const parentCompanionRefreshes = sqliteTable("parent_companion_refreshes", {
   userId: text("user_id").notNull(),
   dateKey: text("date_key").notNull(),

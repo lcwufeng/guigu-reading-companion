@@ -117,6 +117,69 @@ test("handwritten-answer OCR cannot see the question or reference answer before 
   assert.equal(unreadableResult.result.correct, false);
 });
 
+test("student interests require explicit expression and keep their own evidence time", async () => {
+  const root = await mkdtemp(join(tmpdir(), "guigu-memory-test-"));
+  try {
+    const databasePath = join(root, "app.sqlite");
+    const memoryRun = await run(tsx, ["-e", `
+      process.env.APP_DATABASE_FILE = ${JSON.stringify(databasePath)};
+      (async () => {
+        const { rememberStudentEvent, getStudentMemory, extractInterestTopics, normalizeInterestTopics } = await import("./db/student-memory.ts");
+        const { readyRuntimeDatabase } = await import("./db/runtime-database.ts");
+        const { saveParentCompanionSuggestion, getParentCompanionSuggestionHistory } = await import("./db/parent-companion.ts");
+        const userId = "student-interest-test";
+        await rememberStudentEvent(userId, { type: "chat", message: "龟龟可以叫我米粒吧，我喜欢恐龙和太空。" });
+        const database = await readyRuntimeDatabase();
+        const firstEvidence = await database.first("SELECT last_used_at FROM user_memory_facts WHERE user_id = ? AND fact_type = 'interest' AND fact_value = '太空'", [userId]);
+        await new Promise((resolve) => setTimeout(resolve, 8));
+        await rememberStudentEvent(userId, { type: "activity", activity: "捉迷藏", detail: "和龟龟玩了一局" });
+        const secondEvidence = await database.first("SELECT last_used_at FROM user_memory_facts WHERE user_id = ? AND fact_type = 'interest' AND fact_value = '太空'", [userId]);
+        await rememberStudentEvent(userId, { type: "chat", message: "我想知道你喜欢什么。" });
+        await rememberStudentEvent(userId, { type: "chat", message: "我不喜欢足球。" });
+        await database.run("INSERT INTO user_memory_facts (user_id, fact_type, fact_value, source_type, created_at, last_used_at, expires_at) VALUES (?, 'interest', ?, 'legacy-d1', ?, ?, NULL)", [userId, "最近对星星和行星很好奇", Date.now(), Date.now()]);
+        await saveParentCompanionSuggestion("parent-test", userId, { text: "先聊聊恐龙最吸引你的地方。", modelSource: "test", generatedAt: 100 });
+        await saveParentCompanionSuggestion("parent-test", userId, { text: "一起画一张太空路线图。", modelSource: "test", generatedAt: 200 });
+        const memory = await getStudentMemory(userId);
+        const history = await getParentCompanionSuggestionHistory(userId, 8);
+        process.stdout.write(JSON.stringify({
+          explicit: extractInterestTopics("我喜欢恐龙和太空，但是今天有点累。"),
+          inquiry: extractInterestTopics("我想知道你喜欢什么。"),
+          learningIntent: extractInterestTopics("我想学习乘法口诀。"),
+          negative: extractInterestTopics("我不太喜欢足球。"),
+          legacy: normalizeInterestTopics("最近对星星和行星很好奇"),
+          legacyFalsePositives: [
+            "喝那个",
+            "我们来聊点别的吧。那么你最喜欢什么绘本呢？",
+            "我叫你青岩石",
+            "旅游吗",
+            "普通小乌龟喜欢吃肉和菜，还有龟粮呢。",
+            "那么你喜欢干什么呢？",
+          ].flatMap(normalizeInterestTopics),
+          memory,
+          firstEvidence: firstEvidence.last_used_at,
+          secondEvidence: secondEvidence.last_used_at,
+          history,
+        }));
+      })();
+    `]);
+    const result = JSON.parse(memoryRun.stdout);
+    assert.deepEqual(result.explicit, ["恐龙", "太空"]);
+    assert.deepEqual(result.inquiry, []);
+    assert.deepEqual(result.learningIntent, []);
+    assert.deepEqual(result.negative, []);
+    assert.deepEqual(result.legacy, ["星星", "行星"]);
+    assert.deepEqual(result.legacyFalsePositives, []);
+    assert.equal(result.memory.studentName, "米粒");
+    assert.deepEqual([...result.memory.interests].sort(), ["太空", "恐龙", "星星", "行星"].sort());
+    assert.equal(result.memory.interests.includes("足球"), false);
+    assert.equal(result.memory.interestDetails.find((item) => item.value === "太空").sourceType, "chat-explicit");
+    assert.equal(result.firstEvidence, result.secondEvidence, "unrelated activities must not refresh an old interest's evidence time");
+    assert.deepEqual(result.history.map((item) => item.generatedAt), [200, 100]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("JSON data migrates to isolated SQLite rows and can build a parent report", async () => {
   const root = await mkdtemp(join(tmpdir(), "guigu-db-test-"));
   try {

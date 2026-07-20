@@ -603,6 +603,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(parentCompanionAi, /PARENT_SUGGESTION_MIMO_TIMEOUT_MS/);
   assert.match(parentCompanionAi, /PARENT_SUGGESTION_DEEPSEEK_TIMEOUT_MS/);
   assert.match(parentCenter, /dashboard\.companionSuggestion\.text/);
+  assert.match(parentCenter, /兴趣和成长记忆/);
+  assert.match(parentCenter, /兴趣只来自孩子明确表达或家长补充/);
+  assert.match(parentCenter, /dashboard\.companionSuggestions/);
+  assert.match(studentMemoryDb, /extractInterestTopics/);
+  assert.match(studentMemoryDb, /chat-explicit/);
+  assert.match(schemaStatements, /parent_companion_suggestion_history/);
   assert.match(parentCenter, /每天最多一次/);
   assert.match(companionRoute, /cleanPetName/);
   assert.match(companionRoute, /function localReply/);

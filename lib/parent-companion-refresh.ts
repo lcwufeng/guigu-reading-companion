@@ -6,6 +6,7 @@ import {
 } from "../db/parent-companion";
 import { getParentChildren } from "../db/parent-center";
 import { buildParentReport } from "../db/parent-reports";
+import { getStudentMemory } from "../db/student-memory";
 import { generateParentCompanionSuggestion, type ParentCompanionAiInput } from "./parent-companion-ai";
 
 const bookTitles = new Map<string, string>([
@@ -27,10 +28,13 @@ function fallbackSuggestion(input: ParentCompanionAiInput) {
 
 async function inputFor(studentId: string, childName: string): Promise<ParentCompanionAiInput | null> {
   const now = Date.now();
-  const report = await buildParentReport(studentId, { from: now - 14 * 24 * 60 * 60 * 1000, to: now });
+  const [report, memory] = await Promise.all([
+    buildParentReport(studentId, { from: now - 14 * 24 * 60 * 60 * 1000, to: now }),
+    getStudentMemory(studentId),
+  ]);
   if (!report) return null;
   return {
-    childName,
+    childName: memory.studentName || childName,
     activeDays: report.dailyTasks.activeDays,
     completedTaskDays: report.dailyTasks.fullyCompletedDays,
     recentBooks: report.reading.books.slice(0, 6).map((book) => bookTitles.get(book.bookId) || book.bookId),

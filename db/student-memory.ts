@@ -13,11 +13,20 @@ export type StudentActivityMemory = {
   at: number;
 };
 
+export type StudentFactMemory = {
+  value: string;
+  sourceType: string;
+  firstRecordedAt: number;
+  lastRecordedAt: number;
+};
+
 export type StudentMemory = {
   studentName: string;
   books: StudentBookMemory[];
   learned: string[];
   interests: string[];
+  learnedDetails: StudentFactMemory[];
+  interestDetails: StudentFactMemory[];
   recentActivities: StudentActivityMemory[];
   updatedAt: number;
 };
@@ -39,6 +48,8 @@ const emptyMemory = (): StudentMemory => ({
   books: [],
   learned: [],
   interests: [],
+  learnedDetails: [],
+  interestDetails: [],
   recentActivities: [],
   updatedAt: Date.now(),
 });
@@ -49,8 +60,83 @@ function cleanText(value: unknown, limit: number) {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, limit) : "";
 }
 
+const genericInterestTopics = new Set([
+  "这个", "那个", "这些", "那些", "它", "东西", "事情", "内容", "问题", "什么", "不知道", "没什么",
+]);
+
+function normalizeInterestCandidate(value: string) {
+  const raw = cleanText(value, 60);
+  if (!raw
+    || /[？?]/.test(raw)
+    || /(?:吗|呢|吧|么)[。！!…]*$/.test(raw)
+    || /(?:什么|为什么|怎么|怎样|哪里|哪儿|谁|是否)/.test(raw)
+    || /(?:这个|那个|这些|那些|我叫你|我们来|咱们来|聊点)/.test(raw)) return "";
+  const topic = raw
+    .replace(/^[“”"'‘’《》]+|[“”"'‘’《》]+$/g, "")
+    .split(/(?:但是|不过|因为|所以|然后|而且|可是|只是|，|。|！|？)/, 1)[0]
+    .replace(/^(?:最近|现在|目前|特别|非常|真的|比较|很|最|也|还|关于|有关)\s*/, "")
+    .replace(/^对\s*/, "")
+    .replace(/^(?:看|读|学|学习|了解|知道|研究|探索|玩|去玩|去看|做)\s*/, "")
+    .replace(/(?:很|特别|非常|比较)?(?:感兴趣|好奇|喜欢)$/, "")
+    .replace(/(?:是什么|怎么样|怎么回事|的事情|的内容|的知识|相关内容|这些东西|这个主题)$/, "")
+    .replace(/^[“”"'‘’《》]+|[“”"'‘’《》]+$/g, "")
+    .replace(/[，。！!…]+$/g, "")
+    .trim();
+  if (/^(?:你|龟龟|他|她|别人)/.test(topic)) return "";
+  if (topic.length < 2 || topic.length > 20 || genericInterestTopics.has(topic)) return "";
+  if (/^(?:不|没|无|讨厌|不喜欢|不感兴趣)/.test(topic)) return "";
+  if (/(?:喜欢|感兴趣|好奇)/.test(topic)) return "";
+  return topic;
+}
+
+export function normalizeInterestTopics(value: unknown) {
+  const text = cleanText(value, 120);
+  if (!text) return [];
+  const pieces = text.split(/(?:、|以及|还有|和|与)/).slice(0, 3);
+  return [...new Set(pieces.map(normalizeInterestCandidate).filter(Boolean))].slice(0, 3);
+}
+
+export function extractInterestTopics(message: string) {
+  const text = cleanText(message, 500);
+  if (!text || /我(?:不|不太|不怎么|没有那么)(?:喜欢|感兴趣|好奇)/.test(text)) return [];
+  const patterns = [
+    /(?:^|[，。！？!?\s])我(?:最近|现在)?(?:特别|非常|真的|很|最|也|还)?(?:喜欢|喜爱|爱看|爱读|爱玩|爱学)(?:的是)?([^，。！？!?]{1,60})/,
+    /(?:^|[，。！？!?\s])我对([^，。！？!?]{1,60}?)(?:特别|非常|真的|很|比较)?(?:感兴趣|好奇)/,
+  ];
+  for (const pattern of patterns) {
+    const matched = text.match(pattern)?.[1] || "";
+    const topics = normalizeInterestTopics(matched);
+    if (topics.length) return topics;
+  }
+  return [];
+}
+
+function safeFactDetails(value: unknown, kind: "learned" | "interest") {
+  if (!Array.isArray(value)) return [];
+  const details: StudentFactMemory[] = [];
+  for (const raw of value.slice(-24)) {
+    const sourceType = cleanText(raw?.sourceType, 30) || "derived";
+    const firstRecordedAt = Math.max(0, Number(raw?.firstRecordedAt) || 0);
+    const lastRecordedAt = Math.max(firstRecordedAt, Number(raw?.lastRecordedAt) || 0);
+    const values = kind === "interest" ? normalizeInterestTopics(raw?.value) : [cleanText(raw?.value, 140)].filter(Boolean);
+    for (const factValue of values) {
+      const existing = details.find((item) => item.value === factValue);
+      if (existing) {
+        existing.firstRecordedAt = Math.min(existing.firstRecordedAt || firstRecordedAt, firstRecordedAt || existing.firstRecordedAt);
+        existing.lastRecordedAt = Math.max(existing.lastRecordedAt, lastRecordedAt);
+        if (sourceType === "parent") existing.sourceType = "parent";
+      } else details.push({ value: factValue, sourceType, firstRecordedAt, lastRecordedAt });
+    }
+  }
+  return details.slice(-16);
+}
+
 function safeMemory(value: unknown): StudentMemory {
   const memory = value && typeof value === "object" ? value as Partial<StudentMemory> : {};
+  const learnedDetails = safeFactDetails(memory.learnedDetails, "learned");
+  const interestDetails = safeFactDetails(memory.interestDetails, "interest");
+  const learned = Array.isArray(memory.learned) ? memory.learned.slice(-16).map((item) => cleanText(item, 140)).filter(Boolean) : [];
+  const interests = Array.isArray(memory.interests) ? memory.interests.flatMap(normalizeInterestTopics).slice(-10) : [];
   return {
     studentName: cleanText(memory.studentName, 8),
     books: Array.isArray(memory.books) ? memory.books.slice(-12).map((book) => ({
@@ -59,8 +145,10 @@ function safeMemory(value: unknown): StudentMemory {
       chapter: cleanText(book?.chapter, 80),
       lastReadAt: Math.max(0, Number(book?.lastReadAt) || 0),
     })).filter((book) => book.title) : [],
-    learned: Array.isArray(memory.learned) ? memory.learned.slice(-16).map((item) => cleanText(item, 140)).filter(Boolean) : [],
-    interests: Array.isArray(memory.interests) ? memory.interests.slice(-10).map((item) => cleanText(item, 120)).filter(Boolean) : [],
+    learned: [...new Set([...learned, ...learnedDetails.map((item) => item.value)])].slice(-16),
+    interests: [...new Set([...interests, ...interestDetails.map((item) => item.value)])].slice(-10),
+    learnedDetails: learnedDetails.length ? learnedDetails : learned.map((item) => ({ value: item, sourceType: "derived", firstRecordedAt: 0, lastRecordedAt: 0 })),
+    interestDetails: interestDetails.length ? interestDetails : interests.map((item) => ({ value: item, sourceType: "derived", firstRecordedAt: 0, lastRecordedAt: 0 })),
     recentActivities: Array.isArray(memory.recentActivities) ? memory.recentActivities.slice(-20).map((item) => ({
       activity: cleanText(item?.activity, 24),
       detail: cleanText(item?.detail, 120),
@@ -76,26 +164,16 @@ function addUnique(items: string[], value: string, limit: number) {
 }
 
 function extractStudentName(message: string) {
-  const match = message.match(/(?:^|[，。！？!?\s])我(?:叫|的小名是)([\p{L}·]{1,8})(?=[，。！？!?\s]|$)/u);
-  const name = cleanText(match?.[1], 8).replace(/[^\p{L}·]/gu, "");
+  const patterns = [
+    /(?:^|[，。！？!?\s])我叫([\p{L}·]{1,8})(?=[，。！？!?\s]|$)/u,
+    /(?:^|[，。！？!?\s])我的小名(?:是|叫)([\p{L}·]{1,8})(?=[，。！？!?\s]|$)/u,
+    /(?:^|[，。！？!?\s])(?:你|龟龟)?(?:可以)?叫我([\p{L}·]{1,8})(?=[吧呀哦，。！？!?\s]|$)/u,
+    /(?:^|[，。！？!?\s])我喜欢别人叫我([\p{L}·]{1,8})(?=[吧呀哦，。！？!?\s]|$)/u,
+  ];
+  const matched = patterns.map((pattern) => message.match(pattern)?.[1]).find(Boolean);
+  const name = cleanText(matched, 8).replace(/[吧呀哦]$/u, "").replace(/[^\p{L}·]/gu, "");
   if (!name || /^(学生|小朋友|孩子|本人)$/.test(name)) return "";
   return name;
-}
-
-function extractInterest(message: string) {
-  const patterns = [
-    /(?:我)?(?:最喜欢|喜欢|最爱|爱看|想学|想知道)(?:的是)?([^，。！？!?]{1,48})/,
-    /(?:我)?对([^，。！？!?]{1,48})(?:感兴趣|很好奇|好奇)/,
-    /(?:我)?想去([^，。！？!?]{1,48})/,
-    /(?:我)?好奇(?:的是)?([^，。！？!?]{1,48})/,
-  ];
-  for (const pattern of patterns) {
-    const topic = cleanText(message.match(pattern)?.[1], 48)
-      .replace(/^(?:看|学|了解|知道|去)\s*/, "")
-      .replace(/\s*(?:的事情|的故事)$/, "");
-    if (topic) return topic;
-  }
-  return "";
 }
 
 function mergeEvent(current: StudentMemory, rawEvent: StudentMemoryEvent, allowInterestAnalysis = true): StudentMemory {
@@ -132,7 +210,9 @@ function mergeEvent(current: StudentMemory, rawEvent: StudentMemoryEvent, allowI
     const message = cleanText(rawEvent.message, 500);
     const studentName = extractStudentName(message);
     if (studentName) memory.studentName = studentName;
-    if (allowInterestAnalysis) memory.interests = addUnique(memory.interests, extractInterest(message), 10);
+    if (allowInterestAnalysis) {
+      for (const interest of extractInterestTopics(message)) memory.interests = addUnique(memory.interests, interest, 10);
+    }
   }
   memory.updatedAt = now;
   return memory;
@@ -152,11 +232,11 @@ async function readNormalizedMemory(database: RuntimeDatabase, userId: string): 
     database.all<{ title: string; category: string; chapter: string; last_read_at: number }>(`SELECT title, category, chapter, last_read_at
       FROM (SELECT title, category, chapter, last_read_at FROM user_memory_books WHERE user_id = ? ORDER BY last_read_at DESC LIMIT 12)
       ORDER BY last_read_at ASC`, [userId]),
-    database.all<{ fact_value: string }>(`SELECT fact_value FROM (
-      SELECT fact_value, last_used_at FROM user_memory_facts WHERE user_id = ? AND fact_type = 'learned' ORDER BY last_used_at DESC LIMIT 16
+    database.all<{ fact_value: string; source_type: string; created_at: number; last_used_at: number }>(`SELECT fact_value, source_type, created_at, last_used_at FROM (
+      SELECT fact_value, source_type, created_at, last_used_at FROM user_memory_facts WHERE user_id = ? AND fact_type = 'learned' ORDER BY last_used_at DESC LIMIT 16
     ) ORDER BY last_used_at ASC`, [userId]),
-    database.all<{ fact_value: string }>(`SELECT fact_value FROM (
-      SELECT fact_value, last_used_at FROM user_memory_facts WHERE user_id = ? AND fact_type = 'interest' ORDER BY last_used_at DESC LIMIT 10
+    database.all<{ fact_value: string; source_type: string; created_at: number; last_used_at: number }>(`SELECT fact_value, source_type, created_at, last_used_at FROM (
+      SELECT fact_value, source_type, created_at, last_used_at FROM user_memory_facts WHERE user_id = ? AND fact_type = 'interest' ORDER BY last_used_at DESC LIMIT 40
     ) ORDER BY last_used_at ASC`, [userId]),
     database.all<{ activity: string; detail: string; happened_at: number }>(`SELECT activity, detail, happened_at FROM (
       SELECT activity, detail, happened_at FROM user_activity_log WHERE user_id = ? ORDER BY happened_at DESC LIMIT 20
@@ -167,12 +247,14 @@ async function readNormalizedMemory(database: RuntimeDatabase, userId: string): 
     books: books.map((book) => ({ title: book.title, category: book.category, chapter: book.chapter, lastReadAt: book.last_read_at })),
     learned: learned.map((fact) => fact.fact_value),
     interests: interests.map((fact) => fact.fact_value),
+    learnedDetails: learned.map((fact) => ({ value: fact.fact_value, sourceType: fact.source_type, firstRecordedAt: fact.created_at, lastRecordedAt: fact.last_used_at })),
+    interestDetails: interests.map((fact) => ({ value: fact.fact_value, sourceType: fact.source_type, firstRecordedAt: fact.created_at, lastRecordedAt: fact.last_used_at })),
     recentActivities: activities.map((activity) => ({ activity: activity.activity, detail: activity.detail, at: activity.happened_at })),
     updatedAt: profile.updated_at,
   });
 }
 
-function memoryStatements(userId: string, memory: StudentMemory, sourceType: string, includeActivities: boolean): SqlStatement[] {
+function memoryStatements(userId: string, memory: StudentMemory, sourceType: string, includeActivities: boolean, includeFacts: boolean): SqlStatement[] {
   const statements: SqlStatement[] = [{
     sql: `INSERT INTO user_memory_profile (user_id, student_name, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET student_name = excluded.student_name, updated_at = excluded.updated_at`,
@@ -183,7 +265,7 @@ function memoryStatements(userId: string, memory: StudentMemory, sourceType: str
       ON CONFLICT(user_id, title) DO UPDATE SET category = excluded.category, chapter = excluded.chapter, last_read_at = excluded.last_read_at`,
     params: [userId, book.title, book.category, book.chapter, book.lastReadAt],
   });
-  for (const [factType, facts] of [["learned", memory.learned], ["interest", memory.interests]] as const) {
+  if (includeFacts) for (const [factType, facts] of [["learned", memory.learned], ["interest", memory.interests]] as const) {
     for (const fact of facts) statements.push({
       sql: `INSERT INTO user_memory_facts (user_id, fact_type, fact_value, source_type, created_at, last_used_at, expires_at)
         VALUES (?, ?, ?, ?, ?, ?, NULL)
@@ -239,7 +321,7 @@ export async function getStudentMemory(userId: string): Promise<StudentMemory> {
     if (!row?.memory_json) return emptyMemory();
     try {
       const memory = safeMemory(JSON.parse(row.memory_json));
-      await database.batch(memoryStatements(userId, memory, "legacy-d1", true));
+      await database.batch(memoryStatements(userId, memory, "legacy-d1", true, true));
       return memory;
     } catch {
       return emptyMemory();
@@ -262,7 +344,24 @@ export async function rememberStudentEvent(userId: string, event: StudentMemoryE
       allowInterestAnalysis = !controls || Boolean(controls.interest_analysis_enabled);
     }
     const memory = mergeEvent(current, event, allowInterestAnalysis);
-    const statements = memoryStatements(userId, memory, event.type || "derived", false);
+    const statements = memoryStatements(userId, memory, event.type || "derived", false, false);
+    if (event.type === "learning") {
+      const fact = cleanText(event.detail, 140);
+      if (fact) statements.push({
+        sql: `INSERT INTO user_memory_facts (user_id, fact_type, fact_value, source_type, created_at, last_used_at, expires_at)
+          VALUES (?, 'learned', ?, 'learning-activity', ?, ?, NULL)
+          ON CONFLICT(user_id, fact_type, fact_value) DO UPDATE SET last_used_at = excluded.last_used_at`,
+        params: [userId, fact, memory.updatedAt, memory.updatedAt],
+      });
+    }
+    if (event.type === "chat" && allowInterestAnalysis) {
+      for (const topic of extractInterestTopics(cleanText(event.message, 500))) statements.push({
+        sql: `INSERT INTO user_memory_facts (user_id, fact_type, fact_value, source_type, created_at, last_used_at, expires_at)
+          VALUES (?, 'interest', ?, 'chat-explicit', ?, ?, NULL)
+          ON CONFLICT(user_id, fact_type, fact_value) DO UPDATE SET last_used_at = excluded.last_used_at`,
+        params: [userId, topic, memory.updatedAt, memory.updatedAt],
+      });
+    }
     const latest = memory.recentActivities.at(-1);
     const previousLatest = current.recentActivities.at(-1);
     if (latest && (latest.at !== previousLatest?.at || latest.detail !== previousLatest?.detail || latest.activity !== previousLatest?.activity)) {
