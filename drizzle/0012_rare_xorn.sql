@@ -1,0 +1,1 @@
+ALTER TABLE `imported_books` ADD `journal_art_src` text DEFAULT '' NOT NULL;

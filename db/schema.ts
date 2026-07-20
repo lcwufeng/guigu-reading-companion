@@ -462,3 +462,52 @@ export const userActivityLog = sqliteTable("user_activity_log", {
   detail: text("detail").notNull(),
   happenedAt: integer("happened_at").notNull(),
 }, (table) => [index("user_activity_log_user_date_idx").on(table.userId, table.happenedAt)]);
+
+export const importedBooks = sqliteTable("imported_books", {
+  bookId: text("book_id").primaryKey(),
+  slug: text("slug").notNull(),
+  title: text("title").notNull(),
+  author: text("author").notNull(),
+  grade: text("grade").notNull(),
+  summary: text("summary").notNull(),
+  knowledge: text("knowledge").notNull(),
+  memoryCategory: text("memory_category").notNull(),
+  sourceLabel: text("source_label").notNull(),
+  journalArtSrc: text("journal_art_src").notNull().default(""),
+  sourceFilename: text("source_filename").notNull(),
+  sourceFormat: text("source_format").notNull(),
+  sourceSize: integer("source_size").notNull(),
+  extractionMode: text("extraction_mode").notNull(),
+  status: text("status").notNull().default("published"),
+  chapterCount: integer("chapter_count").notNull(),
+  pageCount: integer("page_count").notNull(),
+  imageCount: integer("image_count").notNull().default(0),
+  qualityReportJson: text("quality_report_json").notNull().default("{}"),
+  createdByAdminId: text("created_by_admin_id").notNull(),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+  publishedAt: integer("published_at"),
+}, (table) => [
+  uniqueIndex("imported_books_slug_idx").on(table.slug),
+  index("imported_books_status_date_idx").on(table.status, table.updatedAt),
+]);
+
+export const importedBookChapters = sqliteTable("imported_book_chapters", {
+  bookId: text("book_id").notNull(),
+  chapterIndex: integer("chapter_index").notNull(),
+  chapterId: text("chapter_id").notNull(),
+  title: text("title").notNull(),
+  pagesJson: text("pages_json").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.bookId, table.chapterIndex] }),
+  index("imported_book_chapters_book_idx").on(table.bookId, table.chapterIndex),
+]);
+
+export const importedBookAssets = sqliteTable("imported_book_assets", {
+  assetId: text("asset_id").primaryKey(),
+  bookId: text("book_id").notNull(),
+  kind: text("kind").notNull().default("illustration"),
+  contentType: text("content_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [index("imported_book_assets_book_idx").on(table.bookId, table.createdAt)]);

@@ -12,13 +12,14 @@
     "audio:generate": "node scripts/pregenerate-book-audio.mjs",
     "db:migrate-json": "tsx scripts/migrate-json-to-sqlite.mts",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern public/vendor",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
     "lucide-react": "^1.24.0",
     "next": "16.2.6",
+    "pdfjs-dist": "^5.4.624",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "ws": "^8.21.0"

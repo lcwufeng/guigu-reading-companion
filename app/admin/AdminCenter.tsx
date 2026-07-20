@@ -2,16 +2,17 @@
 "use client";
 
 import {
-  Activity, BookOpenCheck, Bot, CheckCircle2, ChevronRight, ClipboardList, KeyRound,
+  Activity, BookCopy, BookOpenCheck, Bot, CheckCircle2, ChevronRight, ClipboardList, KeyRound,
   Link2, LogOut, RefreshCw, Save, Search, ShieldCheck, UserPlus, UsersRound, UserX, XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import type { AdminAccountsData, AdminAiData, AdminAuditRow, AdminLearningData, AdminOverviewData, ManagedAccountType } from "../../db/admin-center";
+import BookImportPanel from "./BookImportPanel";
 import styles from "./AdminCenter.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-export type AdminSection = "overview" | "accounts" | "learning" | "ai" | "audit";
+export type AdminSection = "overview" | "accounts" | "learning" | "books" | "ai" | "audit";
 type AdminIdentity = { id: string; displayName: string; role: string };
 type Credential = { id: string; username: string; temporaryPassword: string };
 
@@ -19,6 +20,7 @@ const nav: Array<{ key: AdminSection; label: string; path: string; icon: ReactNo
   { key: "overview", label: "数据总览", path: "", icon: <Activity /> },
   { key: "accounts", label: "账号与绑定", path: "accounts", icon: <UsersRound /> },
   { key: "learning", label: "学习数据", path: "learning", icon: <BookOpenCheck /> },
+  { key: "books", label: "图书导入", path: "books", icon: <BookCopy /> },
   { key: "ai", label: "AI 服务", path: "ai", icon: <Bot /> },
   { key: "audit", label: "操作审计", path: "audit", icon: <ClipboardList /> },
 ];
@@ -116,6 +118,7 @@ export default function AdminCenter({ initialSection }: { initialSection: AdminS
           {initialSection === "overview" && overview && <Overview data={overview} />}
           {initialSection === "accounts" && accounts && <Accounts data={accounts} action={action} />}
           {initialSection === "learning" && <Learning data={learning} accounts={accounts} selectedStudentId={selectedStudentId} select={(id) => { setSelectedStudentId(id); void load(id); }} />}
+          {initialSection === "books" && <BookImportPanel />}
           {initialSection === "ai" && ai && <AiStatus data={ai} action={action} />}
           {initialSection === "audit" && <Audit rows={audits} />}
         </>}
@@ -254,7 +257,7 @@ function ModelConfigCard({ provider, action }: { provider: AdminAiData["provider
   </form>;
 }
 
-function serviceName(value: string) { return ({ "reading-ai": "章节判断", "chat-ai": "陪伴聊天", "mistake-ai": "错题识别", "parent-ai": "家长建议", speech: "语音识别" } as Record<string, string>)[value] || value; }
+function serviceName(value: string) { return ({ "reading-ai": "章节判断", "chat-ai": "陪伴聊天", "mistake-ai": "错题识别", "parent-ai": "家长建议", "book-import-ai": "图书 OCR", speech: "语音识别" } as Record<string, string>)[value] || value; }
 
 function Audit({ rows }: { rows: AdminAuditRow[] }) {
   return <><Title eyebrow="操作审计" detail="临时密码不会写入日志；这里记录管理员的重要操作、对象、时间和来源。">后台操作记录</Title>{rows.length ? <AuditTable rows={rows} /> : <Empty>还没有后台操作记录。</Empty>}</>;

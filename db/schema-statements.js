@@ -398,4 +398,48 @@ export const SCHEMA_STATEMENTS = [
     happened_at INTEGER NOT NULL
   )`,
   "CREATE INDEX IF NOT EXISTS user_activity_log_user_date_idx ON user_activity_log(user_id, happened_at DESC)",
+  `CREATE TABLE IF NOT EXISTS imported_books (
+    book_id TEXT PRIMARY KEY NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    author TEXT NOT NULL,
+    grade TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    knowledge TEXT NOT NULL,
+    memory_category TEXT NOT NULL,
+    source_label TEXT NOT NULL,
+    journal_art_src TEXT NOT NULL DEFAULT '',
+    source_filename TEXT NOT NULL,
+    source_format TEXT NOT NULL,
+    source_size INTEGER NOT NULL,
+    extraction_mode TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'published',
+    chapter_count INTEGER NOT NULL,
+    page_count INTEGER NOT NULL,
+    image_count INTEGER NOT NULL DEFAULT 0,
+    quality_report_json TEXT NOT NULL DEFAULT '{}',
+    created_by_admin_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    published_at INTEGER
+  )`,
+  "CREATE INDEX IF NOT EXISTS imported_books_status_date_idx ON imported_books(status, updated_at DESC)",
+  `CREATE TABLE IF NOT EXISTS imported_book_chapters (
+    book_id TEXT NOT NULL,
+    chapter_index INTEGER NOT NULL,
+    chapter_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    pages_json TEXT NOT NULL,
+    PRIMARY KEY (book_id, chapter_index)
+  )`,
+  "CREATE INDEX IF NOT EXISTS imported_book_chapters_book_idx ON imported_book_chapters(book_id, chapter_index)",
+  `CREATE TABLE IF NOT EXISTS imported_book_assets (
+    asset_id TEXT PRIMARY KEY NOT NULL,
+    book_id TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'illustration',
+    content_type TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS imported_book_assets_book_idx ON imported_book_assets(book_id, created_at)",
 ];

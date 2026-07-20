@@ -180,6 +180,43 @@ test("student interests require explicit expression and keep their own evidence 
   }
 });
 
+test("administrator book imports are validated, published, readable, and safely hidden", async () => {
+  const root = await mkdtemp(join(tmpdir(), "guigu-book-import-test-"));
+  try {
+    const databasePath = join(root, "app.sqlite");
+    const imported = await run(tsx, ["-e", `
+      process.env.APP_DATABASE_FILE = ${JSON.stringify(databasePath)};
+      (async () => {
+        const { createImportedBook, getAdminImportedBooks, getPublishedBookCatalog, getPublishedBookContent, setImportedBookStatus } = await import("./db/book-imports.ts");
+        const { analyzeTextBook } = await import("./lib/book-import-client.ts");
+        const analysis = analyzeTextBook("# 前言\\n这不是学生阅读正文。\\n\\n# 第一章 小种子\\n小种子在泥土里\\n安静地等待春天。\\n\\n它听见雨声。\\n\\n# 第二章 发芽\\n春风来了，小种子长出了嫩芽。", "markdown");
+        const bookId = "imported-11111111-1111-4111-8111-111111111111";
+        await createImportedBook("admin-test", {
+          bookId, title: "小种子的旅行", author: "测试作者", grade: "一年级", summary: "一粒种子的成长故事。",
+          knowledge: "种子发芽需要合适的水分、温度和空气。", memoryCategory: "自然童话", sourceFilename: "小种子.md",
+          sourceFormat: "markdown", sourceSize: 320, extractionMode: analysis.extractionMode, qualityReport: analysis.quality, chapters: analysis.chapters,
+        });
+        const admin = await getAdminImportedBooks();
+        const catalogBefore = await getPublishedBookCatalog();
+        const content = await getPublishedBookContent(bookId);
+        await setImportedBookStatus(bookId, "hidden");
+        const catalogAfter = await getPublishedBookCatalog();
+        process.stdout.write(JSON.stringify({ analysis, admin, catalogBefore, content, catalogAfter }));
+      })();
+    `]);
+    const result = JSON.parse(imported.stdout);
+    assert.equal(result.analysis.chapters.length, 2, "front matter must not become a reading chapter");
+    assert.equal(result.analysis.quality.skippedFrontMatterPages, 1);
+    assert.match(result.analysis.chapters[0].pages[0].body, /小种子在泥土里安静地等待春天。/);
+    assert.equal(result.admin[0].chapterCount, 2);
+    assert.equal(result.catalogBefore[0].title, "小种子的旅行");
+    assert.equal(result.content.chapters.length, 2);
+    assert.equal(result.catalogAfter.length, 0, "hidden books must disappear from the student shelf");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("JSON data migrates to isolated SQLite rows and can build a parent report", async () => {
   const root = await mkdtemp(join(tmpdir(), "guigu-db-test-"));
   try {

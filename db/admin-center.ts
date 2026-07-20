@@ -1,5 +1,6 @@
 import classicBookManifest from "../app/classic-books-manifest.json";
 import { passwordHash } from "./auth";
+import { getImportedBookTitleMap } from "./book-imports";
 import { getAdminModelConfigs, type AdminModelConfig } from "./model-config";
 import { buildParentReport, type ParentReportData } from "./parent-reports";
 import { getStudentMemory, type StudentMemory } from "./student-memory";
@@ -152,17 +153,18 @@ export async function getAdminLearning(studentId: string, days = 14): Promise<Ad
   const now = Date.now();
   const overview = await buildParentReport(studentId, { from: now - Math.min(90, Math.max(7, days)) * 86400000, to: now });
   if (!overview) return null;
-  const [reading, answers, mistakes, memory] = await Promise.all([
+  const [reading, answers, mistakes, memory, importedTitles] = await Promise.all([
     database.all<{ book_id: string; chapter_index: number; page_index: number; completed: number; updated_at: number }>("SELECT * FROM user_reading_progress WHERE user_id = ? ORDER BY updated_at DESC LIMIT 100", [studentId]),
     database.all<{ attempt_id: string; book_title: string; chapter_title: string; question: string; answer: string; correct: number; feedback: string; model_source: string; created_at: number }>(`SELECT attempt_id, book_title, chapter_title, question, answer, correct, feedback, model_source, created_at
       FROM chapter_answer_attempts WHERE user_id = ? ORDER BY created_at DESC LIMIT 80`, [studentId]),
     database.all<{ mistake_id: string; subject: string; question: string; cause: string; status: string; review_count: number; updated_at: number }>(`SELECT mistake_id, subject, question, cause, status, review_count, updated_at
       FROM user_mistakes WHERE user_id = ? ORDER BY updated_at DESC LIMIT 100`, [studentId]),
     getStudentMemory(studentId),
+    getImportedBookTitleMap(),
   ]);
   return {
     student: accountRow(row), overview,
-    reading: reading.map((item) => ({ bookId: item.book_id, title: bookTitles.get(item.book_id) || item.book_id, chapterIndex: item.chapter_index, pageIndex: item.page_index, completed: Boolean(item.completed), updatedAt: item.updated_at })),
+    reading: reading.map((item) => ({ bookId: item.book_id, title: bookTitles.get(item.book_id) || importedTitles.get(item.book_id) || item.book_id, chapterIndex: item.chapter_index, pageIndex: item.page_index, completed: Boolean(item.completed), updatedAt: item.updated_at })),
     answers: answers.map((item) => ({ attemptId: item.attempt_id, bookTitle: item.book_title, chapterTitle: item.chapter_title, question: item.question, answer: item.answer, correct: Boolean(item.correct), feedback: item.feedback, modelSource: item.model_source, createdAt: item.created_at })),
     mistakes: mistakes.map((item) => ({ mistakeId: item.mistake_id, subject: item.subject, question: item.question, cause: item.cause, status: item.status, reviewCount: item.review_count, updatedAt: item.updated_at })),
     memory,

@@ -17,6 +17,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ learning: selectedId ? await getAdminLearning(selectedId, Number(url.searchParams.get("days")) || 14) : null, accounts, admin });
     }
     if (section === "ai") return NextResponse.json({ ai: await getAdminAiData(), admin });
+    if (section === "books") return NextResponse.json({ admin });
     if (section === "audit") return NextResponse.json({ audits: await getAdminAuditLogs(200), admin });
     return NextResponse.json({ error: "未知的数据页面。" }, { status: 400 });
   } catch {

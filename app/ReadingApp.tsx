@@ -148,6 +148,7 @@ type Book = {
   summary: string;
   knowledge: string;
   memoryCategory: string;
+  journalArt?: string;
   source?: {
     url: string;
     format: "markdown" | "gutenberg" | "json";
@@ -156,6 +157,18 @@ type Book = {
     language: string;
   };
   unavailableReason?: string;
+};
+
+type ImportedBookCatalogItem = {
+  id: string;
+  title: string;
+  author: string;
+  grade: string;
+  summary: string;
+  knowledge: string;
+  memoryCategory: string;
+  sourceLabel: string;
+  journalArt: string;
 };
 
 type BookPage = {
@@ -305,8 +318,11 @@ const journalReadingArtByTitle: Record<string, string> = {
   ...Object.fromEntries(classicBookManifest.map((book) => [book.title, `ui/journal/books/classics/${book.slug}.png`])),
 };
 
-function journalReadingArtFor(title: string) {
-  return journalReadingArtByTitle[title] || "ui/journal/reading-record-book.png";
+function journalReadingArtFor(title: string, imported: Book[]) {
+  const staticArt = journalReadingArtByTitle[title];
+  if (staticArt) return `${ASSET}/${staticArt}`;
+  const dynamicArt = imported.find((book) => book.title === title)?.journalArt;
+  return dynamicArt ? `${BASE_PATH}${dynamicArt}` : `${ASSET}/ui/journal/reading-record-book.png`;
 }
 
 function isReadingFontSize(value: unknown): value is ReadingFontSize {
@@ -389,6 +405,28 @@ const books: Book[] = [
   },
   ...classicBooks,
 ];
+
+function importedCatalogBook(book: ImportedBookCatalogItem): Book {
+  return {
+    id: book.id,
+    title: book.title,
+    author: book.author || "佚名",
+    category: `${book.grade} · 后台导入`,
+    coverMark: book.title.slice(0, 1),
+    coverClass: "cover-classic",
+    pages: [],
+    summary: book.summary,
+    knowledge: book.knowledge,
+    memoryCategory: book.memoryCategory,
+    journalArt: book.journalArt,
+    source: {
+      url: `${BASE_PATH}/api/library/books?id=${encodeURIComponent(book.id)}`,
+      format: "json",
+      label: book.sourceLabel,
+      language: "中文原文",
+    },
+  };
+}
 
 function buildChapterPrompt(title: string): ChapterPrompt {
   const seed = [...title].reduce((total, character) => total + (character.codePointAt(0) || 0), 0) % 4;
@@ -1028,6 +1066,7 @@ export default function ReadingApp({
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [selectedBook, setSelectedBook] = useState<Book>(books[0]);
+  const [importedBooks, setImportedBooks] = useState<Book[]>([]);
   const [selectedChapter, setSelectedChapter] = useState(0);
   const [bookPage, setBookPage] = useState(0);
   const [loadedBooks, setLoadedBooks] = useState<Record<string, BookChapter[]>>({});
@@ -1072,6 +1111,7 @@ export default function ReadingApp({
   const [reviewOutcome, setReviewOutcome] = useState<MistakeReviewOutcome | null>(null);
   const [dailyTasksOpen, setDailyTasksOpen] = useState(false);
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
+  const availableBooks = useMemo(() => [...books, ...importedBooks], [importedBooks]);
   const dailyTasksExpanded = mobileLayout ? dailyTasksOpen : true;
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideAdvanceTimerRef = useRef<number | null>(null);
@@ -1193,6 +1233,15 @@ export default function ReadingApp({
       })
       .catch(() => setGame(initialState))
       .finally(() => setHydrated(true));
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`${BASE_PATH}/api/library/books`, { cache: "no-store", signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("catalog unavailable")))
+      .then((data: { books?: ImportedBookCatalogItem[] }) => setImportedBooks((data.books || []).map(importedCatalogBook)))
+      .catch(() => undefined);
     return () => controller.abort();
   }, []);
 
@@ -2492,7 +2541,7 @@ export default function ReadingApp({
             </div>
 
             <div className="book-picker" aria-label="选择一本书">
-              {books.map((book) => (
+              {availableBooks.map((book) => (
                 <button
                   key={book.id}
                   type="button"
@@ -2924,7 +2973,7 @@ export default function ReadingApp({
                     {game.readingRecords.length ? game.readingRecords.slice(0, 5).map((record) => (
                       <article className="journal-reading-card" key={record.id}>
                         <div className="journal-reading-visual">
-                          <img src={`${ASSET}/${journalReadingArtFor(record.title)}`} alt={`《${record.title}》主题阅读记录书本`} />
+                          <img src={journalReadingArtFor(record.title, importedBooks)} alt={`《${record.title}》主题阅读记录书本`} />
                           <span><Star fill="currentColor" /></span>
                         </div>
                         <div className="journal-reading-copy">

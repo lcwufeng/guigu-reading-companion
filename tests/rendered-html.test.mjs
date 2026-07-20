@@ -109,6 +109,10 @@ test("provides a protected administration center with account operations", async
   const protectedData = await fetchApp("/api/admin/data?section=accounts");
   assert.equal(protectedData.status, 401);
   assert.match(JSON.stringify(await protectedData.json()), /请先登录管理后台/);
+  const protectedBooks = await fetchApp("/api/admin/books");
+  assert.equal(protectedBooks.status, 401);
+  const protectedLibrary = await fetchApp("/api/library/books");
+  assert.equal(protectedLibrary.status, 401);
 });
 
 test("imports the complete graded ebook shelf with chapters, paragraphs, illustrations, and journal art", async () => {
@@ -312,6 +316,13 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../db/service-health.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/model-config.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/account-logins.ts", import.meta.url), "utf8"),
+  ]);
+  const [bookImportPanel, bookImportClient, bookImports, bookAdminRoute, bookLibraryRoute] = await Promise.all([
+    readFile(new URL("../app/admin/BookImportPanel.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/book-import-client.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/book-imports.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/admin/books/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/library/books/route.ts", import.meta.url), "utf8"),
   ]);
 
   for (const feature of [
@@ -577,6 +588,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(adminCenter, /账号与绑定/);
   assert.match(adminCenter, /学习数据/);
   assert.match(adminCenter, /AI 服务/);
+  assert.match(adminCenter, /图书导入/);
   assert.match(adminCenter, /操作审计/);
   assert.match(adminCenter, /模型配置/);
   assert.match(adminCenter, /API 密钥/);
@@ -593,6 +605,18 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(adminActions, /resetManagedAccountPassword/);
   assert.match(adminData, /getActiveAdmin/);
   assert.match(serviceHealth, /DELETE FROM service_health_events WHERE created_at < \?/);
+  assert.match(bookImportPanel, /电子书整理工作台/);
+  assert.match(bookImportPanel, /扫描版 PDF 会逐页调用后台配置的 MiMo/);
+  assert.match(bookImportPanel, /确认并发布到书房/);
+  assert.match(bookImportClient, /PDF 文字层 \+ MiMo OCR 混合整理/);
+  assert.match(bookImportClient, /frontMatterPattern/);
+  assert.match(bookImportClient, /repeatedHeadersRemoved/);
+  assert.match(bookImports, /imported_book_chapters/);
+  assert.match(bookImports, /status = 'published'/);
+  assert.match(bookAdminRoute, /recordAdminAudit/);
+  assert.match(bookLibraryRoute, /getActiveStudent/);
+  assert.match(page, /api\/library\/books/);
+  assert.match(schemaStatements, /CREATE TABLE IF NOT EXISTS imported_books/);
   const parentLoginRoute = await readFile(new URL("../app/api/parent/auth/login/route.ts", import.meta.url), "utf8");
   const parentCompanionAi = await readFile(new URL("../lib/parent-companion-ai.ts", import.meta.url), "utf8");
   const parentCompanionRefresh = await readFile(new URL("../lib/parent-companion-refresh.ts", import.meta.url), "utf8");

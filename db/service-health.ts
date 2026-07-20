@@ -5,7 +5,7 @@ function clean(value: unknown, limit: number) {
 }
 
 export async function recordServiceHealthEvent(input: {
-  service: "reading-ai" | "chat-ai" | "mistake-ai" | "parent-ai" | "speech";
+  service: "reading-ai" | "chat-ai" | "mistake-ai" | "parent-ai" | "book-import-ai" | "speech";
   operation: string;
   provider: string;
   status: "success" | "failed" | "fallback";
