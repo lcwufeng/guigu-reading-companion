@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       ...analysis,
       date: formatDate(),
       imageUrl,
-      modelSource: mistakeModelSource(),
+      modelSource: await mistakeModelSource(),
     });
     return NextResponse.json({ record });
   } catch {

@@ -1,4 +1,5 @@
 import { recordServiceHealthEvent } from "../db/service-health";
+import { getResolvedModelConfig, type ResolvedModelConfig } from "../db/model-config";
 
 export type ParentCompanionAiInput = {
   childName: string;
@@ -70,13 +71,12 @@ function prompt(input: ParentCompanionAiInput) {
   ].join("\n");
 }
 
-async function requestMiMo(apiKey: string, userPrompt: string): Promise<ParentCompanionAiResult> {
-  const model = process.env.MIMO_MODEL || "mimo-v2.5";
-  const response = await fetchWithTimeout("https://api.xiaomimimo.com/v1/chat/completions", {
+async function requestMiMo(config: ResolvedModelConfig, userPrompt: string): Promise<ParentCompanionAiResult> {
+  const response = await fetchWithTimeout(config.baseUrl, {
     method: "POST",
-    headers: { "api-key": apiKey, "Content-Type": "application/json" },
+    headers: { "api-key": config.apiKey, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model,
+      model: config.model,
       messages: [{ role: "user", content: userPrompt }],
       thinking: { type: "disabled" },
       max_completion_tokens: 260,
@@ -87,16 +87,15 @@ async function requestMiMo(apiKey: string, userPrompt: string): Promise<ParentCo
   const data = await response.json() as ChatCompletionResponse;
   const text = cleanSuggestion(data.choices?.[0]?.message?.content);
   if (!text) throw new Error("empty mimo parent suggestion");
-  return { text, modelSource: model };
+  return { text, modelSource: config.model };
 }
 
-async function requestDeepSeek(apiKey: string, userPrompt: string): Promise<ParentCompanionAiResult> {
-  const model = process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
-  const response = await fetchWithTimeout("https://api.deepseek.com/chat/completions", {
+async function requestDeepSeek(config: ResolvedModelConfig, userPrompt: string): Promise<ParentCompanionAiResult> {
+  const response = await fetchWithTimeout(config.baseUrl, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model,
+      model: config.model,
       messages: [{ role: "user", content: userPrompt }],
       thinking: { type: "disabled" },
       max_tokens: 260,
@@ -107,16 +106,19 @@ async function requestDeepSeek(apiKey: string, userPrompt: string): Promise<Pare
   const data = await response.json() as ChatCompletionResponse;
   const text = cleanSuggestion(data.choices?.[0]?.message?.content);
   if (!text) throw new Error("empty deepseek parent suggestion");
-  return { text, modelSource: model };
+  return { text, modelSource: config.model };
 }
 
 export async function generateParentCompanionSuggestion(input: ParentCompanionAiInput) {
   const userPrompt = prompt(input);
-  const mimoKey = process.env.MIMO_API_KEY?.trim();
-  if (mimoKey) {
+  const [mimoConfig, deepSeekConfig] = await Promise.all([
+    getResolvedModelConfig("multimodal"),
+    getResolvedModelConfig("primary"),
+  ]);
+  if (mimoConfig.configured) {
     const startedAt = Date.now();
     try {
-      const result = await requestMiMo(mimoKey, userPrompt);
+      const result = await requestMiMo(mimoConfig, userPrompt);
       await recordServiceHealthEvent({ service: "parent-ai", operation: "companion-suggestion", provider: "mimo", status: "success", durationMs: Date.now() - startedAt });
       return result;
     } catch {
@@ -124,11 +126,10 @@ export async function generateParentCompanionSuggestion(input: ParentCompanionAi
       // DeepSeek remains a bounded fallback so a temporary MiMo failure does not block parent login indefinitely.
     }
   }
-  const deepSeekKey = process.env.DEEPSEEK_API_KEY?.trim();
-  if (deepSeekKey) {
+  if (deepSeekConfig.configured) {
     const startedAt = Date.now();
     try {
-      const result = await requestDeepSeek(deepSeekKey, userPrompt);
+      const result = await requestDeepSeek(deepSeekConfig, userPrompt);
       await recordServiceHealthEvent({ service: "parent-ai", operation: "companion-suggestion", provider: "deepseek", status: "fallback", durationMs: Date.now() - startedAt });
       return result;
     } catch (error) {

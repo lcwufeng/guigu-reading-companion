@@ -1,5 +1,6 @@
 import classicBookManifest from "../app/classic-books-manifest.json";
 import { passwordHash } from "./auth";
+import { getAdminModelConfigs, type AdminModelConfig } from "./model-config";
 import { buildParentReport, type ParentReportData } from "./parent-reports";
 import { getStudentMemory, type StudentMemory } from "./student-memory";
 import { readyRuntimeDatabase } from "./runtime-database";
@@ -51,7 +52,7 @@ export type AdminLearningData = {
 };
 
 export type AdminAiData = {
-  providers: Array<{ key: string; label: string; configured: boolean; purpose: string }>;
+  providers: AdminModelConfig[];
   summary24h: Array<{ service: string; success: number; failed: number; fallback: number; averageDurationMs: number; latestAt: number }>;
   recentEvents: Array<{ eventId: string; service: string; operation: string; provider: string; status: string; durationMs: number; detail: string; createdAt: number }>;
   usageToday: { readingAnswers: number; mistakeScans: number; mistakeReviews: number; parentSuggestions: number };
@@ -79,16 +80,6 @@ function accountRow(row: { id: string; username: string; status: string | null; 
     id: row.id, username: row.username, status: row.status === "disabled" ? "disabled" : "active",
     mustResetPassword: Boolean(row.must_reset_password), lastLoginAt: row.last_login_at || 0, createdAt: row.created_at,
   };
-}
-
-export async function recordManagedAccountLogin(type: ManagedAccountType, accountId: string) {
-  const database = await readyRuntimeDatabase();
-  if (!database) return;
-  const now = Date.now();
-  await database.run(`INSERT INTO account_admin_state
-    (account_type, account_id, status, last_login_at, created_by_admin_id, updated_at)
-    VALUES (?, ?, 'active', ?, NULL, ?) ON CONFLICT(account_type, account_id) DO UPDATE SET
-    last_login_at = excluded.last_login_at, updated_at = excluded.updated_at`, [type, accountId, now, now]);
 }
 
 export async function getAdminOverview(): Promise<AdminOverviewData> {
@@ -132,10 +123,12 @@ export async function getAdminAccounts(search = ""): Promise<AdminAccountsData> 
   const database = await databaseOrThrow();
   const pattern = `%${search.replace(/[%_]/g, "").slice(0, 30)}%`;
   const [studentRows, parentRows, links] = await Promise.all([
-    database.all<{ id: string; username: string; status: string | null; must_reset_password: number; last_login_at: number | null; created_at: number }>(`SELECT u.id, u.username, s.status, u.must_reset_password, s.last_login_at, u.created_at
+    database.all<{ id: string; username: string; status: string | null; must_reset_password: number; last_login_at: number | null; created_at: number }>(`SELECT u.id, u.username, s.status, u.must_reset_password,
+      MAX(COALESCE(s.last_login_at, 0), COALESCE((SELECT MAX(created_at) FROM app_sessions login_session WHERE login_session.user_id = u.id), 0)) AS last_login_at, u.created_at
       FROM app_users u LEFT JOIN account_admin_state s ON s.account_type = 'student' AND s.account_id = u.id
       WHERE u.username LIKE ? ORDER BY u.created_at DESC LIMIT 200`, [pattern]),
-    database.all<{ id: string; username: string; status: string | null; must_reset_password: number; last_login_at: number | null; created_at: number }>(`SELECT u.id, u.username, s.status, u.must_reset_password, s.last_login_at, u.created_at
+    database.all<{ id: string; username: string; status: string | null; must_reset_password: number; last_login_at: number | null; created_at: number }>(`SELECT u.id, u.username, s.status, u.must_reset_password,
+      MAX(COALESCE(s.last_login_at, 0), COALESCE((SELECT MAX(created_at) FROM app_parent_sessions login_session WHERE login_session.parent_id = u.id), 0)) AS last_login_at, u.created_at
       FROM app_parent_users u LEFT JOIN account_admin_state s ON s.account_type = 'parent' AND s.account_id = u.id
       WHERE u.username LIKE ? ORDER BY u.created_at DESC LIMIT 200`, [pattern]),
     database.all<{ parent_id: string; parent_name: string; student_id: string; student_name: string; relationship: string; created_at: number }>(`SELECT l.parent_id, p.username AS parent_name, l.student_id, u.username AS student_name, l.relationship, l.created_at
@@ -152,7 +145,8 @@ export async function getAdminAccounts(search = ""): Promise<AdminAccountsData> 
 
 export async function getAdminLearning(studentId: string, days = 14): Promise<AdminLearningData | null> {
   const database = await databaseOrThrow();
-  const row = await database.first<{ id: string; username: string; status: string | null; must_reset_password: number; last_login_at: number | null; created_at: number }>(`SELECT u.id, u.username, s.status, u.must_reset_password, s.last_login_at, u.created_at
+  const row = await database.first<{ id: string; username: string; status: string | null; must_reset_password: number; last_login_at: number | null; created_at: number }>(`SELECT u.id, u.username, s.status, u.must_reset_password,
+    MAX(COALESCE(s.last_login_at, 0), COALESCE((SELECT MAX(created_at) FROM app_sessions login_session WHERE login_session.user_id = u.id), 0)) AS last_login_at, u.created_at
     FROM app_users u LEFT JOIN account_admin_state s ON s.account_type = 'student' AND s.account_id = u.id WHERE u.id = ?`, [studentId]);
   if (!row) return null;
   const now = Date.now();
@@ -180,7 +174,8 @@ export async function getAdminAiData(): Promise<AdminAiData> {
   const now = Date.now();
   const since = now - 24 * 60 * 60 * 1000;
   const today = chinaDayStart(now);
-  const [summaryRows, recentRows, reading, scans, reviews, suggestions] = await Promise.all([
+  const [providers, summaryRows, recentRows, reading, scans, reviews, suggestions] = await Promise.all([
+    getAdminModelConfigs(),
     database.all<{ service: string; success: number; failed: number; fallback: number; average_duration: number; latest_at: number }>(`SELECT service,
       COALESCE(SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END), 0) AS success,
       COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) AS failed,
@@ -194,11 +189,7 @@ export async function getAdminAiData(): Promise<AdminAiData> {
     database.first<{ count: number }>("SELECT COUNT(*) AS count FROM parent_companion_suggestions WHERE generated_at >= ?", [today]),
   ]);
   return {
-    providers: [
-      { key: "mimo", label: "MiMo", configured: Boolean(process.env.MIMO_API_KEY), purpose: "章节判断、错题识别、家长建议" },
-      { key: "deepseek", label: "DeepSeek", configured: Boolean(process.env.DEEPSEEK_API_KEY), purpose: "聊天与模型降级" },
-      { key: "volc-speech", label: "火山语音", configured: Boolean(process.env.VOLC_SPEECH_APP_ID && process.env.VOLC_SPEECH_ACCESS_TOKEN), purpose: "学生语音输入" },
-    ],
+    providers,
     summary24h: summaryRows.map((item) => ({ service: item.service, success: item.success, failed: item.failed, fallback: item.fallback, averageDurationMs: Math.round(item.average_duration), latestAt: item.latest_at || 0 })),
     recentEvents: recentRows.map((item) => ({ eventId: item.event_id, service: item.service, operation: item.operation, provider: item.provider, status: item.status, durationMs: item.duration_ms, detail: item.detail, createdAt: item.created_at })),
     usageToday: { readingAnswers: reading?.count || 0, mistakeScans: scans?.count || 0, mistakeReviews: reviews?.count || 0, parentSuggestions: suggestions?.count || 0 },

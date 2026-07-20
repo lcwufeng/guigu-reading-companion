@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { gunzipSync, gzipSync } from "node:zlib";
 
 import type { RawData } from "ws";
+import { getResolvedModelConfig } from "../db/model-config";
 
 export const SPEECH_ENDPOINT = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_nostream";
 export const DEFAULT_SPEECH_RESOURCE_ID = "volc.bigasr.sauc.duration";
@@ -40,13 +41,12 @@ async function loadNodeWebSocket() {
 }
 
 export async function recognizeVolcSpeech(audio: Buffer) {
-  const appId = process.env.VOLC_SPEECH_APP_ID;
-  const accessToken = process.env.VOLC_SPEECH_ACCESS_TOKEN;
-  if (!appId || !accessToken) throw new Error("speech credentials missing");
+  const config = await getResolvedModelConfig("speech");
+  if (!config.configured) throw new Error("speech credentials missing");
 
   const WebSocket = await loadNodeWebSocket();
   const connectionId = randomUUID();
-  const resourceId = process.env.VOLC_SPEECH_RESOURCE_ID || DEFAULT_SPEECH_RESOURCE_ID;
+  const resourceId = config.model || DEFAULT_SPEECH_RESOURCE_ID;
   const request = {
     user: { uid: randomUUID() },
     audio: { format: "wav", codec: "raw", rate: 16000, bits: 16, channel: 1, language: "zh-CN" },
@@ -59,10 +59,10 @@ export async function recognizeVolcSpeech(audio: Buffer) {
   };
 
   return new Promise<string>((resolve, reject) => {
-    const socket = new WebSocket(SPEECH_ENDPOINT, {
+    const socket = new WebSocket(config.baseUrl || SPEECH_ENDPOINT, {
       headers: {
-        "X-Api-App-Key": appId,
-        "X-Api-Access-Key": accessToken,
+        "X-Api-App-Key": config.appId,
+        "X-Api-Access-Key": config.apiKey,
         "X-Api-Resource-Id": resourceId,
         "X-Api-Connect-Id": connectionId,
       },

@@ -302,12 +302,16 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../lib/book-audio-store.ts", import.meta.url), "utf8"),
     readFile(new URL("../scripts/pregenerate-book-audio.mjs", import.meta.url), "utf8"),
   ]);
-  const [adminCenter, adminAuth, adminActions, adminData, serviceHealth] = await Promise.all([
+  const [adminCenter, adminStyles, parentStyles, adminAuth, adminActions, adminData, serviceHealth, modelConfig, accountLogins] = await Promise.all([
     readFile(new URL("../app/admin/AdminCenter.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/admin/AdminCenter.module.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/parent/ParentCenter.module.css", import.meta.url), "utf8"),
     readFile(new URL("../db/admin-auth.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/admin/actions/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/admin/data/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/service-health.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/model-config.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/account-logins.ts", import.meta.url), "utf8"),
   ]);
 
   for (const feature of [
@@ -545,11 +549,11 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(nextConfig, /NEXT_PUBLIC_BASE_PATH/);
   assert.match(page, /fetch\(`\$\{BASE_PATH\}\/api\/companion`/);
   assert.doesNotMatch(styles, /url\(["']?\/assets\//);
-  assert.match(companionRoute, /https:\/\/api\.deepseek\.com\/chat\/completions/);
-  assert.match(companionRoute, /deepseek-v4-flash/);
-  assert.match(companionRoute, /https:\/\/api\.xiaomimimo\.com\/v1\/chat\/completions/);
-  assert.match(companionRoute, /MIMO_API_KEY/);
-  assert.match(companionRoute, /mimo-v2\.5/);
+  assert.match(modelConfig, /https:\/\/api\.deepseek\.com\/chat\/completions/);
+  assert.match(modelConfig, /deepseek-v4-flash/);
+  assert.match(modelConfig, /https:\/\/api\.xiaomimimo\.com\/v1\/chat\/completions/);
+  assert.match(modelConfig, /MIMO_API_KEY/);
+  assert.match(modelConfig, /mimo-v2\.5/);
   assert.match(companionRoute, /source: "mimo"/);
   assert.match(companionRoute, /DEFAULT_MIMO_TIMEOUT_MS = 25_000/);
   assert.match(companionRoute, /DEFAULT_DEEPSEEK_TIMEOUT_MS = 20_000/);
@@ -568,12 +572,20 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(companionRoute, /response_format: \{ type: "json_object" \}/);
   assert.match(companionRoute, /parseReadingEvaluation/);
   assert.match(companionRoute, /correct: evaluation\.correct/);
-  assert.match(companionRoute, /DEEPSEEK_API_KEY/);
+  assert.match(companionRoute, /getResolvedModelConfig\("primary"\)/);
   assert.match(adminCenter, /数据总览/);
   assert.match(adminCenter, /账号与绑定/);
   assert.match(adminCenter, /学习数据/);
   assert.match(adminCenter, /AI 服务/);
   assert.match(adminCenter, /操作审计/);
+  assert.match(adminCenter, /模型配置/);
+  assert.match(adminCenter, /API 密钥/);
+  assert.match(adminActions, /updateModelConfig/);
+  assert.match(modelConfig, /AES-GCM/);
+  assert.match(modelConfig, /MODEL_CONFIG_ENCRYPTION_KEY/);
+  assert.match(adminStyles, /height: 100dvh; overflow-y: auto/);
+  assert.match(parentStyles, /height: 100dvh; min-height: 100vh; overflow-y: auto/);
+  assert.match(accountLogins, /account_login_events/);
   assert.doesNotMatch(adminCenter, /chatMessages|message_text/);
   assert.match(adminAuth, /ADMIN_INITIAL_PASSWORD/);
   assert.match(adminAuth, /sessionLifetime = 8 \* 60 \* 60 \* 1000/);
@@ -606,9 +618,9 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(speechRoute, /recognizeVolcSpeech/);
   assert.match(speechRoute, /MAX_AUDIO_BYTES/);
   assert.match(speechClient, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
-  assert.match(speechClient, /VOLC_SPEECH_APP_ID/);
-  assert.match(speechClient, /VOLC_SPEECH_ACCESS_TOKEN/);
-  assert.match(speechClient, /volc\.bigasr\.sauc\.duration/);
+  assert.match(modelConfig, /VOLC_SPEECH_APP_ID/);
+  assert.match(modelConfig, /VOLC_SPEECH_ACCESS_TOKEN/);
+  assert.match(modelConfig, /volc\.bigasr\.sauc\.duration/);
   assert.match(speechClient, /@vite-ignore/);
   assert.doesNotMatch(speechClient, /import WebSocket from "ws"/);
   assert.match(serverBundle, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
@@ -623,9 +635,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(mistakesDb, /WHERE user_id = \? AND mistake_id = \?/);
   assert.match(mistakesDb, /user_mistake_answer_attempts/);
   assert.match(mistakesDb, /user_reward_ledger/);
-  assert.match(mistakeAi, /api\.xiaomimimo\.com\/v1\/chat\/completions/);
-  assert.match(mistakeAi, /MIMO_API_KEY/);
-  assert.match(mistakeAi, /mimo-v2\.5/);
+  assert.match(mistakeAi, /getResolvedModelConfig\("multimodal"\)/);
   assert.match(mistakeAi, /response_format: \{ type: "json_object" \}/);
   assert.match(mistakeAi, /MAX_IMAGE_DATA_LENGTH/);
   for (const account of ["同学一", "同学二", "同学三", "同学四", "同学五", "同学六", "同学七"]) assert.match(authDb, new RegExp(account));

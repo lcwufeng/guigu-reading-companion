@@ -85,6 +85,24 @@ export const SCHEMA_STATEMENTS = [
   )`,
   "CREATE INDEX IF NOT EXISTS service_health_events_service_date_idx ON service_health_events(service, created_at)",
   "CREATE INDEX IF NOT EXISTS service_health_events_status_date_idx ON service_health_events(status, created_at)",
+  `CREATE TABLE IF NOT EXISTS app_model_configs (
+    provider_key TEXT PRIMARY KEY NOT NULL,
+    model TEXT NOT NULL,
+    base_url TEXT NOT NULL,
+    secret_ciphertext TEXT NOT NULL DEFAULT '',
+    secondary_secret_ciphertext TEXT NOT NULL DEFAULT '',
+    updated_by_admin_id TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS account_login_events (
+    event_id TEXT PRIMARY KEY NOT NULL,
+    account_type TEXT NOT NULL,
+    account_id TEXT NOT NULL,
+    ip_address TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS account_login_events_account_date_idx ON account_login_events(account_type, account_id, created_at)",
+  "CREATE INDEX IF NOT EXISTS account_login_events_date_idx ON account_login_events(created_at)",
   `CREATE TABLE IF NOT EXISTS parent_student_links (
     parent_id TEXT NOT NULL,
     student_id TEXT NOT NULL,

@@ -3,6 +3,7 @@ import { getActiveStudent } from "../../auth-user";
 import { rememberStudentEvent, type StudentMemory } from "../../../db/student-memory";
 import { recordChapterAnswer } from "../../../db/learning-records";
 import { recordServiceHealthEvent } from "../../../db/service-health";
+import { getResolvedModelConfig, type ResolvedModelConfig } from "../../../db/model-config";
 
 type CompanionMessage = {
   role?: "user" | "assistant";
@@ -94,15 +95,15 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
-async function evaluateReadingWithMiMo(apiKey: string, name: string, userContext: string) {
-  const response = await fetchWithTimeout("https://api.xiaomimimo.com/v1/chat/completions", {
+async function evaluateReadingWithMiMo(config: ResolvedModelConfig, name: string, userContext: string) {
+  const response = await fetchWithTimeout(config.baseUrl, {
     method: "POST",
     headers: {
-      "api-key": apiKey,
+      "api-key": config.apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.MIMO_MODEL || "mimo-v2.5",
+      model: config.model,
       messages: [
         { role: "system", content: buildSystemPrompt(name, "reading") },
         { role: "user", content: userContext },
@@ -120,15 +121,15 @@ async function evaluateReadingWithMiMo(apiKey: string, name: string, userContext
   return parseReadingEvaluation(rawReply);
 }
 
-async function evaluateReadingWithDeepSeek(apiKey: string, name: string, userContext: string) {
-  const response = await fetchWithTimeout("https://api.deepseek.com/chat/completions", {
+async function evaluateReadingWithDeepSeek(config: ResolvedModelConfig, name: string, userContext: string) {
+  const response = await fetchWithTimeout(config.baseUrl, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${config.apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
+      model: config.model,
       messages: [
         { role: "system", content: buildSystemPrompt(name, "reading") },
         { role: "user", content: userContext },
@@ -255,11 +256,14 @@ export async function POST(request: Request) {
       `孩子的回答：${input}`,
     ].join("\n");
 
-    const mimoApiKey = process.env.MIMO_API_KEY;
-    if (mimoApiKey) {
+    const [mimoConfig, deepSeekConfig] = await Promise.all([
+      getResolvedModelConfig("multimodal"),
+      getResolvedModelConfig("primary"),
+    ]);
+    if (mimoConfig.configured) {
       const startedAt = Date.now();
       try {
-        const evaluation = await evaluateReadingWithMiMo(mimoApiKey, name, userContext);
+        const evaluation = await evaluateReadingWithMiMo(mimoConfig, name, userContext);
         await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "mimo", status: "success", durationMs: Date.now() - startedAt });
         await saveReadingAttempt(student.id, body, evaluation, "mimo");
         return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "mimo" });
@@ -269,11 +273,10 @@ export async function POST(request: Request) {
       }
     }
 
-    const deepSeekApiKey = process.env.DEEPSEEK_API_KEY;
-    if (deepSeekApiKey) {
+    if (deepSeekConfig.configured) {
       const startedAt = Date.now();
       try {
-        const evaluation = await evaluateReadingWithDeepSeek(deepSeekApiKey, name, userContext);
+        const evaluation = await evaluateReadingWithDeepSeek(deepSeekConfig, name, userContext);
         await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "deepseek", status: "fallback", durationMs: Date.now() - startedAt });
         await saveReadingAttempt(student.id, body, evaluation, "deepseek");
         return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "deepseek" });
@@ -289,19 +292,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) return NextResponse.json({ reply: localReply(body), source: "local" });
+  const deepSeekConfig = await getResolvedModelConfig("primary");
+  if (!deepSeekConfig.configured) return NextResponse.json({ reply: localReply(body), source: "local" });
 
   try {
     const startedAt = Date.now();
-    const response = await fetchWithTimeout("https://api.deepseek.com/chat/completions", {
+    const response = await fetchWithTimeout(deepSeekConfig.baseUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${deepSeekConfig.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
+        model: deepSeekConfig.model,
         messages: [
           { role: "system", content: buildSystemPrompt(name, "chat", studentMemory) },
           ...safeHistory(body.history),

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { recordAdminAudit, requestIp } from "../../../../db/admin-audit";
+import { updateModelConfig, type ModelProviderKey } from "../../../../db/model-config";
 import {
   createManagedAccount,
   createParentStudentBinding,
@@ -20,6 +21,11 @@ type AdminActionBody = {
   parentId?: string;
   studentId?: string;
   relationship?: string;
+  providerKey?: ModelProviderKey;
+  model?: string;
+  baseUrl?: string;
+  apiKey?: string;
+  appId?: string;
 };
 
 export async function POST(request: Request) {
@@ -30,6 +36,19 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as AdminActionBody | null;
   const ipAddress = requestIp(request);
   try {
+    if (body?.action === "update-model-config" && (body.providerKey === "primary" || body.providerKey === "multimodal" || body.providerKey === "speech")) {
+      if (admin.role !== "super_admin") return NextResponse.json({ error: "只有超级管理员可以修改模型和密钥。" }, { status: 403 });
+      const updated = await updateModelConfig({
+        adminId: admin.id, providerKey: body.providerKey, model: body.model, baseUrl: body.baseUrl,
+        apiKey: body.apiKey, appId: body.appId,
+      });
+      await recordAdminAudit({
+        adminId: admin.id, adminUsername: admin.displayName, action: "model.config.update",
+        targetType: "model_provider", targetId: updated.providerKey,
+        summary: `更新${updated.providerKey === "primary" ? "主要模型" : updated.providerKey === "multimodal" ? "多模态模型" : "语音模型"}配置（密钥未写入日志）`, ipAddress,
+      });
+      return NextResponse.json({ ok: true });
+    }
     if (body?.action === "create-account" && (body.accountType === "student" || body.accountType === "parent")) {
       const created = await createManagedAccount(admin.id, body.accountType, body.username, body.studentId, body.relationship);
       await recordAdminAudit({ adminId: admin.id, adminUsername: admin.displayName, action: "account.create", targetType: body.accountType, targetId: created.id, summary: `创建${body.accountType === "student" ? "学生" : "家长"}账号“${created.username}”`, ipAddress });

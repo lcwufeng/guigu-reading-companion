@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authenticateUser, createSession } from "../../../../db/auth";
-import { recordManagedAccountLogin } from "../../../../db/admin-center";
+import { loginRequestIp, recordManagedAccountLogin } from "../../../../db/account-logins";
 import { SESSION_COOKIE, sessionCookieOptions } from "../../../auth-user";
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -38,8 +38,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "账号或密码不正确。" }, { status: 401 });
     }
     attempts.delete(key);
-    await recordManagedAccountLogin("student", user.id);
     const token = await createSession(user.id);
+    await recordManagedAccountLogin("student", user.id, loginRequestIp(request));
     const response = NextResponse.json({ loggedIn: true, mustResetPassword: user.mustResetPassword });
     response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(request));
     return response;

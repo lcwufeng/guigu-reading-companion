@@ -1,3 +1,5 @@
+import { getResolvedModelConfig } from "../db/model-config";
+
 export const MISTAKE_SUBJECTS = ["数学", "语文", "英语", "科学", "其他"] as const;
 export const MISTAKE_CAUSES = ["知识点没记牢", "题目没读懂", "计算或书写失误", "方法没有想到", "还不确定"] as const;
 
@@ -75,16 +77,16 @@ async function requestMiMo(
   userContent: string | Array<{ type: "image_url"; image_url: { url: string } } | { type: "text"; text: string }>,
   maxCompletionTokens: number,
 ) {
-  const apiKey = process.env.MIMO_API_KEY;
-  if (!apiKey) throw new Error("mimo unavailable");
+  const config = await getResolvedModelConfig("multimodal");
+  if (!config.configured) throw new Error("mimo unavailable");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), modelTimeout());
   try {
-    const response = await fetch("https://api.xiaomimimo.com/v1/chat/completions", {
+    const response = await fetch(config.baseUrl, {
       method: "POST",
-      headers: { "api-key": apiKey, "Content-Type": "application/json" },
+      headers: { "api-key": config.apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: process.env.MIMO_MODEL || "mimo-v2.5",
+        model: config.model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
@@ -106,8 +108,8 @@ async function requestMiMo(
   }
 }
 
-export function mistakeModelSource() {
-  return process.env.MIMO_MODEL || "mimo-v2.5";
+export async function mistakeModelSource() {
+  return (await getResolvedModelConfig("multimodal")).model;
 }
 
 export async function analyzeMistakeImage(imageData: string): Promise<MistakeAnalysis> {

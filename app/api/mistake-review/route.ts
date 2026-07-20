@@ -4,6 +4,7 @@ import { getMistakeForUser, recordMistakeReviewForUser } from "../../../db/mista
 import { deleteMistakeImage, saveMistakeImage } from "../../../db/mistake-images";
 import { decodeMistakeImageData, evaluateMistakeAnswer, mistakeModelSource, validateMistakeImageData } from "../../../lib/mistake-ai";
 import { recordServiceHealthEvent } from "../../../db/service-health";
+import { getResolvedModelConfig } from "../../../db/model-config";
 
 const mistakeIdPattern = /^\d{10,20}$/;
 
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
   }
   const mistake = await getMistakeForUser(student.id, mistakeId);
   if (!mistake) return NextResponse.json({ error: "这道错题不存在" }, { status: 404 });
-  if (!process.env.MIMO_API_KEY) return NextResponse.json({ error: "错题判断服务尚未配置" }, { status: 503 });
+  if (!(await getResolvedModelConfig("multimodal")).configured) return NextResponse.json({ error: "错题判断服务尚未配置" }, { status: 503 });
 
   let answerImageId = "";
   const startedAt = Date.now();
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     });
     if (!result.readable) {
       await recordServiceHealthEvent({ service: "mistake-ai", operation: "answer-review", provider: "mimo", status: "success", durationMs: Date.now() - startedAt, detail: "image-unreadable" });
-      return NextResponse.json({ result, saved: false, source: mistakeModelSource() });
+      return NextResponse.json({ result, saved: false, source: await mistakeModelSource() });
     }
 
     const { bytes, contentType } = decodeMistakeImageData(body.imageData);
@@ -45,11 +46,11 @@ export async function POST(request: Request) {
       correct: result.correct,
       feedback: result.feedback,
       notice: result.notice,
-      modelSource: mistakeModelSource(),
+      modelSource: await mistakeModelSource(),
     });
     if (!review) throw new Error("mistake disappeared");
     await recordServiceHealthEvent({ service: "mistake-ai", operation: "answer-review", provider: "mimo", status: "success", durationMs: Date.now() - startedAt });
-    return NextResponse.json({ result, review, saved: true, source: mistakeModelSource() });
+    return NextResponse.json({ result, review, saved: true, source: await mistakeModelSource() });
   } catch {
     await recordServiceHealthEvent({ service: "mistake-ai", operation: "answer-review", provider: "mimo", status: "failed", durationMs: Date.now() - startedAt, detail: "review-failed" });
     if (answerImageId) await deleteMistakeImage(student.id, answerImageId).catch(() => undefined);

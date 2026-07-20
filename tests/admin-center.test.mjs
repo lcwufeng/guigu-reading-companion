@@ -28,10 +28,13 @@ test("admin accounts are isolated, audited, disableable and never expose raw cha
       process.env.ADMIN_INITIAL_USERNAME = "admin";
       process.env.ADMIN_INITIAL_PASSWORD = "InitialAdmin2026";
       process.env.MIMO_API_KEY = "configured";
+      process.env.MODEL_CONFIG_ENCRYPTION_KEY = "admin-model-config-test-encryption-key-2026";
       (async () => {
         const { authenticateAdmin, createAdminSession, getAdminSessionUser } = await import("./db/admin-auth.ts");
         const { authenticateUser } = await import("./db/auth.ts");
         const { createManagedAccount, resetManagedAccountPassword, setManagedAccountStatus, createParentStudentBinding, getAdminAccounts, getAdminLearning, getAdminOverview, getAdminAiData } = await import("./db/admin-center.ts");
+        const { recordManagedAccountLogin } = await import("./db/account-logins.ts");
+        const { getResolvedModelConfig, updateModelConfig } = await import("./db/model-config.ts");
         const { recordAdminAudit } = await import("./db/admin-audit.ts");
         const { recordServiceHealthEvent } = await import("./db/service-health.ts");
         const { readyRuntimeDatabase } = await import("./db/runtime-database.ts");
@@ -50,15 +53,20 @@ test("admin accounts are isolated, audited, disableable and never expose raw cha
         const disabledLogin = await authenticateUser(student.username, reset.temporaryPassword);
         await setManagedAccountStatus("student", student.id, "active");
         const activeLogin = await authenticateUser(student.username, reset.temporaryPassword);
+        await recordManagedAccountLogin("student", student.id, "127.0.0.1");
+        await updateModelConfig({ adminId: admin.id, providerKey: "primary", model: "deepseek-test-model", baseUrl: "https://example.com/v1/chat/completions", apiKey: "top-secret-test-key" });
         await createParentStudentBinding(parent.id, student.id, "监护人");
         const accounts = await getAdminAccounts("后台测试");
         const learning = await getAdminLearning(student.id, 14);
         const overview = await getAdminOverview();
         const ai = await getAdminAiData();
+        const primaryConfig = await getResolvedModelConfig("primary");
+        const encryptedConfig = await database.first("SELECT secret_ciphertext FROM app_model_configs WHERE provider_key = 'primary'");
+        const loginEvents = await database.first("SELECT COUNT(*) AS count FROM account_login_events WHERE account_type = 'student' AND account_id = ?", [student.id]);
         process.stdout.write(JSON.stringify({
           admin: { username: admin.username, role: admin.role, mustResetPassword: admin.mustResetPassword }, session: Boolean(session),
           student, parent, reset, disabledLogin: Boolean(disabledLogin), activeMustReset: activeLogin?.mustResetPassword,
-          accounts, learning, overview, ai,
+          accounts, learning, overview, ai, primaryConfig, encryptedConfig, loginEvents,
         }));
       })();
     `]);
@@ -71,7 +79,12 @@ test("admin accounts are isolated, audited, disableable and never expose raw cha
     assert.equal(output.accounts.parents[0].children[0].relationship, "监护人");
     assert.equal(JSON.stringify(output.learning).includes("秘密聊天原文-后台不可见"), false);
     assert.ok(output.overview.counts.students >= 8);
-    assert.equal(output.ai.providers.find((provider) => provider.key === "mimo").configured, true);
+    assert.equal(output.ai.providers.find((provider) => provider.key === "multimodal").configured, true);
+    assert.equal(output.ai.providers.find((provider) => provider.key === "primary").model, "deepseek-test-model");
+    assert.equal(output.primaryConfig.apiKey, "top-secret-test-key");
+    assert.equal(output.encryptedConfig.secret_ciphertext.includes("top-secret-test-key"), false);
+    assert.ok(output.accounts.students[0].lastLoginAt > 0);
+    assert.equal(output.loginEvents.count, 1);
     assert.equal(output.ai.summary24h[0].averageDurationMs, 321);
     assert.equal(JSON.stringify(output.overview.recentAudits).includes(output.reset.temporaryPassword), false);
   } finally {

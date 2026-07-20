@@ -137,6 +137,27 @@ export const serviceHealthEvents = sqliteTable("service_health_events", {
   index("service_health_events_status_date_idx").on(table.status, table.createdAt),
 ]);
 
+export const appModelConfigs = sqliteTable("app_model_configs", {
+  providerKey: text("provider_key").primaryKey(),
+  model: text("model").notNull(),
+  baseUrl: text("base_url").notNull(),
+  secretCiphertext: text("secret_ciphertext").notNull().default(""),
+  secondarySecretCiphertext: text("secondary_secret_ciphertext").notNull().default(""),
+  updatedByAdminId: text("updated_by_admin_id").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const accountLoginEvents = sqliteTable("account_login_events", {
+  eventId: text("event_id").primaryKey(),
+  accountType: text("account_type").notNull(),
+  accountId: text("account_id").notNull(),
+  ipAddress: text("ip_address").notNull().default(""),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("account_login_events_account_date_idx").on(table.accountType, table.accountId, table.createdAt),
+  index("account_login_events_date_idx").on(table.createdAt),
+]);
+
 export const parentStudentLinks = sqliteTable("parent_student_links", {
   parentId: text("parent_id").notNull(),
   studentId: text("student_id").notNull(),

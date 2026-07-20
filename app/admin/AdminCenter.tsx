@@ -3,7 +3,7 @@
 
 import {
   Activity, BookOpenCheck, Bot, CheckCircle2, ChevronRight, ClipboardList, KeyRound,
-  Link2, LogOut, RefreshCw, Search, ShieldCheck, UserPlus, UsersRound, UserX, XCircle,
+  Link2, LogOut, RefreshCw, Save, Search, ShieldCheck, UserPlus, UsersRound, UserX, XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
@@ -116,7 +116,7 @@ export default function AdminCenter({ initialSection }: { initialSection: AdminS
           {initialSection === "overview" && overview && <Overview data={overview} />}
           {initialSection === "accounts" && accounts && <Accounts data={accounts} action={action} />}
           {initialSection === "learning" && <Learning data={learning} accounts={accounts} selectedStudentId={selectedStudentId} select={(id) => { setSelectedStudentId(id); void load(id); }} />}
-          {initialSection === "ai" && ai && <AiStatus data={ai} />}
+          {initialSection === "ai" && ai && <AiStatus data={ai} action={action} />}
           {initialSection === "audit" && <Audit rows={audits} />}
         </>}
       </section>
@@ -216,10 +216,10 @@ function Learning({ data, accounts, selectedStudentId, select }: { data: AdminLe
   </>;
 }
 
-function AiStatus({ data }: { data: AdminAiData }) {
+function AiStatus({ data, action }: { data: AdminAiData; action: (input: Record<string, unknown>, confirmation?: string) => Promise<unknown> }) {
   return <>
-    <Title eyebrow="AI 与服务" detail="只记录调用是否成功、耗时和服务来源，不保存提示词、聊天原文或模型完整回复。">服务运行状态</Title>
-    <div className={styles.providerGrid}>{data.providers.map((provider) => <article key={provider.key}><Bot /><div><strong>{provider.label}</strong><span>{provider.purpose}</span></div><em className={provider.configured ? styles.success : styles.danger}>{provider.configured ? "已配置" : "未配置"}</em></article>)}</div>
+    <Title eyebrow="模型配置" detail="这里统一管理主要模型、多模态模型和语音模型。密钥加密保存，页面不会回显密钥原文。">模型与服务</Title>
+    <div className={styles.modelConfigGrid}>{data.providers.map((provider) => <ModelConfigCard key={provider.key} provider={provider} action={action} />)}</div>
     <div className={styles.metrics}>
       <article><BookOpenCheck /><span>今日章节判断</span><strong>{data.usageToday.readingAnswers}</strong></article>
       <article><Search /><span>今日错题识别</span><strong>{data.usageToday.mistakeScans}</strong></article>
@@ -229,6 +229,29 @@ function AiStatus({ data }: { data: AdminAiData }) {
     <article className={styles.panel}><h2>最近 24 小时</h2>{data.summary24h.length ? <div className={styles.serviceRows}>{data.summary24h.map((item) => <div key={item.service}><strong>{serviceName(item.service)}</strong><span>成功 {item.success}</span><span>失败 {item.failed}</span><span>降级 {item.fallback}</span><em>平均 {item.averageDurationMs} ms</em></div>)}</div> : <Empty>服务事件会从本版本上线后的新调用开始记录。</Empty>}</article>
     <article className={styles.panel}><h2>最近调用事件</h2>{data.recentEvents.length ? <div className={styles.tableWrap}><table><thead><tr><th>时间</th><th>服务</th><th>操作</th><th>来源</th><th>结果</th><th>耗时</th></tr></thead><tbody>{data.recentEvents.map((event) => <tr key={event.eventId}><td>{formatDate(event.createdAt)}</td><td>{serviceName(event.service)}</td><td>{event.operation}</td><td>{event.provider}</td><td><em className={event.status === "success" ? styles.success : event.status === "fallback" ? styles.warning : styles.danger}>{event.status === "success" ? "成功" : event.status === "fallback" ? "降级" : "失败"}</em></td><td>{event.durationMs} ms</td></tr>)}</tbody></table></div> : <Empty>暂无调用记录。</Empty>}</article>
   </>;
+}
+
+function ModelConfigCard({ provider, action }: { provider: AdminAiData["providers"][number]; action: (input: Record<string, unknown>, confirmation?: string) => Promise<unknown> }) {
+  const [model, setModel] = useState(provider.model);
+  const [baseUrl, setBaseUrl] = useState(provider.baseUrl);
+  const [apiKey, setApiKey] = useState("");
+  const [appId, setAppId] = useState("");
+  const [saving, setSaving] = useState(false);
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    const saved = await action({ action: "update-model-config", providerKey: provider.key, model, baseUrl, apiKey, appId }, `确定更新“${provider.label}”的配置吗？更新后新请求会立即使用这组设置。`);
+    if (saved) { setApiKey(""); setAppId(""); }
+    setSaving(false);
+  }
+  return <form className={styles.modelConfigCard} onSubmit={save}>
+    <header><Bot /><div><strong>{provider.label}</strong><span>{provider.purpose}</span></div><em className={provider.configured ? styles.success : styles.danger}>{provider.configured ? "可用" : "待配置"}</em></header>
+    <label><span>模型名称 / 资源 ID</span><input value={model} onChange={(event) => setModel(event.target.value)} required /></label>
+    <label><span>访问地址</span><input type="url" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} required /></label>
+    {provider.key === "speech" && <label><span>应用 ID</span><input type="password" value={appId} onChange={(event) => setAppId(event.target.value)} placeholder={provider.appIdConfigured ? "已保存；留空则不修改" : "请输入火山语音应用 ID"} autoComplete="new-password" /></label>}
+    <label><span>{provider.key === "speech" ? "访问密钥 / Access Token" : "API 密钥"}</span><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={provider.apiKeyConfigured ? "已保存；留空则不修改" : "请输入访问密钥"} autoComplete="new-password" /></label>
+    <footer><span>{provider.updatedAt ? `后台更新于 ${formatDate(provider.updatedAt)}` : provider.source === "environment" ? "当前使用服务器环境配置" : "当前使用系统默认值"}</span><button className={styles.primary} disabled={saving}><Save />{saving ? "正在保存…" : "保存配置"}</button></footer>
+  </form>;
 }
 
 function serviceName(value: string) { return ({ "reading-ai": "章节判断", "chat-ai": "陪伴聊天", "mistake-ai": "错题识别", "parent-ai": "家长建议", speech: "语音识别" } as Record<string, string>)[value] || value; }
