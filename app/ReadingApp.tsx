@@ -21,6 +21,7 @@ import {
   Send,
   Sparkles,
   Star,
+  Trophy,
   Trash2,
   Upload,
   Users,
@@ -32,7 +33,7 @@ import { chapterKnowledge } from "./book-knowledge";
 import { chapterPrompts, type ChapterPrompt } from "./book-prompts";
 import classicBookManifest from "./classic-books-manifest.json";
 
-type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal";
+type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard";
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
 type RecordTab = "travel" | "reading" | "items";
 type ChatMessage = { id: number; role: "turtle" | "user"; text: string };
@@ -237,6 +238,26 @@ type CompanionResponse = {
   reply: string;
   correct?: boolean;
   source?: "deepseek" | "mimo" | "local" | "unavailable";
+};
+
+type LeaderboardCategoryKey = "interaction" | "reading" | "travel" | "mistake";
+type WeeklyLeaderboard = {
+  weekLabel: string;
+  top: Array<{ rank: number; name: string; points: number }>;
+  me: {
+    rank: number;
+    name: string;
+    points: number;
+    breakdown: Record<LeaderboardCategoryKey, number>;
+  };
+  participantCount: number;
+  categories: Array<{
+    key: LeaderboardCategoryKey;
+    label: string;
+    pointPerEvent: number;
+    dailyCap: number;
+    dailyMaxPoints: number;
+  }>;
 };
 
 type VoiceTarget = "chat" | "reading";
@@ -1068,6 +1089,13 @@ function NavButton({
   );
 }
 
+function LeaderboardCategoryIcon({ category }: { category: LeaderboardCategoryKey }) {
+  if (category === "interaction") return <Users aria-hidden="true" />;
+  if (category === "reading") return <BookOpen aria-hidden="true" />;
+  if (category === "travel") return <Compass aria-hidden="true" />;
+  return <Camera aria-hidden="true" />;
+}
+
 export default function ReadingApp({
   student,
 }: {
@@ -1136,6 +1164,9 @@ export default function ReadingApp({
   const [reviewPhotoPreview, setReviewPhotoPreview] = useState("");
   const [reviewOutcome, setReviewOutcome] = useState<MistakeReviewOutcome | null>(null);
   const [dailyTasksOpen, setDailyTasksOpen] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<WeeklyLeaderboard | null>(null);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState("");
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
   const availableBooks = useMemo(() => [...books, ...importedBooks], [importedBooks]);
   const selectedGradeBooks = useMemo(
@@ -1212,6 +1243,23 @@ export default function ReadingApp({
     setBookAudioPhase((phase) => phase === "playing" || phase === "paused" ? "ready" : phase);
   }, []);
 
+  const loadLeaderboard = useCallback(async () => {
+    setLeaderboardLoading(true);
+    setLeaderboardError("");
+    try {
+      const response = await fetch(`${BASE_PATH}/api/leaderboard`, { cache: "no-store" });
+      const data = await response.json().catch(() => null) as WeeklyLeaderboard | { error?: string } | null;
+      if (!response.ok || !data || !("top" in data)) {
+        throw new Error(data && "error" in data ? data.error || "排行榜暂时不可用" : "排行榜暂时不可用");
+      }
+      setLeaderboard(data);
+    } catch (error) {
+      setLeaderboardError(error instanceof Error ? error.message : "排行榜暂时不可用");
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, []);
+
   const navigateTo = useCallback((nextView: View) => {
     stopBookAudio();
     if (nextView === "library") {
@@ -1219,8 +1267,9 @@ export default function ReadingApp({
       setChapterListOpen(false);
       setChapterQuestionOpen(false);
     }
+    if (nextView === "leaderboard") void loadLeaderboard();
     setView(nextView);
-  }, [stopBookAudio]);
+  }, [loadLeaderboard, stopBookAudio]);
 
   const remember = useCallback((event: StudentMemoryEvent) => {
     return fetch(`${BASE_PATH}/api/student-memory`, {
@@ -2419,6 +2468,17 @@ export default function ReadingApp({
             <span><Star className="wallet-star" fill="currentColor" aria-hidden="true" /> {game.stars}</span>
             <span><img className="wallet-icon" src={`${ASSET}/objects/fruit_orange.png`} alt="" /> {game.fruits}</span>
             <span className="wallet-ticket"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="" /> {game.tickets}</span>
+            <button
+              className={`leaderboard-button ${view === "leaderboard" ? "active" : ""}`}
+              type="button"
+              onClick={() => navigateTo("leaderboard")}
+              disabled={navigationLocked}
+              aria-label="打开本周成长榜"
+              title="本周成长榜"
+            >
+              <Trophy aria-hidden="true" />
+              <b>本周榜</b>
+            </button>
           </div>
         </div>
         <button className="logout-button" type="button" onClick={logout} aria-label="退出登录" title={`退出 ${student.displayName} 的账号`}>
@@ -2576,6 +2636,87 @@ export default function ReadingApp({
               </div>
             )}
 
+          </section>
+        )}
+
+        {view === "leaderboard" && (
+          <section className="scene leaderboard-scene">
+            <main className="leaderboard-panel">
+              <header className="leaderboard-heading">
+                <div>
+                  <span><Trophy aria-hidden="true" /> 本周成长榜</span>
+                  <h1>和龟龟一起慢慢变强</h1>
+                  <p>{leaderboard?.weekLabel || "本周"}的成长积分会在这里结算。</p>
+                </div>
+                <button type="button" className="leaderboard-back" onClick={() => navigateTo("home")}>
+                  <ChevronLeft aria-hidden="true" /> 回家
+                </button>
+              </header>
+
+              {leaderboardLoading && !leaderboard && (
+                <div className="leaderboard-status" role="status"><Sparkles aria-hidden="true" /> 龟龟正在整理本周的成长足迹…</div>
+              )}
+
+              {leaderboardError && !leaderboardLoading && (
+                <div className="leaderboard-status leaderboard-error" role="alert">
+                  <span>{leaderboardError}</span>
+                  <button type="button" onClick={() => void loadLeaderboard()}>再试一次</button>
+                </div>
+              )}
+
+              {leaderboard && (
+                <>
+                  <section className="leaderboard-my-card" aria-label="我的本周成长积分">
+                    <div>
+                      <span>我的名次</span>
+                      <strong>第 {leaderboard.me.rank} 名</strong>
+                      <small>{leaderboard.participantCount > 0 ? `本周有 ${leaderboard.participantCount} 位小朋友获得了积分` : "本周先和龟龟一起攒下第一分吧"}</small>
+                    </div>
+                    <div className="leaderboard-total">
+                      <span>本周积分</span>
+                      <strong>{leaderboard.me.points}</strong>
+                      <small>成长积分</small>
+                    </div>
+                  </section>
+
+                  <section className="leaderboard-top" aria-label="本周前三名">
+                    <header>
+                      <h2>本周前三名</h2>
+                      <small>只展示名次和成长积分</small>
+                    </header>
+                    <div className="leaderboard-podium">
+                      {leaderboard.top.map((entry) => (
+                        <article className={`podium-card rank-${entry.rank}`} key={`${entry.rank}-${entry.name}`}>
+                          <span className="podium-medal">{entry.rank}</span>
+                          <strong>{entry.name}</strong>
+                          <b>{entry.points}<small>分</small></b>
+                          <span>本周成长积分</span>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="leaderboard-rules" aria-label="积分规则">
+                    <header>
+                      <h2>积分怎么来？</h2>
+                      <p>每一项每天都有上限，认真参与就很棒。</p>
+                    </header>
+                    <div className="point-rule-grid">
+                      {leaderboard.categories.map((category) => (
+                        <article key={category.key}>
+                          <span className={`rule-icon rule-${category.key}`}><LeaderboardCategoryIcon category={category.key} /></span>
+                          <div>
+                            <h3>{category.label}</h3>
+                            <p>每次 {category.pointPerEvent} 分 · 每日最多 {category.dailyCap} 次 / {category.dailyMaxPoints} 分</p>
+                          </div>
+                          <b>{leaderboard.me.breakdown[category.key]}<small>分</small></b>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
+            </main>
           </section>
         )}
 
