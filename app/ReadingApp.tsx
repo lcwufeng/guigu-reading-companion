@@ -107,6 +107,8 @@ type DailyPlan = {
 type DailyFruitPicking = { dateKey: string; picked: number };
 type DailyHideAndSeek = { dateKey: string; completed: number };
 type ReadingFontSize = "small" | "medium" | "large";
+type GradeLevel = 1 | 2 | 3 | 4 | 5 | 6;
+type LibraryMode = "shelf" | "reader";
 type StudentMemoryEvent = {
   type: "reading" | "learning" | "activity";
   title?: string;
@@ -141,6 +143,7 @@ type Book = {
   id: string;
   title: string;
   author: string;
+  grade: GradeLevel;
   category: string;
   coverMark: string;
   coverClass: string;
@@ -311,6 +314,22 @@ const readingFontOptions: Array<{ value: ReadingFontSize; label: string; hint: s
   { value: "large", label: "大", hint: "原文字号放大 4 像素" },
 ];
 
+const gradeLevels: Array<{ value: GradeLevel; label: string }> = [
+  { value: 1, label: "一年级" },
+  { value: 2, label: "二年级" },
+  { value: 3, label: "三年级" },
+  { value: 4, label: "四年级" },
+  { value: 5, label: "五年级" },
+  { value: 6, label: "六年级" },
+];
+
+function gradeLevelFromLabel(label: string): GradeLevel {
+  const chineseGrade = gradeLevels.find((grade) => label.includes(grade.label));
+  if (chineseGrade) return chineseGrade.value;
+  const numericGrade = Number(label.match(/[1-6]/)?.[0]);
+  return numericGrade >= 1 && numericGrade <= 6 ? numericGrade as GradeLevel : 1;
+}
+
 const journalReadingArtByTitle: Record<string, string> = {
   "稻草人": "ui/journal/books/scarecrow-reading-book.png",
   "格林童话": "ui/journal/books/grimm-reading-book.png",
@@ -333,6 +352,7 @@ const classicBooks: Book[] = classicBookManifest.map((book) => ({
   id: book.slug,
   title: book.title,
   author: book.author,
+  grade: gradeLevelFromLabel(book.grade),
   category: `${book.grade}经典读物`,
   coverMark: book.title.slice(0, 1),
   coverClass: "cover-classic",
@@ -353,6 +373,7 @@ const books: Book[] = [
     id: "scarecrow-zh",
     title: "稻草人",
     author: "叶圣陶",
+    grade: 3,
     category: "中文电子版全文",
     coverMark: "稻",
     coverClass: "cover-scarecrow",
@@ -371,6 +392,7 @@ const books: Book[] = [
     id: "grimm-zh",
     title: "格林童话",
     author: "格林兄弟",
+    grade: 3,
     category: "中文电子版全文",
     coverMark: "格",
     coverClass: "cover-grimm",
@@ -389,6 +411,7 @@ const books: Book[] = [
     id: "andersen-zh",
     title: "安徒生童话",
     author: "安徒生",
+    grade: 3,
     category: "中文电子版全文",
     coverMark: "安",
     coverClass: "cover-andersen",
@@ -411,6 +434,7 @@ function importedCatalogBook(book: ImportedBookCatalogItem): Book {
     id: book.id,
     title: book.title,
     author: book.author || "佚名",
+    grade: gradeLevelFromLabel(book.grade),
     category: `${book.grade} · 后台导入`,
     coverMark: book.title.slice(0, 1),
     coverClass: "cover-classic",
@@ -1050,6 +1074,8 @@ export default function ReadingApp({
   student: { displayName: string };
 }) {
   const [view, setView] = useState<View>("home");
+  const [libraryMode, setLibraryMode] = useState<LibraryMode>("shelf");
+  const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(3);
   const [game, setGame] = useState<GameState>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
@@ -1112,6 +1138,13 @@ export default function ReadingApp({
   const [dailyTasksOpen, setDailyTasksOpen] = useState(false);
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
   const availableBooks = useMemo(() => [...books, ...importedBooks], [importedBooks]);
+  const selectedGradeBooks = useMemo(
+    () => availableBooks.filter((book) => book.grade === selectedGrade),
+    [availableBooks, selectedGrade],
+  );
+  const gradeBookCounts = useMemo(() => Object.fromEntries(
+    gradeLevels.map((grade) => [grade.value, availableBooks.filter((book) => book.grade === grade.value).length]),
+  ) as Record<GradeLevel, number>, [availableBooks]);
   const dailyTasksExpanded = mobileLayout ? dailyTasksOpen : true;
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideAdvanceTimerRef = useRef<number | null>(null);
@@ -1180,7 +1213,12 @@ export default function ReadingApp({
   }, []);
 
   const navigateTo = useCallback((nextView: View) => {
-    if (nextView !== "library") stopBookAudio();
+    stopBookAudio();
+    if (nextView === "library") {
+      setLibraryMode("shelf");
+      setChapterListOpen(false);
+      setChapterQuestionOpen(false);
+    }
     setView(nextView);
   }, [stopBookAudio]);
 
@@ -1698,6 +1736,8 @@ export default function ReadingApp({
 
   const chooseBook = (book: Book) => {
     stopBookAudio();
+    setLibraryMode("reader");
+    setSelectedGrade(book.grade);
     setSelectedBook(book);
     setBookLoading(Boolean(book.source && !loadedBooks[book.id]));
     setBookLoadError("");
@@ -1711,6 +1751,13 @@ export default function ReadingApp({
     setReaderSideTab("companion");
     setChapterListOpen(false);
     restoredBookRef.current[book.id] = false;
+  };
+
+  const returnToLibraryShelf = () => {
+    stopBookAudio();
+    setLibraryMode("shelf");
+    setChapterListOpen(false);
+    setChapterQuestionOpen(false);
   };
 
   const nextBookPage = () => {
@@ -2533,29 +2580,80 @@ export default function ReadingApp({
         )}
 
         {view === "library" && (
-          <section className="scene library-scene">
-            <div className="page-heading light-heading">
-              <span className="eyebrow"><BookOpen size={16} /> 龟龟书房</span>
-              <h1>名著伴读书房</h1>
-              <p>问题会轻轻出现在书页旁边，不催促，也不打断。</p>
-            </div>
+          <section className={`scene library-scene library-mode-${libraryMode}`}>
+            {libraryMode === "shelf" ? (
+              <div className="library-shelf-screen">
+                <header className="library-shelf-header">
+                  <span className="eyebrow"><BookOpen /> 龟龟书房</span>
+                  <div>
+                    <h1>今天想读哪一本？</h1>
+                    <p>先选择年级，再挑一本喜欢的书。阅读进度会自动保存。</p>
+                  </div>
+                  <span className="library-book-total">共 {availableBooks.length} 本</span>
+                </header>
 
-            <div className="book-picker" aria-label="选择一本书">
-              {availableBooks.map((book) => (
-                <button
-                  key={book.id}
-                  type="button"
-                  className={selectedBook.id === book.id ? "selected" : ""}
-                  onClick={() => chooseBook(book)}
-                >
-                  <span className={`book-cover ${book.coverClass}`} aria-hidden="true"><b>{book.coverMark}</b><i>{book.author}</i></span>
-                  <span><strong>{book.title}</strong><small>{book.author} · {book.category}</small></span>
-                  {selectedBook.id === book.id && <Check size={17} />}
-                </button>
-              ))}
-            </div>
+                <nav className="library-grade-tabs" aria-label="按年级选择图书">
+                  {gradeLevels.map((grade) => (
+                    <button
+                      key={grade.value}
+                      type="button"
+                      className={selectedGrade === grade.value ? "active" : ""}
+                      aria-pressed={selectedGrade === grade.value}
+                      onClick={() => setSelectedGrade(grade.value)}
+                    >
+                      <strong>{grade.value}</strong>
+                      <span>{grade.label}</span>
+                      <small>{gradeBookCounts[grade.value]} 本</small>
+                    </button>
+                  ))}
+                </nav>
 
-            <div className="reading-workspace complete-reader">
+                <section className="library-grade-section" aria-labelledby="selected-grade-heading">
+                  <div className="library-grade-heading">
+                    <div>
+                      <span>{selectedGrade}</span>
+                      <div><h2 id="selected-grade-heading">{gradeLevels[selectedGrade - 1].label}书架</h2><p>选择书本后，书架会收起来，进入安静的阅读界面。</p></div>
+                    </div>
+                    <strong>{selectedGradeBooks.length} 本可读</strong>
+                  </div>
+
+                  {selectedGradeBooks.length ? (
+                    <div className="library-book-grid">
+                      {selectedGradeBooks.map((book) => {
+                        const savedProgress = readingProgressByBook[book.id];
+                        const progressLabel = savedProgress?.completed
+                          ? "已读完"
+                          : savedProgress
+                            ? `继续读 · 第 ${savedProgress.chapter + 1} 章`
+                            : "开始阅读";
+                        return (
+                          <button className="library-book-card" key={book.id} type="button" onClick={() => chooseBook(book)}>
+                            <span className={`book-cover ${book.coverClass}`} aria-hidden="true"><b>{book.coverMark}</b><i>{book.author}</i></span>
+                            <span className="library-book-copy">
+                              <small>{book.category}</small>
+                              <strong>{book.title}</strong>
+                              <span>{book.author}</span>
+                              <em className={savedProgress?.completed ? "completed" : ""}>{savedProgress?.completed && <Check />} {progressLabel}</em>
+                            </span>
+                            <ChevronRight className="library-book-arrow" aria-hidden="true" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="library-empty-grade"><BookOpen /><strong>这个年级的书正在整理</strong><span>管理员导入后会自动出现在这里。</span></div>
+                  )}
+                </section>
+              </div>
+            ) : (
+              <>
+                <header className="library-reader-header">
+                  <button type="button" onClick={returnToLibraryShelf}><ChevronLeft /> 返回书架</button>
+                  <div><small>{selectedBook.grade} 年级 · 正在阅读</small><strong>《{selectedBook.title}》</strong></div>
+                  <span>{selectedBook.author}</span>
+                </header>
+
+                <div className="reading-workspace complete-reader">
               {bookLoading ? (
                 <div className="book-loading-panel" role="status"><BookOpen /><strong>正在装订完整原文…</strong><span>龟龟正在识别章节和分页</span></div>
               ) : bookLoadError ? (
@@ -2698,13 +2796,15 @@ export default function ReadingApp({
                   </aside>
                 </>
               ) : null}
-            </div>
+                </div>
 
-            <img
-              className="reading-turtle"
-              src={`${ASSET}/characters/turtle/${activePage && bookPage === activePages.length - 1 ? "turtle_reading_question.png" : "turtle_reading.png"}`}
-              alt={`${game.name}正在陪你读书`}
-            />
+                <img
+                  className="reading-turtle"
+                  src={`${ASSET}/characters/turtle/${activePage && bookPage === activePages.length - 1 ? "turtle_reading_question.png" : "turtle_reading.png"}`}
+                  alt={`${game.name}正在陪你读书`}
+                />
+              </>
+            )}
           </section>
         )}
 

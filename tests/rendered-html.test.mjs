@@ -162,8 +162,16 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(readingApp, /format: "json"/);
   assert.match(readingApp, /book-inline-illustrations/);
   assert.match(readingApp, /buildChapterPrompt/);
+  assert.match(readingApp, /type LibraryMode = "shelf" \| "reader"/);
+  assert.match(readingApp, /按年级选择图书/);
+  assert.match(readingApp, /一年级/);
+  assert.match(readingApp, /六年级/);
+  assert.match(readingApp, /setLibraryMode\("reader"\)/);
+  assert.match(readingApp, /返回书架/);
   assert.match(styles, /text-indent: 2em/);
   assert.match(styles, /book-inline-illustrations/);
+  assert.match(styles, /library-shelf-screen/);
+  assert.match(styles, /library-mode-reader \.complete-reader/);
 });
 
 test("forces first-login password reset and isolates every student's data", async () => {
