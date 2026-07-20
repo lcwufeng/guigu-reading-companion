@@ -172,6 +172,7 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(styles, /book-inline-illustrations/);
   assert.match(styles, /library-shelf-screen/);
   assert.match(styles, /library-mode-reader \.complete-reader/);
+  assert.match(styles, /chapter-list-scroll button strong \{ font-size: 16px/);
 });
 
 test("forces first-login password reset and isolates every student's data", async () => {
@@ -522,7 +523,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.travel-card dl div \{[\s\S]*?font-size: 14px/);
   assert.match(styles, /height: clamp\(360px, calc\(100dvh - 190px\), 760px\)/);
   assert.match(styles, /width: min\(1500px, 84vw\)/);
-  assert.match(styles, /flex: 0 0 clamp\(170px, 14vw, 220px\)/);
+  assert.match(styles, /flex: 0 0 clamp\(200px, 15vw, 244px\)/);
   assert.match(styles, /flex: 0 0 clamp\(280px, 21vw, 360px\)/);
   assert.match(styles, /\.reading-companion-card\.embedded \.companion-card-heading img \{[\s\S]*?height: 80px;[\s\S]*?width: 88px;/);
   assert.match(styles, /\.reading-companion-card\.embedded h3 \{[\s\S]*?font-size: 18px;/);
