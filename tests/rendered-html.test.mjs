@@ -360,6 +360,9 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /nonRepeatingCards/);
   assert.match(page, /Math\.random\(\) \* candidates\.length/);
   assert.match(page, /knowledgeCardId/);
+  assert.match(page, /className="travel-reward-card-image" src=\{travelReward\.card\.image\}/);
+  assert.match(page, /本次获得的知识卡/);
+  assert.match(styles, /\.travel-reward-card-image \{[\s\S]*?object-fit: contain;/);
   assert.match(page, /随机海洋知识卡/);
   assert.match(page, /随机森林知识卡/);
   assert.match(page, /随机恐龙知识卡/);

@@ -3503,14 +3503,31 @@ export default function ReadingApp({
         <div className="modal-backdrop" role="presentation">
           <section className="modal reward-modal" role="dialog" aria-modal="true" aria-labelledby="reward-title">
             <button className="modal-close" type="button" onClick={() => setTravelReward(null)} aria-label="关闭"><X /></button>
-            <img className="returning-turtle" src={`${ASSET}/characters/turtle/turtle_travel_return.png`} alt="旅行回来的龟龟" />
-            <span className="modal-kicker">旅行平安归来 · +4 星星</span>
-            <h2 id="reward-title">从{travelReward.destination.name}带回了新发现</h2>
-            <div className="reward-preview">
-              <img src={travelReward.destination.photo} alt={`${travelReward.destination.name}照片`} />
+            <header className="travel-reward-heading">
+              <img className="returning-turtle" src={`${ASSET}/characters/turtle/turtle_travel_return.png`} alt="旅行回来的龟龟" />
               <div>
-                <small>本次随机收获</small><strong>{travelReward.card.title}</strong><span>还有 1 个野外果子</span>
-                <button className="knowledge-link" type="button" onClick={() => setKnowledgeOpen(travelReward)}><img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 先看看知识卡</button>
+                <span className="modal-kicker">旅行平安归来 · +4 星星</span>
+                <h2 id="reward-title">从{travelReward.destination.name}带回了新发现</h2>
+                <p>龟龟找到了一张新的知识卡，快看看这次带回了什么！</p>
+              </div>
+            </header>
+            <div className="travel-reward-showcase">
+              <figure className="travel-reward-card-frame">
+                <span><Sparkles aria-hidden="true" /> 本次获得的知识卡</span>
+                <img className="travel-reward-card-image" src={travelReward.card.image} alt={`本次获得的${travelReward.card.title}`} />
+                <figcaption>{travelReward.card.title}</figcaption>
+              </figure>
+              <div className="travel-reward-details">
+                <small>本次随机收获</small>
+                <strong>{travelReward.card.title}</strong>
+                <ul>
+                  {travelReward.card.facts.map((fact) => <li key={fact}><Star fill="currentColor" aria-hidden="true" /> {fact}</li>)}
+                </ul>
+                <div className="travel-extra-reward">
+                  <img src={`${ASSET}/objects/fruit_orange.png`} alt="" />
+                  <span>还带回了 <b>1 个野外果子</b></span>
+                </div>
+                <button className="knowledge-link" type="button" onClick={() => setKnowledgeOpen(travelReward)}><img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 展开查看知识卡</button>
               </div>
             </div>
             <button className="primary-button full-button" type="button" onClick={() => { setTravelReward(null); navigateTo("journal"); setRecordTab("travel"); }}><Backpack /> 放进旅行手账</button>

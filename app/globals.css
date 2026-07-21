@@ -4721,41 +4721,243 @@ button:disabled {
   width: 100%;
 }
 
-.reward-modal {
-  padding-top: 36px;
-  text-align: center;
-  width: min(520px, 100%);
-}
-
-.returning-turtle {
-  height: 150px;
-  object-fit: contain;
-  width: 180px;
-}
-
-.reward-preview {
-  background: #edf7ee;
-  display: grid;
-  gap: 14px;
-  grid-template-columns: 120px 1fr;
-  margin: 17px 0 14px;
-  padding: 11px;
+.modal.reward-modal {
+  background: linear-gradient(155deg, #fffce9 0%, #fff4c9 58%, #edf7d9 100%);
+  border: 4px solid #c4923e;
+  border-radius: 24px;
+  box-shadow: 0 12px 0 rgba(105, 67, 24, 0.2), 0 24px 70px rgba(9, 28, 20, 0.36), inset 0 0 0 4px rgba(255, 255, 255, 0.62);
+  padding: 26px 30px 28px;
   text-align: left;
+  width: min(860px, 100%);
 }
 
-.reward-preview > img {
-  height: 128px;
-  object-fit: cover;
-  width: 110px;
+.travel-reward-heading {
+  align-items: center;
+  border-bottom: 2px dashed rgba(172, 120, 40, 0.4);
+  display: grid;
+  gap: 15px;
+  grid-template-columns: 112px minmax(0, 1fr);
+  padding: 0 50px 17px 0;
 }
 
-.reward-preview > div {
-  align-self: center;
+.travel-reward-heading .returning-turtle {
+  height: 104px;
+  object-fit: contain;
+  width: 112px;
 }
 
-.reward-preview strong,
-.reward-preview span {
+.travel-reward-heading .modal-kicker {
+  color: #56833e;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.travel-reward-heading h2 {
+  color: #583717;
+  font-size: 29px;
+  margin: 0 0 5px;
+}
+
+.travel-reward-heading p {
+  color: #7d6444;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.travel-reward-showcase {
+  align-items: center;
+  display: grid;
+  gap: 30px;
+  grid-template-columns: minmax(290px, 340px) minmax(0, 1fr);
+  margin: 22px 0 20px;
+}
+
+.travel-reward-card-frame {
+  background: #f6e9bd;
+  border: 3px solid #bd8738;
+  box-shadow: 0 7px 0 rgba(111, 70, 25, 0.18), inset 0 0 0 5px rgba(255, 253, 225, 0.75);
+  margin: 0;
+  padding: 13px;
+  position: relative;
+}
+
+.travel-reward-card-frame > span {
+  align-items: center;
+  background: #5f913f;
+  border: 2px solid #fff5b9;
+  border-radius: 999px;
+  box-shadow: 0 3px 0 rgba(61, 89, 38, 0.24);
+  color: #fff;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 5px;
+  left: 50%;
+  padding: 7px 13px;
+  position: absolute;
+  top: -16px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.travel-reward-card-frame > span svg {
+  height: 17px;
+  width: 17px;
+}
+
+.travel-reward-card-image {
   display: block;
+  height: auto;
+  max-height: 430px;
+  object-fit: contain;
+  width: 100%;
+}
+
+.travel-reward-card-frame figcaption {
+  color: #55371c;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.4;
+  padding: 9px 4px 1px;
+  text-align: center;
+}
+
+.travel-reward-details > small {
+  color: #668047;
+  display: block;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.travel-reward-details > strong {
+  color: #503117;
+  display: block;
+  font-size: 26px;
+  line-height: 1.35;
+  margin: 5px 0 14px;
+}
+
+.travel-reward-details ul {
+  display: grid;
+  gap: 9px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.travel-reward-details li {
+  align-items: flex-start;
+  background: rgba(255, 252, 226, 0.8);
+  border-left: 4px solid #e3a31d;
+  color: #5d5039;
+  display: flex;
+  font-size: 16px;
+  font-weight: 700;
+  gap: 8px;
+  line-height: 1.6;
+  padding: 9px 11px;
+}
+
+.travel-reward-details li svg {
+  color: #e4a51f;
+  flex: 0 0 auto;
+  height: 18px;
+  margin-top: 4px;
+  width: 18px;
+}
+
+.travel-extra-reward {
+  align-items: center;
+  background: #e8f4d7;
+  border: 2px solid #acc77f;
+  border-radius: 12px;
+  color: #57713a;
+  display: flex;
+  font-size: 15px;
+  font-weight: 750;
+  gap: 9px;
+  margin-top: 13px;
+  padding: 9px 12px;
+}
+
+.travel-extra-reward img {
+  height: 34px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  width: 34px;
+}
+
+.reward-modal .knowledge-link {
+  background: #fff8d5;
+  border: 2px solid #b68235;
+  border-radius: 10px;
+  color: #6a461e;
+  font-size: 15px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  width: 100%;
+}
+
+.reward-modal > .primary-button {
+  border-radius: 12px;
+  box-shadow: 0 4px 0 #315c37;
+  font-size: 17px;
+  min-height: 50px;
+}
+
+@media (max-width: 820px) {
+  .modal.reward-modal {
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 22px 22px 0 0;
+    border-right: 0;
+    padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .travel-reward-heading {
+    gap: 9px;
+    grid-template-columns: 80px minmax(0, 1fr);
+    padding: 0 38px 12px 0;
+  }
+
+  .travel-reward-heading .returning-turtle {
+    height: 76px;
+    width: 80px;
+  }
+
+  .travel-reward-heading .modal-kicker { font-size: 13px; }
+  .reward-modal .travel-reward-heading h2 { font-size: 22px; }
+  .travel-reward-heading p { font-size: 13px; }
+
+  .travel-reward-showcase {
+    gap: 15px;
+    grid-template-columns: 1fr;
+    margin: 20px 0 16px;
+  }
+
+  .travel-reward-card-frame {
+    margin: 0 auto;
+    padding: 10px;
+    width: min(280px, 78vw);
+  }
+
+  .travel-reward-card-image { max-height: none; }
+  .travel-reward-card-frame figcaption { font-size: 15px; padding-top: 7px; }
+  .travel-reward-details > strong { font-size: 22px; margin-bottom: 10px; }
+  .travel-reward-details li { font-size: 15px; padding: 8px 10px; }
+  .travel-extra-reward { font-size: 14px; }
+}
+
+@media (max-width: 420px) {
+  .travel-reward-card-frame { width: min(235px, 72vw); }
+  .travel-reward-card-frame > span { font-size: 11px; padding: 6px 9px; }
+  .travel-reward-heading p { display: none; }
+  .travel-reward-details > small,
+  .travel-reward-details > strong { text-align: center; }
 }
 
 .knowledge-backdrop {
