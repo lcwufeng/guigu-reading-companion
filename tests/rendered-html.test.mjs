@@ -175,6 +175,28 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(styles, /chapter-list-scroll button strong \{ font-size: 16px/);
 });
 
+test("provides a separate eight-domain knowledge expedition with durable account progress", async () => {
+  const [readingApp, catalog, explorationDb, styles, schema] = await Promise.all([
+    readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/exploration-catalog.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/exploration.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(readingApp, /知识探险/);
+  assert.match(readingApp, /八个兴趣世界/);
+  for (const title of ["动物与自然", "科学与太空", "历史与文明", "文学与故事", "地理与旅行", "艺术与创造", "数学与逻辑", "生活与社会"]) {
+    assert.match(catalog, new RegExp(title));
+  }
+  assert.equal((catalog.match(/type: "(?:发现|观察|连接|创造)"/g) || []).length, 32);
+  assert.match(explorationDb, /user_exploration_progress/);
+  assert.match(explorationDb, /knowledge-exploration/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS user_exploration_progress/);
+  assert.match(styles, /\.interest-domain-grid/);
+  assert.match(styles, /\.exploration-route/);
+  assert.doesNotMatch(explorationDb, /localStorage|sessionStorage/);
+});
+
 test("forces first-login password reset and isolates every student's data", async () => {
   const unauthorized = await fetchApp("/api/user-state");
   assert.equal(unauthorized.status, 401);

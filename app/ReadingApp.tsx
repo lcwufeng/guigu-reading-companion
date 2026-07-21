@@ -32,8 +32,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { chapterKnowledge } from "./book-knowledge";
 import { chapterPrompts, type ChapterPrompt } from "./book-prompts";
 import classicBookManifest from "./classic-books-manifest.json";
+import {
+  interestDomains,
+  type ExplorationNode,
+  type InterestDomain,
+  type InterestDomainId,
+} from "../lib/exploration-catalog";
 
-type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard";
+type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "explore";
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
 type RecordTab = "travel" | "reading" | "items";
 type ChatMessage = { id: number; role: "turtle" | "user"; text: string };
@@ -258,6 +264,13 @@ type WeeklyLeaderboard = {
     dailyCap: number;
     dailyMaxPoints: number;
   }>;
+};
+
+type ExplorationOverview = {
+  completedNodeIds: string[];
+  recommended: Array<{ domainId: InterestDomainId; reason: string }>;
+  totalNodes: number;
+  updatedAt: number;
 };
 
 type VoiceTarget = "chat" | "reading";
@@ -1096,6 +1109,17 @@ function LeaderboardCategoryIcon({ category }: { category: LeaderboardCategoryKe
   return <Camera aria-hidden="true" />;
 }
 
+function InterestDomainIcon({ domainId }: { domainId: InterestDomainId }) {
+  if (domainId === "nature") return <Sparkles aria-hidden="true" />;
+  if (domainId === "science") return <Lightbulb aria-hidden="true" />;
+  if (domainId === "history") return <Compass aria-hidden="true" />;
+  if (domainId === "literature") return <BookOpen aria-hidden="true" />;
+  if (domainId === "geography") return <Backpack aria-hidden="true" />;
+  if (domainId === "art") return <Camera aria-hidden="true" />;
+  if (domainId === "math") return <Trophy aria-hidden="true" />;
+  return <Users aria-hidden="true" />;
+}
+
 export default function ReadingApp({
   student,
 }: {
@@ -1167,6 +1191,12 @@ export default function ReadingApp({
   const [leaderboard, setLeaderboard] = useState<WeeklyLeaderboard | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState("");
+  const [explorationOverview, setExplorationOverview] = useState<ExplorationOverview | null>(null);
+  const [selectedInterestDomain, setSelectedInterestDomain] = useState<InterestDomainId | null>(null);
+  const [activeExplorationNode, setActiveExplorationNode] = useState<ExplorationNode | null>(null);
+  const [explorationLoading, setExplorationLoading] = useState(false);
+  const [explorationSaving, setExplorationSaving] = useState(false);
+  const [explorationError, setExplorationError] = useState("");
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
   const availableBooks = useMemo(() => [...books, ...importedBooks], [importedBooks]);
   const selectedGradeBooks = useMemo(
@@ -1260,6 +1290,23 @@ export default function ReadingApp({
     }
   }, []);
 
+  const loadExploration = useCallback(async () => {
+    setExplorationLoading(true);
+    setExplorationError("");
+    try {
+      const response = await fetch(`${BASE_PATH}/api/exploration`, { cache: "no-store" });
+      const data = await response.json().catch(() => null) as ExplorationOverview | { error?: string } | null;
+      if (!response.ok || !data || !("completedNodeIds" in data)) {
+        throw new Error(data && "error" in data ? data.error || "知识探险暂时走不开" : "知识探险暂时走不开");
+      }
+      setExplorationOverview(data);
+    } catch (error) {
+      setExplorationError(error instanceof Error ? error.message : "知识探险暂时走不开");
+    } finally {
+      setExplorationLoading(false);
+    }
+  }, []);
+
   const navigateTo = useCallback((nextView: View) => {
     stopBookAudio();
     if (nextView === "library") {
@@ -1268,8 +1315,13 @@ export default function ReadingApp({
       setChapterQuestionOpen(false);
     }
     if (nextView === "leaderboard") void loadLeaderboard();
+    if (nextView === "explore") {
+      setSelectedInterestDomain(null);
+      setActiveExplorationNode(null);
+      void loadExploration();
+    }
     setView(nextView);
-  }, [loadLeaderboard, stopBookAudio]);
+  }, [loadExploration, loadLeaderboard, stopBookAudio]);
 
   const remember = useCallback((event: StudentMemoryEvent) => {
     return fetch(`${BASE_PATH}/api/student-memory`, {
@@ -1278,6 +1330,29 @@ export default function ReadingApp({
       body: JSON.stringify({ event }),
     }).then(() => undefined).catch(() => undefined);
   }, []);
+
+  const completeExploration = useCallback(async () => {
+    if (!activeExplorationNode || explorationSaving) return;
+    setExplorationSaving(true);
+    setExplorationError("");
+    try {
+      const response = await fetch(`${BASE_PATH}/api/exploration`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ nodeId: activeExplorationNode.id }),
+      });
+      const data = await response.json().catch(() => null) as ExplorationOverview | { error?: string } | null;
+      if (!response.ok || !data || !("completedNodeIds" in data)) {
+        throw new Error(data && "error" in data ? data.error || "这片知识叶暂时没能点亮" : "这片知识叶暂时没能点亮");
+      }
+      setExplorationOverview(data);
+      showToast(`“${activeExplorationNode.title}”已点亮，龟龟帮你记住啦！`);
+    } catch (error) {
+      setExplorationError(error instanceof Error ? error.message : "这片知识叶暂时没能点亮");
+    } finally {
+      setExplorationSaving(false);
+    }
+  }, [activeExplorationNode, explorationSaving, showToast]);
 
   const logout = useCallback(async () => {
     await fetch(`${BASE_PATH}/api/auth/logout`, { method: "POST" }).catch(() => undefined);
@@ -2421,6 +2496,11 @@ export default function ReadingApp({
 
   const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
   const navigationLocked = !!busy || !!hideTarget || !!traveling;
+  const completedExplorationNodes = new Set(explorationOverview?.completedNodeIds || []);
+  const selectedInterestDomainData: InterestDomain | null = selectedInterestDomain
+    ? interestDomains.find((domain) => domain.id === selectedInterestDomain) || null
+    : null;
+  const explorationStartedDomains = interestDomains.filter((domain) => domain.nodes.some((node) => completedExplorationNodes.has(node.id))).length;
   const selectedDestinationUnlocked = game.stars >= selectedDestination.requiredStars;
   const selectedDestinationMissingStars = Math.max(0, selectedDestination.requiredStars - game.stars);
   const journalTravelItems = game.travelRecords.slice(0, 9);
@@ -2493,6 +2573,24 @@ export default function ReadingApp({
               <small suppressHydrationWarning>{formatDate()} · 晴</small>
               <h1>今天想和{game.name}做什么？</h1>
             </div>
+
+            {!hideTarget && (
+              <button
+                className="knowledge-expedition-entry"
+                type="button"
+                onClick={() => navigateTo("explore")}
+                disabled={navigationLocked}
+                aria-label="进入知识探险，探索八个兴趣世界"
+              >
+                <span className="knowledge-expedition-icon"><Compass aria-hidden="true" /><Sparkles aria-hidden="true" /></span>
+                <span>
+                  <small>兴趣会长出新路线</small>
+                  <strong>知识探险</strong>
+                  <em>8 个兴趣世界</em>
+                </span>
+                <ChevronRight aria-hidden="true" />
+              </button>
+            )}
 
             <aside className={`daily-task-panel ${dailyTasksExpanded ? "open" : ""}`} aria-label={`今日任务，已完成${dailyCompletedCount}项，共4项`}>
               <button
@@ -2636,6 +2734,211 @@ export default function ReadingApp({
               </div>
             )}
 
+          </section>
+        )}
+
+        {view === "explore" && (
+          <section className="scene explore-scene">
+            <main className="explore-shell">
+              <header className="explore-heading">
+                <div className="explore-heading-copy">
+                  <span><Compass aria-hidden="true" /> 龟龟知识探险</span>
+                  <h1>{selectedInterestDomainData ? selectedInterestDomainData.title : "从喜欢的一件事，发现更大的世界"}</h1>
+                  <p>{selectedInterestDomainData
+                    ? selectedInterestDomainData.description
+                    : "八个兴趣领域，三十二片知识叶。每次花一点时间观察、连接或创造，慢慢长出自己的学习地图。"}</p>
+                </div>
+                <button
+                  type="button"
+                  className="explore-home-button"
+                  onClick={() => selectedInterestDomainData ? setSelectedInterestDomain(null) : navigateTo("home")}
+                >
+                  <ChevronLeft aria-hidden="true" /> {selectedInterestDomainData ? "全部领域" : "回家园"}
+                </button>
+              </header>
+
+              {explorationLoading && !explorationOverview && (
+                <div className="explore-status" role="status"><Sparkles aria-hidden="true" /> 龟龟正在铺开你的知识地图…</div>
+              )}
+
+              {explorationError && !explorationLoading && !explorationOverview && (
+                <div className="explore-status explore-status-error" role="alert">
+                  <span>{explorationError}</span>
+                  <button type="button" onClick={() => void loadExploration()}>再试一次</button>
+                </div>
+              )}
+
+              {!selectedInterestDomainData && explorationOverview && (
+                <>
+                  <section className="explore-summary" aria-label="知识探险进度">
+                    <div>
+                      <strong>{completedExplorationNodes.size}</strong>
+                      <span>已点亮知识叶</span>
+                    </div>
+                    <div>
+                      <strong>{explorationStartedDomains}</strong>
+                      <span>已开始领域</span>
+                    </div>
+                    <div>
+                      <strong>{explorationOverview.totalNodes - completedExplorationNodes.size}</strong>
+                      <span>等待新发现</span>
+                    </div>
+                    <img src={`${ASSET}/characters/turtle/turtle_travel_start.png`} alt="龟龟背着书包准备知识探险" />
+                  </section>
+
+                  <section className="explore-recommendations" aria-labelledby="explore-recommendation-title">
+                    <header>
+                      <span><Sparkles aria-hidden="true" /></span>
+                      <div>
+                        <h2 id="explore-recommendation-title">龟龟为你发现的路线</h2>
+                        <p>根据最近的阅读、学习和兴趣整理；你也可以自由选择其他领域。</p>
+                      </div>
+                    </header>
+                    <div>
+                      {explorationOverview.recommended.map((recommendation) => {
+                        const domain = interestDomains.find((item) => item.id === recommendation.domainId);
+                        if (!domain) return null;
+                        return (
+                          <button
+                            type="button"
+                            className={`explore-recommendation-card ${domain.colorClass}`}
+                            key={domain.id}
+                            onClick={() => setSelectedInterestDomain(domain.id)}
+                          >
+                            <span><InterestDomainIcon domainId={domain.id} /></span>
+                            <div><strong>{domain.title}</strong><p>{recommendation.reason}</p></div>
+                            <ChevronRight aria-hidden="true" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="interest-domain-section" aria-labelledby="interest-domain-title">
+                    <header>
+                      <div><span>八个兴趣世界</span><h2 id="interest-domain-title">选择今天想走的方向</h2></div>
+                      <small>没有标准路线，从任何喜欢的地方开始都可以。</small>
+                    </header>
+                    <div className="interest-domain-grid">
+                      {interestDomains.map((domain) => {
+                        const completedCount = domain.nodes.filter((node) => completedExplorationNodes.has(node.id)).length;
+                        const recommendation = explorationOverview.recommended.find((item) => item.domainId === domain.id);
+                        return (
+                          <button
+                            type="button"
+                            className={`interest-domain-card ${domain.colorClass}`}
+                            key={domain.id}
+                            onClick={() => setSelectedInterestDomain(domain.id)}
+                          >
+                            {recommendation && <b className="interest-recommended-badge"><Sparkles aria-hidden="true" /> 龟龟推荐</b>}
+                            <span className="interest-domain-icon"><InterestDomainIcon domainId={domain.id} /></span>
+                            <div className="interest-domain-copy">
+                              <h3>{domain.title}</h3>
+                              <p>{domain.description}</p>
+                            </div>
+                            <div className="interest-domain-progress">
+                              <span><i style={{ width: `${completedCount / domain.nodes.length * 100}%` }} /></span>
+                              <b>{completedCount}/{domain.nodes.length}</b>
+                            </div>
+                            <em>{completedCount === domain.nodes.length ? "全部点亮" : completedCount ? "继续探索" : "开始探索"}<ChevronRight aria-hidden="true" /></em>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                </>
+              )}
+
+              {selectedInterestDomainData && explorationOverview && (
+                <section className={`interest-detail ${selectedInterestDomainData.colorClass}`}>
+                  <header className="interest-detail-hero">
+                    <span className="interest-detail-icon"><InterestDomainIcon domainId={selectedInterestDomainData.id} /></span>
+                    <div>
+                      <small>兴趣路线 · {selectedInterestDomainData.nodes.filter((node) => completedExplorationNodes.has(node.id)).length}/{selectedInterestDomainData.nodes.length} 已点亮</small>
+                      <h2>{selectedInterestDomainData.title}</h2>
+                      <p>{selectedInterestDomainData.description}</p>
+                    </div>
+                    <div className="interest-detail-progress" aria-label={`${selectedInterestDomainData.title}探索进度`}>
+                      <span><i style={{ width: `${selectedInterestDomainData.nodes.filter((node) => completedExplorationNodes.has(node.id)).length / selectedInterestDomainData.nodes.length * 100}%` }} /></span>
+                      <b>{selectedInterestDomainData.nodes.filter((node) => completedExplorationNodes.has(node.id)).length * 25}%</b>
+                    </div>
+                  </header>
+
+                  {explorationOverview.recommended.find((item) => item.domainId === selectedInterestDomainData.id) && (
+                    <div className="interest-detail-reason"><Sparkles aria-hidden="true" /> {explorationOverview.recommended.find((item) => item.domainId === selectedInterestDomainData.id)?.reason}</div>
+                  )}
+
+                  <div className="exploration-route" aria-label={`${selectedInterestDomainData.title}知识路线`}>
+                    {selectedInterestDomainData.nodes.map((node, index) => {
+                      const completed = completedExplorationNodes.has(node.id);
+                      const unlocked = index === 0 || completedExplorationNodes.has(selectedInterestDomainData.nodes[index - 1].id);
+                      return (
+                        <article className={`exploration-node-card ${completed ? "completed" : ""} ${unlocked ? "unlocked" : "locked"}`} key={node.id}>
+                          <div className="exploration-route-line" aria-hidden="true"><i /></div>
+                          <button
+                            type="button"
+                            disabled={!unlocked}
+                            onClick={() => {
+                              setExplorationError("");
+                              setActiveExplorationNode(node);
+                            }}
+                          >
+                            <span className="exploration-node-number">{completed ? <Check aria-hidden="true" /> : unlocked ? index + 1 : <Lock aria-hidden="true" />}</span>
+                            <div>
+                              <small>{node.type}任务</small>
+                              <h3>{node.title}</h3>
+                              <p>{unlocked ? node.guide : `先点亮“${selectedInterestDomainData.nodes[index - 1].title}”`}</p>
+                            </div>
+                            <strong>{completed ? "再次看看" : unlocked ? "去探索" : "还未解锁"}<ChevronRight aria-hidden="true" /></strong>
+                          </button>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+            </main>
+
+            {activeExplorationNode && (
+              <div className="exploration-modal-backdrop" role="presentation" onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !explorationSaving) setActiveExplorationNode(null);
+              }}>
+                <section className={`exploration-modal ${interestDomains.find((domain) => domain.id === activeExplorationNode.domainId)?.colorClass || ""}`} role="dialog" aria-modal="true" aria-labelledby="exploration-modal-title">
+                  <button className="exploration-modal-close" type="button" aria-label="关闭知识点" onClick={() => setActiveExplorationNode(null)} disabled={explorationSaving}><X /></button>
+                  <header>
+                    <span><InterestDomainIcon domainId={activeExplorationNode.domainId} /></span>
+                    <div><small>{activeExplorationNode.type}任务</small><h2 id="exploration-modal-title">{activeExplorationNode.title}</h2></div>
+                  </header>
+                  <div className="exploration-guide">
+                    <h3><BookOpen aria-hidden="true" /> 先听龟龟讲一讲</h3>
+                    <p>{activeExplorationNode.guide}</p>
+                  </div>
+                  <div className="exploration-challenge">
+                    <h3><Lightbulb aria-hidden="true" /> 你的探险小任务</h3>
+                    <p>{activeExplorationNode.challenge}</p>
+                  </div>
+                  {completedExplorationNodes.has(activeExplorationNode.id) && (
+                    <div className="exploration-takeaway">
+                      <Check aria-hidden="true" />
+                      <div><h3>这片知识叶已经点亮</h3><p>{activeExplorationNode.takeaway}</p></div>
+                    </div>
+                  )}
+                  {explorationError && <p className="exploration-modal-error" role="alert">{explorationError}</p>}
+                  <button
+                    className="exploration-complete-button"
+                    type="button"
+                    onClick={() => completedExplorationNodes.has(activeExplorationNode.id) ? setActiveExplorationNode(null) : void completeExploration()}
+                    disabled={explorationSaving}
+                  >
+                    {explorationSaving
+                      ? "龟龟正在记录…"
+                      : completedExplorationNodes.has(activeExplorationNode.id)
+                        ? "完成回顾，回到路线"
+                        : <><Sparkles aria-hidden="true" /> 我完成了，点亮知识叶</>}
+                  </button>
+                </section>
+              </div>
+            )}
           </section>
         )}
 

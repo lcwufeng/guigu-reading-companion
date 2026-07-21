@@ -398,6 +398,16 @@ export const SCHEMA_STATEMENTS = [
     happened_at INTEGER NOT NULL
   )`,
   "CREATE INDEX IF NOT EXISTS user_activity_log_user_date_idx ON user_activity_log(user_id, happened_at DESC)",
+  `CREATE TABLE IF NOT EXISTS user_exploration_progress (
+    user_id TEXT NOT NULL,
+    node_id TEXT NOT NULL,
+    domain_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'completed',
+    completed_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, node_id)
+  )`,
+  "CREATE INDEX IF NOT EXISTS user_exploration_progress_user_date_idx ON user_exploration_progress(user_id, updated_at DESC)",
   `CREATE TABLE IF NOT EXISTS imported_books (
     book_id TEXT PRIMARY KEY NOT NULL,
     slug TEXT NOT NULL UNIQUE,

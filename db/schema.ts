@@ -463,6 +463,18 @@ export const userActivityLog = sqliteTable("user_activity_log", {
   happenedAt: integer("happened_at").notNull(),
 }, (table) => [index("user_activity_log_user_date_idx").on(table.userId, table.happenedAt)]);
 
+export const userExplorationProgress = sqliteTable("user_exploration_progress", {
+  userId: text("user_id").notNull(),
+  nodeId: text("node_id").notNull(),
+  domainId: text("domain_id").notNull(),
+  status: text("status").notNull().default("completed"),
+  completedAt: integer("completed_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.nodeId] }),
+  index("user_exploration_progress_user_date_idx").on(table.userId, table.updatedAt),
+]);
+
 export const importedBooks = sqliteTable("imported_books", {
   bookId: text("book_id").primaryKey(),
   slug: text("slug").notNull(),
