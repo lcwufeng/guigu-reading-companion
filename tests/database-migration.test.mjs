@@ -54,6 +54,7 @@ function gameState(overrides = {}) {
     },
     fruitPicking: { dateKey: "2026-07-19", picked: 0 },
     hideAndSeekDaily: { dateKey: "2026-07-19", completed: 0 },
+    fruitCatchDaily: { dateKey: "2026-07-19", plays: 0, rewarded: false, bestScore: 0, totalCaught: 0 },
     readingFontSize: "medium",
     ...overrides,
   };
@@ -265,6 +266,7 @@ test("JSON data migrates to isolated SQLite rows and can build a parent report",
             },
             fruitPicking: { dateKey: "2026-07-19", picked: 3 },
             hideAndSeekDaily: { dateKey: "2026-07-19", completed: 2 },
+            fruitCatchDaily: { dateKey: "2026-07-19", plays: 3, rewarded: true, bestScore: 18, totalCaught: 37 },
           }),
         },
         "student-b": { updatedAt: now + 1, state: gameState({ name: "米粒", stars: 2, fruits: 1, tickets: 0 }) },
@@ -324,6 +326,10 @@ test("JSON data migrates to isolated SQLite rows and can build a parent report",
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM user_reading_progress WHERE user_id = 'student-a' AND book_id = 'scarecrow-zh'").get().count, 1);
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM user_reading_progress WHERE user_id = 'student-b' AND book_id = 'scarecrow-zh'").get().count, 0);
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM user_mistakes WHERE user_id = 'student-a'").get().count, 1);
+    assert.deepEqual(
+      { ...database.prepare("SELECT plays, best_score, total_caught, reward_claimed FROM user_minigame_daily WHERE user_id = 'student-a' AND game_id = 'fruit-catch'").get() },
+      { plays: 3, best_score: 18, total_caught: 37, reward_claimed: 1 },
+    );
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'user_mistake_answer_attempts'").get().count, 1);
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM user_memory_facts WHERE user_id = 'student-a' AND fact_type = 'interest' AND fact_value = '恐龙'").get().count, 1);
     assert.equal(database.prepare("SELECT COUNT(*) AS count FROM legacy_unassigned_data WHERE source_key = 'legacy-device'").get().count, 2);

@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Compass,
   Edit3,
+  Gamepad2,
   Lightbulb,
   Lock,
   LogOut,
@@ -32,6 +33,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { chapterKnowledge } from "./book-knowledge";
 import { chapterPrompts, type ChapterPrompt } from "./book-prompts";
 import classicBookManifest from "./classic-books-manifest.json";
+import GamePark, { type FruitCatchDailyState, type FruitCatchResult } from "./GamePark";
 import {
   interestDomains,
   type ExplorationNode,
@@ -39,7 +41,7 @@ import {
   type InterestDomainId,
 } from "../lib/exploration-catalog";
 
-type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "explore";
+type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "explore" | "games";
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
 type RecordTab = "travel" | "reading" | "items";
 type ChatMessage = { id: number; role: "turtle" | "user"; text: string };
@@ -143,6 +145,7 @@ type GameState = {
   dailyPlan: DailyPlan;
   fruitPicking: DailyFruitPicking;
   hideAndSeekDaily: DailyHideAndSeek;
+  fruitCatchDaily: FruitCatchDailyState;
   readingFontSize: ReadingFontSize;
 };
 
@@ -352,6 +355,7 @@ const initialState: GameState = {
   },
   fruitPicking: { dateKey: "", picked: 0 },
   hideAndSeekDaily: { dateKey: "", completed: 0 },
+  fruitCatchDaily: { dateKey: "", plays: 0, rewarded: false, bestScore: 0, totalCaught: 0 },
   readingFontSize: "medium",
 };
 
@@ -896,6 +900,20 @@ function ensureDailyHideAndSeek(state: Pick<GameState, "hideAndSeekDaily">): Dai
   };
 }
 
+function ensureDailyFruitCatch(state: Pick<GameState, "fruitCatchDaily">): FruitCatchDailyState {
+  const saved = state.fruitCatchDaily;
+  if (!saved || saved.dateKey !== currentDayKey()) {
+    return { dateKey: currentDayKey(), plays: 0, rewarded: false, bestScore: 0, totalCaught: 0 };
+  }
+  return {
+    dateKey: saved.dateKey,
+    plays: Math.max(0, Math.floor(Number(saved.plays) || 0)),
+    rewarded: Boolean(saved.rewarded),
+    bestScore: Math.max(0, Math.floor(Number(saved.bestScore) || 0)),
+    totalCaught: Math.max(0, Math.floor(Number(saved.totalCaught) || 0)),
+  };
+}
+
 function createDailyPlan(state: Pick<GameState, "mistakes">): DailyPlan {
   const pendingMistakes = state.mistakes.filter((mistake) => mistake.status !== "mastered").length;
   return {
@@ -1214,6 +1232,7 @@ export default function ReadingApp({
   const [explorationQuizOption, setExplorationQuizOption] = useState<number | null>(null);
   const [explorationAnswer, setExplorationAnswer] = useState("");
   const [explorationFeedback, setExplorationFeedback] = useState<ExplorationFeedback | null>(null);
+  const [miniGamePlaying, setMiniGamePlaying] = useState(false);
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
   const availableBooks = useMemo(() => [...books, ...importedBooks], [importedBooks]);
   const selectedGradeBooks = useMemo(
@@ -1337,6 +1356,7 @@ export default function ReadingApp({
       setActiveExplorationNode(null);
       void loadExploration();
     }
+    if (nextView === "games") setMiniGamePlaying(false);
     setView(nextView);
   }, [loadExploration, loadLeaderboard, stopBookAudio]);
 
@@ -1347,6 +1367,34 @@ export default function ReadingApp({
       body: JSON.stringify({ event }),
     }).then(() => undefined).catch(() => undefined);
   }, []);
+
+  const completeFruitCatchRound = useCallback((result: FruitCatchResult) => {
+    const earnedStar = result.success && !ensureDailyFruitCatch(game).rewarded;
+    setGame((current) => {
+      const daily = ensureDailyFruitCatch(current);
+      const shouldReward = result.success && !daily.rewarded;
+      return {
+        ...current,
+        stars: current.stars + (shouldReward ? 1 : 0),
+        boredom: clamp(current.boredom - Math.min(8, Math.max(3, Math.floor(result.score / 3)))),
+        fruitCatchDaily: {
+          dateKey: daily.dateKey,
+          plays: daily.plays + 1,
+          rewarded: daily.rewarded || result.success,
+          bestScore: Math.max(daily.bestScore, result.score),
+          totalCaught: daily.totalCaught + result.caught,
+        },
+      };
+    });
+    showToast(result.success
+      ? earnedStar ? "接果子过关，获得 1 颗星星！" : "接果子过关啦，今天的星星已经领过了"
+      : `本局得到 ${result.score} 分，再试一次就更接近啦`);
+    void remember({
+      type: "activity",
+      activity: "龟龟接果子",
+      detail: `完成一局接果子，得到${result.score}分，接到${result.caught}个果子`,
+    });
+  }, [game, remember, showToast]);
 
   const openExplorationNode = useCallback((node: ExplorationNode) => {
     const progress = explorationOverview?.nodeProgress[node.id];
@@ -1447,6 +1495,7 @@ export default function ReadingApp({
           dailyPlan: ensureDailyPlan(restored),
           fruitPicking: ensureDailyFruitPicking(restored),
           hideAndSeekDaily: ensureDailyHideAndSeek(restored),
+          fruitCatchDaily: ensureDailyFruitCatch(restored),
         });
         accountStateLoadedRef.current = true;
       })
@@ -1562,6 +1611,7 @@ export default function ReadingApp({
           current.dailyPlan.dateKey === dateKey
           && current.fruitPicking.dateKey === dateKey
           && current.hideAndSeekDaily.dateKey === dateKey
+          && current.fruitCatchDaily.dateKey === dateKey
         ) return current;
         return {
           ...current,
@@ -1570,6 +1620,9 @@ export default function ReadingApp({
           hideAndSeekDaily: current.hideAndSeekDaily.dateKey === dateKey
             ? current.hideAndSeekDaily
             : { dateKey, completed: 0 },
+          fruitCatchDaily: current.fruitCatchDaily.dateKey === dateKey
+            ? current.fruitCatchDaily
+            : { dateKey, plays: 0, rewarded: false, bestScore: 0, totalCaught: 0 },
         };
       });
     };
@@ -1683,6 +1736,7 @@ export default function ReadingApp({
   const fruitPickingRemaining = Math.max(0, 5 - dailyFruitPicking.picked);
   const dailyHideAndSeek = ensureDailyHideAndSeek(game);
   const hideGamesRemaining = Math.max(0, DAILY_HIDE_AND_SEEK_LIMIT - dailyHideAndSeek.completed);
+  const fruitCatchDaily = ensureDailyFruitCatch(game);
 
   const pickFruitAndOpen = () => {
     if (fruitPickingRemaining > 0) {
@@ -2555,7 +2609,7 @@ export default function ReadingApp({
   };
 
   const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
-  const navigationLocked = !!busy || !!hideTarget || !!traveling;
+  const navigationLocked = !!busy || !!hideTarget || !!traveling || miniGamePlaying;
   const completedExplorationNodes = new Set(explorationOverview?.completedNodeIds || []);
   const dueExplorationNodes = new Set(explorationOverview?.dueReviewNodeIds || []);
   const masteredExplorationCount = Object.values(explorationOverview?.nodeProgress || {}).filter((progress) => progress.state === "mastered").length;
@@ -2649,6 +2703,24 @@ export default function ReadingApp({
                   <small>兴趣会长出新路线</small>
                   <strong>知识探险</strong>
                   <em>8 个兴趣世界</em>
+                </span>
+                <ChevronRight aria-hidden="true" />
+              </button>
+            )}
+
+            {!hideTarget && (
+              <button
+                className="game-park-entry"
+                type="button"
+                onClick={() => navigateTo("games")}
+                disabled={navigationLocked}
+                aria-label="进入龟龟乐园玩小游戏"
+              >
+                <span className="game-park-entry-icon"><Gamepad2 aria-hidden="true" /><Star aria-hidden="true" /></span>
+                <span>
+                  <small>轻松玩一小会儿</small>
+                  <strong>龟龟乐园</strong>
+                  <em>接果子开放啦</em>
                 </span>
                 <ChevronRight aria-hidden="true" />
               </button>
@@ -2796,6 +2868,18 @@ export default function ReadingApp({
               </div>
             )}
 
+          </section>
+        )}
+
+        {view === "games" && (
+          <section className="scene game-park-scene">
+            <GamePark
+              turtleName={game.name}
+              daily={fruitCatchDaily}
+              onBackHome={() => navigateTo("home")}
+              onRoundComplete={completeFruitCatchRound}
+              onPlayingChange={setMiniGamePlaying}
+            />
           </section>
         )}
 

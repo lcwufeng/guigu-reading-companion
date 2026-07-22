@@ -109,7 +109,7 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     [userId],
   );
   const chatClearedAt = parentControls?.chat_cleared_at || 0;
-  const [readingRecords, readingRewards, travelRecords, activeTravel, mistakes, dailyRows, chatRows] = await Promise.all([
+  const [readingRecords, readingRewards, travelRecords, activeTravel, mistakes, dailyRows, minigameRows, chatRows] = await Promise.all([
     database.all<{ record_id: string; title: string; read_date: string; answer: string; summary: string }>(
       "SELECT record_id, title, read_date, answer, summary FROM user_reading_records WHERE user_id = ? ORDER BY created_at DESC",
       [userId],
@@ -135,12 +135,16 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
       feed_progress: number; swim_progress: number; reading_progress: number; mistake_progress: number; reward_claimed: number;
       fruit_picked: number; hide_completed: number;
     }>("SELECT * FROM user_daily_state WHERE user_id = ? ORDER BY date_key DESC LIMIT 1", [userId]),
+    database.all<{
+      date_key: string; plays: number; best_score: number; total_caught: number; reward_claimed: number;
+    }>("SELECT date_key, plays, best_score, total_caught, reward_claimed FROM user_minigame_daily WHERE user_id = ? AND game_id = 'fruit-catch' ORDER BY date_key DESC LIMIT 1", [userId]),
     database.all<{ message_id: string; role: string; message_text: string; created_at: number }>(`SELECT message_id, role, message_text, created_at FROM (
       SELECT message_id, role, message_text, created_at FROM user_chat_messages
       WHERE user_id = ? AND expires_at > ? AND created_at > ? ORDER BY created_at DESC LIMIT 16
     ) ORDER BY created_at ASC`, [userId, now, chatClearedAt]),
   ]);
   const daily = dailyRows[0];
+  const fruitCatch = minigameRows[0];
   return {
     name: pet.pet_name,
     hunger: pet.hunger,
@@ -185,6 +189,13 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     } : undefined,
     fruitPicking: daily ? { dateKey: daily.date_key, picked: daily.fruit_picked } : undefined,
     hideAndSeekDaily: daily ? { dateKey: daily.date_key, completed: daily.hide_completed } : undefined,
+    fruitCatchDaily: fruitCatch ? {
+      dateKey: fruitCatch.date_key,
+      plays: fruitCatch.plays,
+      rewarded: Boolean(fruitCatch.reward_claimed),
+      bestScore: fruitCatch.best_score,
+      totalCaught: fruitCatch.total_caught,
+    } : undefined,
   };
 }
 
@@ -317,7 +328,8 @@ async function saveNormalizedState(
   const progress = object(dailyPlan.progress);
   const fruitPicking = object(state.fruitPicking);
   const hideAndSeek = object(state.hideAndSeekDaily);
-  const dateKey = text(dailyPlan.dateKey, 20) || text(fruitPicking.dateKey, 20) || text(hideAndSeek.dateKey, 20);
+  const fruitCatch = object(state.fruitCatchDaily);
+  const dateKey = text(dailyPlan.dateKey, 20) || text(fruitPicking.dateKey, 20) || text(hideAndSeek.dateKey, 20) || text(fruitCatch.dateKey, 20);
   if (dateKey) statements.push({
     sql: `INSERT INTO user_daily_state
       (user_id, date_key, mistake_mode, feed_target, swim_target, reading_target, mistake_target,
@@ -334,6 +346,25 @@ async function saveNormalizedState(
       Math.max(0, integer(targets.feed, 1)), Math.max(0, integer(targets.swim, 1)), Math.max(0, integer(targets.reading, 1)), Math.max(0, integer(targets.mistake, 1)),
       Math.max(0, integer(progress.feed)), Math.max(0, integer(progress.swim)), Math.max(0, integer(progress.reading)), Math.max(0, integer(progress.mistake)),
       booleanInteger(dailyPlan.rewardClaimed), Math.max(0, integer(fruitPicking.picked)), Math.max(0, integer(hideAndSeek.completed)), updatedAt,
+    ],
+  });
+
+  const fruitCatchDateKey = text(fruitCatch.dateKey, 20);
+  if (fruitCatchDateKey) statements.push({
+    sql: `INSERT INTO user_minigame_daily
+      (user_id, date_key, game_id, plays, best_score, total_caught, reward_claimed, updated_at)
+      VALUES (?, ?, 'fruit-catch', ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id, date_key, game_id) DO UPDATE SET plays = excluded.plays,
+      best_score = excluded.best_score, total_caught = excluded.total_caught,
+      reward_claimed = excluded.reward_claimed, updated_at = excluded.updated_at`,
+    params: [
+      userId,
+      fruitCatchDateKey,
+      Math.max(0, integer(fruitCatch.plays)),
+      Math.max(0, integer(fruitCatch.bestScore)),
+      Math.max(0, integer(fruitCatch.totalCaught)),
+      booleanInteger(fruitCatch.rewarded),
+      updatedAt,
     ],
   });
 

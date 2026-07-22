@@ -219,6 +219,32 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   assert.doesNotMatch(explorationDb, /localStorage|sessionStorage/);
 });
 
+test("provides a responsive turtle fruit-catching game with a daily isolated reward record", async () => {
+  const [readingApp, gamePark, styles, userState, schema] = await Promise.all([
+    readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/GamePark.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(readingApp, /进入龟龟乐园玩小游戏/);
+  assert.match(readingApp, /fruitCatchDaily/);
+  assert.match(readingApp, /stars: current\.stars \+ \(shouldReward \? 1 : 0\)/);
+  assert.match(gamePark, /龟龟接果子/);
+  assert.match(gamePark, /ROUND_DURATION_MS = 30_000/);
+  assert.match(gamePark, /FRUIT_CATCH_TARGET_SCORE = 12/);
+  assert.match(gamePark, /turtle_idle_standing\.png/);
+  assert.match(gamePark, /turtle_excited\.png/);
+  assert.match(gamePark, /onPointerMove=\{moveFromPointer\}/);
+  assert.match(gamePark, /event\.key === "ArrowLeft"/);
+  assert.match(gamePark, /今天首次过关，获得 1 颗星星/);
+  assert.match(styles, /\.game-park-scene \{[\s\S]*overflow-y: auto/);
+  assert.match(styles, /touch-action: none/);
+  assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.fruit-catch-field/);
+  assert.match(userState, /user_minigame_daily/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS user_minigame_daily/);
+});
+
 test("forces first-login password reset and isolates every student's data", async () => {
   const unauthorized = await fetchApp("/api/user-state");
   assert.equal(unauthorized.status, 401);

@@ -372,6 +372,20 @@ export const userDailyState = sqliteTable("user_daily_state", {
   index("user_daily_state_user_date_idx").on(table.userId, table.dateKey),
 ]);
 
+export const userMinigameDaily = sqliteTable("user_minigame_daily", {
+  userId: text("user_id").notNull(),
+  dateKey: text("date_key").notNull(),
+  gameId: text("game_id").notNull(),
+  plays: integer("plays").notNull().default(0),
+  bestScore: integer("best_score").notNull().default(0),
+  totalCaught: integer("total_caught").notNull().default(0),
+  rewardClaimed: integer("reward_claimed", { mode: "boolean" }).notNull().default(false),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.dateKey, table.gameId] }),
+  index("user_minigame_daily_user_date_idx").on(table.userId, table.dateKey),
+]);
+
 export const userChatMessages = sqliteTable("user_chat_messages", {
   userId: text("user_id").notNull(),
   messageId: text("message_id").notNull(),
