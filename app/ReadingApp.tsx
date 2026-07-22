@@ -3005,6 +3005,13 @@ export default function ReadingApp({
 
                   {activeExplorationNode.lesson && explorationStage === "learn" && (
                     <div className="exploration-learning-content">
+                      <figure className="exploration-lesson-illustration">
+                        <img
+                          src={`${BASE_PATH}${activeExplorationNode.lesson.illustration}`}
+                          alt={activeExplorationNode.lesson.illustrationAlt}
+                        />
+                        <figcaption><Sparkles aria-hidden="true" /> 先看图找线索，再听龟龟讲一讲</figcaption>
+                      </figure>
                       <section className="exploration-hook">
                         <strong><Sparkles aria-hidden="true" /> 先猜一猜</strong>
                         <p>{activeExplorationNode.lesson.hook}</p>

@@ -190,6 +190,8 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   }
   assert.equal((catalog.match(/type: "(?:发现|观察|连接|创造)"/g) || []).length, 32);
   assert.equal((catalog.match(/lesson: \{/g) || []).length, 4);
+  assert.equal((catalog.match(/illustration: "\/assets\/exploration\/nature\//g) || []).length, 4);
+  assert.match(readingApp, /exploration-lesson-illustration/);
   assert.match(readingApp, /我学完了，试试互动检查/);
   assert.match(readingApp, /实践表达 · 把知识用起来/);
   assert.match(readingApp, /到复习时间啦/);
@@ -209,6 +211,11 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   assert.match(styles, /\.interest-domain-grid/);
   assert.match(styles, /\.exploration-route/);
   assert.match(styles, /\.exploration-stepper/);
+  assert.match(styles, /\.app\.view-explore/);
+  assert.match(styles, /\.explore-scene \{[\s\S]*overflow-y: scroll/);
+  for (const asset of ["animal-survival.png", "forest-layers.png", "fossil-evidence.png", "animal-habitat.png"]) {
+    await access(new URL(`../public/assets/exploration/nature/${asset}`, import.meta.url));
+  }
   assert.doesNotMatch(explorationDb, /localStorage|sessionStorage/);
 });
 

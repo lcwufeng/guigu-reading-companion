@@ -13,6 +13,8 @@ export type ExplorationNodeType = "发现" | "观察" | "连接" | "创造";
 export type ExplorationLesson = {
   hook: string;
   objective: string;
+  illustration: string;
+  illustrationAlt: string;
   learnCards: Array<{ title: string; body: string }>;
   quiz: {
     question: string;
@@ -85,6 +87,8 @@ export const interestDomains: InterestDomain[] = [
         lesson: {
           hook: "北极熊没有棉衣，竹节虫也不会真的变成树枝，它们为什么仍能安全生活？",
           objective: "学会从身体特点、行为和环境三方面解释动物怎样生存。",
+          illustration: "/assets/exploration/nature/animal-survival.png",
+          illustrationAlt: "雪地里的北极熊和北极狐，展示动物的保温与保护色本领",
           learnCards: [
             { title: "身体像一件工具", body: "厚厚的脂肪能保温，宽大的脚掌能防止陷进雪里，尖锐的牙齿适合获取食物。身体特点要和生活环境一起看。" },
             { title: "行为也能帮忙", body: "迁徙、冬眠、夜间活动都是生存办法。动物会在食物、温度或危险发生变化时调整行动。" },
@@ -122,6 +126,8 @@ export const interestDomains: InterestDomain[] = [
         lesson: {
           hook: "一片森林看起来挤在一起，其实像一栋有阳台、有楼道、也有地下室的大楼。",
           objective: "学会比较森林不同高度的阳光、水分、食物和居住者。",
+          illustration: "/assets/exploration/nature/forest-layers.png",
+          illustrationAlt: "从树冠到灌木和地表的森林分层，以及生活在不同高度的动物和植物",
           learnCards: [
             { title: "树冠层：阳光最多", body: "高大的树冠接到更多阳光，也有花、果实和嫩叶，许多鸟类和善于攀爬的动物在这里活动。" },
             { title: "灌木层：枝叶更密", body: "较矮的灌木得到的阳光较少，但浓密枝叶适合躲藏、筑巢，也能提供浆果和昆虫。" },
@@ -159,6 +165,8 @@ export const interestDomains: InterestDomain[] = [
         lesson: {
           hook: "没有见过恐龙的人，为什么能知道它走路、吃东西，甚至有时成群活动？",
           objective: "学会把化石、岩层和多条线索组合起来作出有根据的推测。",
+          illustration: "/assets/exploration/nature/fossil-evidence.png",
+          illustrationAlt: "龟龟在不同岩层旁记录脚印、树叶和骨骼化石线索",
           learnCards: [
             { title: "化石不只有骨头", body: "牙齿、树叶、蛋、粪便和脚印都可能成为化石。不同化石告诉我们的信息并不相同。" },
             { title: "岩层像时间书页", body: "在没有被扰动的岩层中，通常越下面形成得越早。记录化石位于哪一层，才能比较大致年代。" },
@@ -196,6 +204,8 @@ export const interestDomains: InterestDomain[] = [
         lesson: {
           hook: "给小熊猫造一间很漂亮的玻璃房就够了吗？漂亮是人的感觉，合适才是动物的需要。",
           objective: "学会根据动物的食物、水、温度、活动和安全需要设计栖息地。",
+          illustration: "/assets/exploration/nature/animal-habitat.png",
+          illustrationAlt: "包含食物、饮水、休息处和安全通道的小熊猫自然栖息地",
           learnCards: [
             { title: "先研究住户", body: "不同动物需要不同食物、温度和活动空间。先了解动物在自然中怎样生活，再开始画房子。" },
             { title: "空间要能连接", body: "食物区、饮水区、休息区和活动区之间要有安全通道，还要有躲避惊吓和天气变化的地方。" },
