@@ -176,9 +176,10 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
 });
 
 test("provides a separate eight-domain knowledge expedition with evidence gates and spaced review", async () => {
-  const [readingApp, catalog, explorationDb, styles, schema] = await Promise.all([
+  const [readingApp, catalog, extraLessons, explorationDb, styles, schema] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/exploration-catalog.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/exploration-lessons.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/exploration.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
@@ -191,6 +192,8 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   assert.equal((catalog.match(/type: "(?:发现|观察|连接|创造)"/g) || []).length, 32);
   assert.equal((catalog.match(/lesson: \{/g) || []).length, 4);
   assert.equal((catalog.match(/illustration: "\/assets\/exploration\/nature\//g) || []).length, 4);
+  assert.equal((catalog.match(/lesson: extraExplorationLessons\[/g) || []).length, 20);
+  assert.equal((extraLessons.match(/illustration: "\/assets\/exploration\//g) || []).length, 20);
   assert.match(readingApp, /exploration-lesson-illustration/);
   assert.match(readingApp, /我学完了，试试互动检查/);
   assert.match(readingApp, /实践表达 · 把知识用起来/);
@@ -215,6 +218,18 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   assert.match(styles, /\.explore-scene \{[\s\S]*overflow-y: scroll/);
   for (const asset of ["animal-survival.png", "forest-layers.png", "fossil-evidence.png", "animal-habitat.png"]) {
     await access(new URL(`../public/assets/exploration/nature/${asset}`, import.meta.url));
+  }
+  const newRouteAssets = {
+    science: ["moon-phases.png", "bioluminescence.png", "renewable-energy.png", "future-base.png"],
+    history: ["ruins-speak.png", "ancient-city-day.png", "inventions-change-life.png", "letter-to-future.png"],
+    literature: ["character-choice.png", "fairy-tale-repetition.png", "different-ending.png", "science-story.png"],
+    geography: ["map-directions.png", "landform-forces.png", "climate-and-life.png", "travel-route.png"],
+    art: ["color-emotion.png", "sound-rhythm.png", "pattern-math.png", "knowledge-card-cover.png"],
+  };
+  for (const [domain, assets] of Object.entries(newRouteAssets)) {
+    for (const asset of assets) {
+      await access(new URL(`../public/assets/exploration/${domain}/${asset}`, import.meta.url));
+    }
   }
   assert.doesNotMatch(explorationDb, /localStorage|sessionStorage/);
 });

@@ -1,3 +1,5 @@
+import { extraExplorationLessons } from "./exploration-lessons";
+
 export type InterestDomainId =
   | "nature"
   | "science"
@@ -251,6 +253,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "月亮本身没有变成月牙。它绕地球运动时，被太阳照亮的那一半，从地球看起来会出现不同形状。",
         challenge: "用台灯当太阳、球当月亮，转动小球，观察你能看到几种“月相”。",
         takeaway: "月相来自太阳、地球和月亮位置的变化。",
+        lesson: extraExplorationLessons["science-moon-phases"],
       },
       {
         id: "science-bioluminescence",
@@ -259,6 +262,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "萤火虫、发光水母和一些深海鱼会利用化学反应发光，用来交流、捕食或躲避危险。",
         challenge: "比较两种发光生物：它们在哪里生活，发光分别有什么用？",
         takeaway: "生物发光是生命利用化学能的一种特殊本领。",
+        lesson: extraExplorationLessons["science-bioluminescence"],
       },
       {
         id: "science-renewable-energy",
@@ -267,6 +271,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "风推动叶片转动，阳光让太阳能电池产生电流。它们能不断补充，但也会受到天气和时间影响。",
         challenge: "为学校设计一份清洁能源方案：哪些地方适合太阳能，哪些地方适合风能？",
         takeaway: "可再生能源清洁但不稳定，需要合理选择和储存。",
+        lesson: extraExplorationLessons["science-renewable-energy"],
       },
       {
         id: "science-future-base",
@@ -275,6 +280,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "在月球或火星生活，需要解决空气、水、食物、温度、能源和通信问题，每个系统都要互相配合。",
         challenge: "画一座未来基地，至少标出四个维持生活的重要系统。",
         takeaway: "太空基地是多个科学与工程系统共同工作的结果。",
+        lesson: extraExplorationLessons["science-future-base"],
       },
     ]),
   },
@@ -294,6 +300,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "一块陶片、一段城墙和一枚钱币都能提供线索。历史研究者会比较材料、位置和年代，避免只凭想象下结论。",
         challenge: "假如你找到一只旧碗，你会从形状、材料和发现地点中问出哪些问题？",
         takeaway: "历史结论需要把遗迹中的多条证据连接起来。",
+        lesson: extraExplorationLessons["history-ruins-speak"],
       },
       {
         id: "history-day-in-city",
@@ -302,6 +309,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "城门、街道、市场和水井记录着古人的日常。观察一座古城的布局，也能看见当时的交通、职业和规则。",
         challenge: "选择一座古城，画出一位同龄孩子从早到晚可能经过的三个地方。",
         takeaway: "城市布局能反映一个时代的生活方式。",
+        lesson: extraExplorationLessons["history-day-in-city"],
       },
       {
         id: "history-inventions",
@@ -310,6 +318,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "纸、印刷术、指南针等发明不仅解决一个问题，还会改变学习、旅行和人与人交流的方式。",
         challenge: "选择一项发明，画出“发明以前”和“发明以后”的生活对比。",
         takeaway: "重要发明常常会带来一连串社会变化。",
+        lesson: extraExplorationLessons["history-inventions"],
       },
       {
         id: "history-letter-future",
@@ -318,6 +327,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "今天的校服、交通和游戏，也会成为未来研究者眼中的历史。记录具体细节，能让未来的人更了解我们。",
         challenge: "写一封给一百年后小朋友的短信，介绍今天最值得保存的三样东西。",
         takeaway: "认真记录当下，就是在为未来保存历史。",
+        lesson: extraExplorationLessons["history-letter-future"],
       },
     ]),
   },
@@ -337,6 +347,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "人物的行动通常来自愿望、担心和当时的处境。把这三条线索放在一起，才能真正理解人物。",
         challenge: "从最近读的故事选一个人物，找出他的愿望、困难和一个重要选择。",
         takeaway: "理解人物要同时关注动机、处境和选择。",
+        lesson: extraExplorationLessons["literature-character-choice"],
       },
       {
         id: "literature-repetition",
@@ -345,6 +356,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "许多童话会重复三次敲门、三次考验或三次回答。重复让读者记得更牢，也让紧张和期待一点点增加。",
         challenge: "找一个有重复情节的故事，说说去掉一次重复后，感觉会有什么不同。",
         takeaway: "重复是故事制造节奏、记忆和期待的重要方法。",
+        lesson: extraExplorationLessons["literature-repetition"],
       },
       {
         id: "literature-new-ending",
@@ -353,6 +365,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "结尾会改变我们对整个故事的理解。快乐、开放或意外的结尾，会让同一组人物和事件产生不同意义。",
         challenge: "给熟悉的故事换一个结尾，并说明人物需要提前做出什么不同选择。",
         takeaway: "故事结尾会回过头改变读者对情节和人物的理解。",
+        lesson: extraExplorationLessons["literature-new-ending"],
       },
       {
         id: "literature-science-story",
@@ -361,6 +374,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "知识也能成为故事。让一个科学现象变成角色，再给它设置愿望和困难，就能把解释写得生动又准确。",
         challenge: "把“水循环”或“种子发芽”写成一段有角色、有困难的小故事。",
         takeaway: "故事能帮助我们用准确又有趣的方式表达知识。",
+        lesson: extraExplorationLessons["literature-science-story"],
       },
     ]),
   },
@@ -380,6 +394,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "地图用方向、图例和比例尺，把真实世界缩小在纸面上。先找到北方，才能准确描述其他地点的位置。",
         challenge: "画一张从家到学校的简图，加入方向箭头和至少三个图例。",
         takeaway: "方向、图例和比例尺是读懂地图的基本工具。",
+        lesson: extraExplorationLessons["geography-directions"],
       },
       {
         id: "geography-landforms",
@@ -388,6 +403,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "地壳运动能把土地抬高，流水和风又会不断侵蚀、搬运。山谷、峡谷和三角洲都是长期变化的结果。",
         challenge: "观察一种地貌，判断它更可能受到抬升、流水还是风的影响。",
         takeaway: "地貌由地球内部力量和外部侵蚀长期共同塑造。",
+        lesson: extraExplorationLessons["geography-landforms"],
       },
       {
         id: "geography-climate-life",
@@ -396,6 +412,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "冷热、降水和季节会影响房屋、衣服、食物与出行。不同地方的生活习惯，常常是在适应当地环境。",
         challenge: "比较一个寒冷地区和一个炎热地区的房屋，找出两处不同并解释原因。",
         takeaway: "气候会影响人们的居住、饮食和出行方式。",
+        lesson: extraExplorationLessons["geography-climate-life"],
       },
       {
         id: "geography-route-plan",
@@ -404,6 +421,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "一条好路线要考虑距离、交通、天气、时间和想看的内容，还要给休息与意外情况留下空间。",
         challenge: "为两天小旅行安排三站路线，说明顺序和每一站的选择理由。",
         takeaway: "旅行规划需要综合位置、时间、条件和个人兴趣。",
+        lesson: extraExplorationLessons["geography-route-plan"],
       },
     ]),
   },
@@ -423,6 +441,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "颜色本身没有固定情绪，但明暗、冷暖和搭配会影响我们的感受。同一种红色放在不同画面里，也可能热闹或紧张。",
         challenge: "只用三种颜色画“安静”和“兴奋”两幅小画，并比较你的选择。",
         takeaway: "颜色的明暗、冷暖和搭配能帮助作品表达情绪。",
+        lesson: extraExplorationLessons["art-color-emotion"],
       },
       {
         id: "art-rhythm",
@@ -431,6 +450,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "长短、强弱和停顿组成节奏。雨滴、脚步和说话里都有节奏，音乐家会把它们组织成可以重复的模式。",
         challenge: "用拍手和桌面敲击设计一组八拍节奏，再教给别人重复。",
         takeaway: "节奏是声音按照时间形成的规律。",
+        lesson: extraExplorationLessons["art-rhythm"],
       },
       {
         id: "art-pattern-math",
@@ -439,6 +459,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "窗花、织物和建筑装饰常用平移、旋转与对称。数学规律让图案既统一，又能不断变化。",
         challenge: "选择一个简单形状，用平移或旋转设计一条连续花边。",
         takeaway: "对称、平移和旋转能创造有规律的艺术图案。",
+        lesson: extraExplorationLessons["art-pattern-math"],
       },
       {
         id: "art-card-cover",
@@ -447,6 +468,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "知识卡封面要让人一眼看懂主题。醒目的标题、主要画面和少量辅助元素，比塞满信息更有效。",
         challenge: "挑一个刚学会的知识点，为它画封面，并说说你最想让人先看到什么。",
         takeaway: "视觉设计要用清楚的层次突出最重要的信息。",
+        lesson: extraExplorationLessons["art-card-cover"],
       },
     ]),
   },
