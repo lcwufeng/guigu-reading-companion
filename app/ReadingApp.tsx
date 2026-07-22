@@ -268,12 +268,25 @@ type WeeklyLeaderboard = {
 
 type ExplorationOverview = {
   completedNodeIds: string[];
+  dueReviewNodeIds: string[];
+  nodeProgress: Record<string, {
+    state: "learned" | "mastered";
+    reviewStreak: number;
+    learnedAt: number;
+    nextReviewAt: number;
+    lastReviewedAt: number;
+    evidenceSummary: string;
+    attempts: number;
+  }>;
   recommended: Array<{ domainId: InterestDomainId; reason: string }>;
   totalNodes: number;
+  availableNodes: number;
   updatedAt: number;
 };
 
-type VoiceTarget = "chat" | "reading";
+type ExplorationStage = "learn" | "quiz" | "project" | "review" | "learned" | "mastered";
+type ExplorationFeedback = { correct: boolean; feedback: string; source: "deepseek" | "local" };
+type VoiceTarget = "chat" | "reading" | "exploration";
 type VoicePhase = "idle" | "recording" | "recognizing";
 type VoiceSession = {
   target: VoiceTarget;
@@ -1197,6 +1210,10 @@ export default function ReadingApp({
   const [explorationLoading, setExplorationLoading] = useState(false);
   const [explorationSaving, setExplorationSaving] = useState(false);
   const [explorationError, setExplorationError] = useState("");
+  const [explorationStage, setExplorationStage] = useState<ExplorationStage>("learn");
+  const [explorationQuizOption, setExplorationQuizOption] = useState<number | null>(null);
+  const [explorationAnswer, setExplorationAnswer] = useState("");
+  const [explorationFeedback, setExplorationFeedback] = useState<ExplorationFeedback | null>(null);
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
   const availableBooks = useMemo(() => [...books, ...importedBooks], [importedBooks]);
   const selectedGradeBooks = useMemo(
@@ -1331,28 +1348,68 @@ export default function ReadingApp({
     }).then(() => undefined).catch(() => undefined);
   }, []);
 
-  const completeExploration = useCallback(async () => {
-    if (!activeExplorationNode || explorationSaving) return;
+  const openExplorationNode = useCallback((node: ExplorationNode) => {
+    const progress = explorationOverview?.nodeProgress[node.id];
+    const dueForReview = explorationOverview?.dueReviewNodeIds.includes(node.id);
+    setExplorationError("");
+    setExplorationFeedback(null);
+    setExplorationQuizOption(null);
+    setExplorationAnswer("");
+    setExplorationStage(progress?.state === "mastered" ? "mastered" : dueForReview ? "review" : progress ? "learned" : "learn");
+    setActiveExplorationNode(node);
+  }, [explorationOverview]);
+
+  const submitExplorationQuizAnswer = useCallback(async () => {
+    if (!activeExplorationNode || explorationSaving || explorationQuizOption === null) return;
     setExplorationSaving(true);
     setExplorationError("");
+    setExplorationFeedback(null);
     try {
       const response = await fetch(`${BASE_PATH}/api/exploration`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ nodeId: activeExplorationNode.id }),
+        body: JSON.stringify({ action: "quiz", nodeId: activeExplorationNode.id, selectedOption: explorationQuizOption }),
       });
-      const data = await response.json().catch(() => null) as ExplorationOverview | { error?: string } | null;
-      if (!response.ok || !data || !("completedNodeIds" in data)) {
-        throw new Error(data && "error" in data ? data.error || "这片知识叶暂时没能点亮" : "这片知识叶暂时没能点亮");
+      const data = await response.json().catch(() => null) as ExplorationFeedback | { error?: string } | null;
+      if (!response.ok || !data || !("correct" in data)) {
+        throw new Error(data && "error" in data ? data.error || "互动检查暂时没能提交" : "互动检查暂时没能提交");
       }
-      setExplorationOverview(data);
-      showToast(`“${activeExplorationNode.title}”已点亮，龟龟帮你记住啦！`);
+      setExplorationFeedback(data);
     } catch (error) {
-      setExplorationError(error instanceof Error ? error.message : "这片知识叶暂时没能点亮");
+      setExplorationError(error instanceof Error ? error.message : "互动检查暂时没能提交");
     } finally {
       setExplorationSaving(false);
     }
-  }, [activeExplorationNode, explorationSaving, showToast]);
+  }, [activeExplorationNode, explorationQuizOption, explorationSaving]);
+
+  const submitExplorationWrittenAnswer = useCallback(async (action: "project" | "review") => {
+    if (!activeExplorationNode || explorationSaving || !explorationAnswer.trim()) return;
+    setExplorationSaving(true);
+    setExplorationError("");
+    setExplorationFeedback(null);
+    try {
+      const response = await fetch(`${BASE_PATH}/api/exploration`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action, nodeId: activeExplorationNode.id, answer: explorationAnswer }),
+      });
+      const data = await response.json().catch(() => null) as (ExplorationFeedback & { overview?: ExplorationOverview }) | { error?: string } | null;
+      if (!response.ok || !data || !("correct" in data)) {
+        throw new Error(data && "error" in data ? data.error || "龟龟暂时没能看完" : "龟龟暂时没能看完");
+      }
+      setExplorationFeedback(data);
+      if (data.correct && data.overview) {
+        setExplorationOverview(data.overview);
+        const progress = data.overview.nodeProgress[activeExplorationNode.id];
+        setExplorationStage(progress?.state === "mastered" ? "mastered" : "learned");
+        showToast(progress?.state === "mastered" ? "这片知识已经牢牢掌握啦！" : "完成学习，龟龟会在合适的时间请你再想一次");
+      }
+    } catch (error) {
+      setExplorationError(error instanceof Error ? error.message : "龟龟暂时没能看完");
+    } finally {
+      setExplorationSaving(false);
+    }
+  }, [activeExplorationNode, explorationAnswer, explorationSaving, showToast]);
 
   const logout = useCallback(async () => {
     await fetch(`${BASE_PATH}/api/auth/logout`, { method: "POST" }).catch(() => undefined);
@@ -2140,9 +2197,12 @@ export default function ReadingApp({
         setChatInput("");
         showToast(`听清楚啦，正在发给${game.name}`);
         submitChatRef.current(data.transcript);
-      } else {
+      } else if (session.target === "reading") {
         setReadingAnswer(data.transcript);
         showToast("听清楚啦，文字已经填好");
+      } else {
+        setExplorationAnswer(data.transcript);
+        showToast("听清楚啦，已经放进探险回答里");
       }
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -2497,10 +2557,12 @@ export default function ReadingApp({
   const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
   const navigationLocked = !!busy || !!hideTarget || !!traveling;
   const completedExplorationNodes = new Set(explorationOverview?.completedNodeIds || []);
+  const dueExplorationNodes = new Set(explorationOverview?.dueReviewNodeIds || []);
+  const masteredExplorationCount = Object.values(explorationOverview?.nodeProgress || {}).filter((progress) => progress.state === "mastered").length;
   const selectedInterestDomainData: InterestDomain | null = selectedInterestDomain
     ? interestDomains.find((domain) => domain.id === selectedInterestDomain) || null
     : null;
-  const explorationStartedDomains = interestDomains.filter((domain) => domain.nodes.some((node) => completedExplorationNodes.has(node.id))).length;
+  const activeExplorationProgress = activeExplorationNode ? explorationOverview?.nodeProgress[activeExplorationNode.id] : undefined;
   const selectedDestinationUnlocked = game.stars >= selectedDestination.requiredStars;
   const selectedDestinationMissingStars = Math.max(0, selectedDestination.requiredStars - game.stars);
   const journalTravelItems = game.travelRecords.slice(0, 9);
@@ -2746,7 +2808,7 @@ export default function ReadingApp({
                   <h1>{selectedInterestDomainData ? selectedInterestDomainData.title : "从喜欢的一件事，发现更大的世界"}</h1>
                   <p>{selectedInterestDomainData
                     ? selectedInterestDomainData.description
-                    : "八个兴趣领域，三十二片知识叶。每次花一点时间观察、连接或创造，慢慢长出自己的学习地图。"}</p>
+                    : "从微课开始，经过互动检查、实践表达和间隔复习，把喜欢真正变成会用的知识。"}</p>
                 </div>
                 <button
                   type="button"
@@ -2773,15 +2835,15 @@ export default function ReadingApp({
                   <section className="explore-summary" aria-label="知识探险进度">
                     <div>
                       <strong>{completedExplorationNodes.size}</strong>
-                      <span>已点亮知识叶</span>
+                      <span>已完成学习</span>
                     </div>
                     <div>
-                      <strong>{explorationStartedDomains}</strong>
-                      <span>已开始领域</span>
+                      <strong>{masteredExplorationCount}</strong>
+                      <span>已经掌握</span>
                     </div>
                     <div>
-                      <strong>{explorationOverview.totalNodes - completedExplorationNodes.size}</strong>
-                      <span>等待新发现</span>
+                      <strong>{dueExplorationNodes.size}</strong>
+                      <span>今天待复习</span>
                     </div>
                     <img src={`${ASSET}/characters/turtle/turtle_travel_start.png`} alt="龟龟背着书包准备知识探险" />
                   </section>
@@ -2798,6 +2860,7 @@ export default function ReadingApp({
                       {explorationOverview.recommended.map((recommendation) => {
                         const domain = interestDomains.find((item) => item.id === recommendation.domainId);
                         if (!domain) return null;
+                        const available = domain.nodes.some((node) => Boolean(node.lesson));
                         return (
                           <button
                             type="button"
@@ -2806,7 +2869,7 @@ export default function ReadingApp({
                             onClick={() => setSelectedInterestDomain(domain.id)}
                           >
                             <span><InterestDomainIcon domainId={domain.id} /></span>
-                            <div><strong>{domain.title}</strong><p>{recommendation.reason}</p></div>
+                            <div><strong>{domain.title} <small>{available ? "完整路线" : "内容准备中"}</small></strong><p>{recommendation.reason}</p></div>
                             <ChevronRight aria-hidden="true" />
                           </button>
                         );
@@ -2823,6 +2886,7 @@ export default function ReadingApp({
                       {interestDomains.map((domain) => {
                         const completedCount = domain.nodes.filter((node) => completedExplorationNodes.has(node.id)).length;
                         const recommendation = explorationOverview.recommended.find((item) => item.domainId === domain.id);
+                        const available = domain.nodes.some((node) => Boolean(node.lesson));
                         return (
                           <button
                             type="button"
@@ -2830,7 +2894,9 @@ export default function ReadingApp({
                             key={domain.id}
                             onClick={() => setSelectedInterestDomain(domain.id)}
                           >
-                            {recommendation && <b className="interest-recommended-badge"><Sparkles aria-hidden="true" /> 龟龟推荐</b>}
+                            {available
+                              ? <b className="interest-recommended-badge ready"><Sparkles aria-hidden="true" /> 完整学习路线</b>
+                              : <b className="interest-recommended-badge upcoming">内容准备中</b>}
                             <span className="interest-domain-icon"><InterestDomainIcon domainId={domain.id} /></span>
                             <div className="interest-domain-copy">
                               <h3>{domain.title}</h3>
@@ -2840,7 +2906,9 @@ export default function ReadingApp({
                               <span><i style={{ width: `${completedCount / domain.nodes.length * 100}%` }} /></span>
                               <b>{completedCount}/{domain.nodes.length}</b>
                             </div>
-                            <em>{completedCount === domain.nodes.length ? "全部点亮" : completedCount ? "继续探索" : "开始探索"}<ChevronRight aria-hidden="true" /></em>
+                            <em>{available
+                              ? completedCount === domain.nodes.length ? "全部掌握" : completedCount ? "继续学习" : "开始学习"
+                              : recommendation ? "龟龟已记下你的兴趣" : "即将开放"}<ChevronRight aria-hidden="true" /></em>
                           </button>
                         );
                       })}
@@ -2854,7 +2922,9 @@ export default function ReadingApp({
                   <header className="interest-detail-hero">
                     <span className="interest-detail-icon"><InterestDomainIcon domainId={selectedInterestDomainData.id} /></span>
                     <div>
-                      <small>兴趣路线 · {selectedInterestDomainData.nodes.filter((node) => completedExplorationNodes.has(node.id)).length}/{selectedInterestDomainData.nodes.length} 已点亮</small>
+                      <small>{selectedInterestDomainData.nodes.some((node) => node.lesson)
+                        ? `完整学习路线 · ${selectedInterestDomainData.nodes.filter((node) => completedExplorationNodes.has(node.id)).length}/${selectedInterestDomainData.nodes.length} 已完成`
+                        : "兴趣入口已保留 · 完整学习内容准备中"}</small>
                       <h2>{selectedInterestDomainData.title}</h2>
                       <p>{selectedInterestDomainData.description}</p>
                     </div>
@@ -2871,25 +2941,41 @@ export default function ReadingApp({
                   <div className="exploration-route" aria-label={`${selectedInterestDomainData.title}知识路线`}>
                     {selectedInterestDomainData.nodes.map((node, index) => {
                       const completed = completedExplorationNodes.has(node.id);
-                      const unlocked = index === 0 || completedExplorationNodes.has(selectedInterestDomainData.nodes[index - 1].id);
+                      const progress = explorationOverview.nodeProgress[node.id];
+                      const mastered = progress?.state === "mastered";
+                      const due = dueExplorationNodes.has(node.id);
+                      const available = Boolean(node.lesson);
+                      const unlocked = available && (index === 0 || completedExplorationNodes.has(selectedInterestDomainData.nodes[index - 1].id));
+                      const statusLabel = !available
+                        ? "内容准备中"
+                        : mastered
+                          ? "已掌握"
+                          : due
+                            ? "该复习啦"
+                            : completed
+                              ? "查看学习成果"
+                              : unlocked
+                                ? "开始学习"
+                                : "还未解锁";
                       return (
-                        <article className={`exploration-node-card ${completed ? "completed" : ""} ${unlocked ? "unlocked" : "locked"}`} key={node.id}>
+                        <article className={`exploration-node-card ${completed ? "completed" : ""} ${mastered ? "mastered" : ""} ${due ? "review-due" : ""} ${unlocked || completed ? "unlocked" : "locked"}`} key={node.id}>
                           <div className="exploration-route-line" aria-hidden="true"><i /></div>
                           <button
                             type="button"
-                            disabled={!unlocked}
-                            onClick={() => {
-                              setExplorationError("");
-                              setActiveExplorationNode(node);
-                            }}
+                            disabled={!unlocked && !completed}
+                            onClick={() => openExplorationNode(node)}
                           >
-                            <span className="exploration-node-number">{completed ? <Check aria-hidden="true" /> : unlocked ? index + 1 : <Lock aria-hidden="true" />}</span>
+                            <span className="exploration-node-number">{mastered ? <Star aria-hidden="true" /> : due ? <RotateCcw aria-hidden="true" /> : completed ? <Check aria-hidden="true" /> : unlocked ? index + 1 : <Lock aria-hidden="true" />}</span>
                             <div>
-                              <small>{node.type}任务</small>
+                              <small>{available ? `${node.type}学习` : "即将开放"}</small>
                               <h3>{node.title}</h3>
-                              <p>{unlocked ? node.guide : `先点亮“${selectedInterestDomainData.nodes[index - 1].title}”`}</p>
+                              <p>{!available
+                                ? "龟龟正在把它做成有讲解、有互动、有表达和复习的完整学习任务。"
+                                : unlocked || completed
+                                  ? node.lesson?.objective
+                                  : `先完成“${selectedInterestDomainData.nodes[index - 1].title}”`}</p>
                             </div>
-                            <strong>{completed ? "再次看看" : unlocked ? "去探索" : "还未解锁"}<ChevronRight aria-hidden="true" /></strong>
+                            <strong>{statusLabel}<ChevronRight aria-hidden="true" /></strong>
                           </button>
                         </article>
                       );
@@ -2907,35 +2993,168 @@ export default function ReadingApp({
                   <button className="exploration-modal-close" type="button" aria-label="关闭知识点" onClick={() => setActiveExplorationNode(null)} disabled={explorationSaving}><X /></button>
                   <header>
                     <span><InterestDomainIcon domainId={activeExplorationNode.domainId} /></span>
-                    <div><small>{activeExplorationNode.type}任务</small><h2 id="exploration-modal-title">{activeExplorationNode.title}</h2></div>
+                    <div><small>{activeExplorationNode.type}学习任务</small><h2 id="exploration-modal-title">{activeExplorationNode.title}</h2></div>
                   </header>
-                  <div className="exploration-guide">
-                    <h3><BookOpen aria-hidden="true" /> 先听龟龟讲一讲</h3>
-                    <p>{activeExplorationNode.guide}</p>
+                  <div className="exploration-stepper" aria-label="学习步骤">
+                    {(["learn", "quiz", "project", "review"] as const).map((step, index) => {
+                      const label = ["学一学", "想一想", "说一说", "再想起"][index];
+                      const order = explorationStage === "mastered" ? 3 : explorationStage === "learned" ? 2 : ["learn", "quiz", "project", "review"].indexOf(explorationStage);
+                      return <span className={order >= index ? "active" : ""} key={step}><i>{index + 1}</i>{label}</span>;
+                    })}
                   </div>
-                  <div className="exploration-challenge">
-                    <h3><Lightbulb aria-hidden="true" /> 你的探险小任务</h3>
-                    <p>{activeExplorationNode.challenge}</p>
-                  </div>
-                  {completedExplorationNodes.has(activeExplorationNode.id) && (
-                    <div className="exploration-takeaway">
-                      <Check aria-hidden="true" />
-                      <div><h3>这片知识叶已经点亮</h3><p>{activeExplorationNode.takeaway}</p></div>
+
+                  {activeExplorationNode.lesson && explorationStage === "learn" && (
+                    <div className="exploration-learning-content">
+                      <section className="exploration-hook">
+                        <strong><Sparkles aria-hidden="true" /> 先猜一猜</strong>
+                        <p>{activeExplorationNode.lesson.hook}</p>
+                      </section>
+                      <section className="exploration-objective">
+                        <Lightbulb aria-hidden="true" />
+                        <div><strong>这次要学会</strong><p>{activeExplorationNode.lesson.objective}</p></div>
+                      </section>
+                      <div className="exploration-lesson-cards">
+                        {activeExplorationNode.lesson.learnCards.map((card, index) => (
+                          <article key={card.title}>
+                            <b>{index + 1}</b>
+                            <div><h3>{card.title}</h3><p>{card.body}</p></div>
+                          </article>
+                        ))}
+                      </div>
+                      <button className="exploration-complete-button" type="button" onClick={() => {
+                        setExplorationStage("quiz");
+                        setExplorationFeedback(null);
+                        setExplorationQuizOption(null);
+                      }}>
+                        <Check aria-hidden="true" /> 我学完了，试试互动检查
+                      </button>
                     </div>
                   )}
-                  {explorationError && <p className="exploration-modal-error" role="alert">{explorationError}</p>}
-                  <button
-                    className="exploration-complete-button"
-                    type="button"
-                    onClick={() => completedExplorationNodes.has(activeExplorationNode.id) ? setActiveExplorationNode(null) : void completeExploration()}
-                    disabled={explorationSaving}
-                  >
-                    {explorationSaving
-                      ? "龟龟正在记录…"
-                      : completedExplorationNodes.has(activeExplorationNode.id)
-                        ? "完成回顾，回到路线"
-                        : <><Sparkles aria-hidden="true" /> 我完成了，点亮知识叶</>}
-                  </button>
+
+                  {activeExplorationNode.lesson && explorationStage === "quiz" && (
+                    <div className="exploration-task-content">
+                      <span className="exploration-task-kicker">互动检查 · 先自己想，不怕答错</span>
+                      <h3>{activeExplorationNode.lesson.quiz.question}</h3>
+                      <div className="exploration-quiz-options">
+                        {activeExplorationNode.lesson.quiz.options.map((option, index) => (
+                          <button
+                            type="button"
+                            className={explorationQuizOption === index ? "selected" : ""}
+                            key={option}
+                            onClick={() => { setExplorationQuizOption(index); setExplorationFeedback(null); }}
+                            disabled={explorationSaving || Boolean(explorationFeedback?.correct)}
+                          >
+                            <i>{String.fromCharCode(65 + index)}</i><span>{option}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {explorationFeedback && (
+                        <div className={`exploration-feedback ${explorationFeedback.correct ? "correct" : "retry"}`} role="status">
+                          {explorationFeedback.correct ? <Check aria-hidden="true" /> : <Lightbulb aria-hidden="true" />}
+                          <p>{explorationFeedback.feedback}</p>
+                        </div>
+                      )}
+                      {explorationError && <p className="exploration-modal-error" role="alert">{explorationError}</p>}
+                      <button
+                        className="exploration-complete-button"
+                        type="button"
+                        onClick={() => {
+                          if (explorationFeedback?.correct) {
+                            setExplorationStage("project");
+                            setExplorationFeedback(null);
+                            setExplorationAnswer("");
+                          } else {
+                            void submitExplorationQuizAnswer();
+                          }
+                        }}
+                        disabled={explorationSaving || explorationQuizOption === null}
+                      >
+                        {explorationSaving ? "龟龟正在看…" : explorationFeedback?.correct
+                          ? <><ChevronRight aria-hidden="true" /> 继续完成实践表达</>
+                          : <><Send aria-hidden="true" /> 发给龟龟看看</>}
+                      </button>
+                    </div>
+                  )}
+
+                  {activeExplorationNode.lesson && explorationStage === "project" && (
+                    <div className="exploration-task-content">
+                      <span className="exploration-task-kicker">实践表达 · 把知识用起来</span>
+                      <h3>{activeExplorationNode.lesson.project.prompt}</h3>
+                      <ul className="exploration-criteria">
+                        {activeExplorationNode.lesson.project.criteria.map((criterion) => <li key={criterion}><Check aria-hidden="true" /> {criterion}</li>)}
+                      </ul>
+                      <label className="exploration-answer-field">
+                        <span>用自己的话告诉龟龟</span>
+                        <textarea
+                          value={explorationAnswer}
+                          onChange={(event) => { setExplorationAnswer(event.target.value); setExplorationFeedback(null); }}
+                          maxLength={800}
+                          placeholder={activeExplorationNode.lesson.project.placeholder}
+                          disabled={explorationSaving}
+                        />
+                        <small>{explorationAnswer.length}/800</small>
+                      </label>
+                      <button className="exploration-voice-button" type="button" onClick={() => void beginVoiceInput("exploration")} disabled={explorationSaving || voicePhase !== "idle"}>
+                        <Mic aria-hidden="true" /> 也可以说给龟龟听
+                      </button>
+                      {explorationFeedback && !explorationFeedback.correct && (
+                        <div className="exploration-feedback retry" role="status"><Lightbulb aria-hidden="true" /><p>{explorationFeedback.feedback}</p></div>
+                      )}
+                      {explorationError && <p className="exploration-modal-error" role="alert">{explorationError}</p>}
+                      <button className="exploration-complete-button" type="button" onClick={() => void submitExplorationWrittenAnswer("project")} disabled={explorationSaving || !explorationAnswer.trim()}>
+                        {explorationSaving ? "龟龟正在认真看…" : <><Send aria-hidden="true" /> 发给龟龟看看</>}
+                      </button>
+                    </div>
+                  )}
+
+                  {activeExplorationNode.lesson && explorationStage === "review" && (
+                    <div className="exploration-task-content exploration-review-content">
+                      <span className="exploration-task-kicker"><RotateCcw aria-hidden="true" /> 到复习时间啦</span>
+                      <h3>{activeExplorationNode.lesson.review.question}</h3>
+                      <p className="exploration-review-tip">先不翻前面的讲解，试着从脑海里把关键联系找回来。</p>
+                      <label className="exploration-answer-field">
+                        <span>我还记得……</span>
+                        <textarea
+                          value={explorationAnswer}
+                          onChange={(event) => { setExplorationAnswer(event.target.value); setExplorationFeedback(null); }}
+                          maxLength={600}
+                          placeholder={activeExplorationNode.lesson.review.placeholder}
+                          disabled={explorationSaving}
+                        />
+                      </label>
+                      <button className="exploration-voice-button" type="button" onClick={() => void beginVoiceInput("exploration")} disabled={explorationSaving || voicePhase !== "idle"}>
+                        <Mic aria-hidden="true" /> 说给龟龟听
+                      </button>
+                      {explorationFeedback && !explorationFeedback.correct && (
+                        <div className="exploration-feedback retry" role="status"><Lightbulb aria-hidden="true" /><p>{explorationFeedback.feedback}</p></div>
+                      )}
+                      {explorationError && <p className="exploration-modal-error" role="alert">{explorationError}</p>}
+                      <button className="exploration-complete-button" type="button" onClick={() => void submitExplorationWrittenAnswer("review")} disabled={explorationSaving || !explorationAnswer.trim()}>
+                        {explorationSaving ? "龟龟正在认真想…" : <><Send aria-hidden="true" /> 发给龟龟看看</>}
+                      </button>
+                    </div>
+                  )}
+
+                  {(explorationStage === "learned" || explorationStage === "mastered") && (
+                    <div className="exploration-result-content">
+                      <div className={`exploration-result-seal ${explorationStage}`}>
+                        {explorationStage === "mastered" ? <Star aria-hidden="true" /> : <Check aria-hidden="true" />}
+                      </div>
+                      <span>{explorationStage === "mastered" ? "已经掌握" : "本次学习完成"}</span>
+                      <h3>{explorationStage === "mastered" ? "这片知识已经变成你的本领" : "先让知识休息一下，过一段时间再想起它"}</h3>
+                      {explorationFeedback?.correct && <p className="exploration-result-feedback">{explorationFeedback.feedback}</p>}
+                      <div className="exploration-takeaway">
+                        <BookOpen aria-hidden="true" />
+                        <div><h3>你带走的发现</h3><p>{activeExplorationNode.takeaway}</p></div>
+                      </div>
+                      {explorationStage === "learned" && activeExplorationProgress?.nextReviewAt ? (
+                        <p className="exploration-next-review"><RotateCcw aria-hidden="true" /> 下次复习：{new Date(activeExplorationProgress.nextReviewAt).toLocaleDateString("zh-CN", { month: "long", day: "numeric" })}</p>
+                      ) : null}
+                      <button className="exploration-complete-button" type="button" onClick={() => setActiveExplorationNode(null)}>
+                        <ChevronLeft aria-hidden="true" /> 回到学习路线
+                      </button>
+                    </div>
+                  )}
                 </section>
               </div>
             )}
@@ -3588,7 +3807,7 @@ export default function ReadingApp({
               {voicePhase === "recording" ? <Mic /> : <Sparkles />}
             </div>
             <div className="voice-panel-copy">
-              <span>{voiceTarget === "chat" ? "说给龟龟听" : "回答阅读问题"}</span>
+              <span>{voiceTarget === "chat" ? "说给龟龟听" : voiceTarget === "reading" ? "回答阅读问题" : "完成探险表达"}</span>
               <h2 id="voice-panel-title">{voicePhase === "recording" ? "我在认真听…" : "正在听懂你的话…"}</h2>
               <p>{voicePhase === "recording" ? "说完后点击“完成”，最多录制 30 秒" : "录音已结束，很快就会变成文字"}</p>
             </div>

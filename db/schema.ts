@@ -475,6 +475,36 @@ export const userExplorationProgress = sqliteTable("user_exploration_progress", 
   index("user_exploration_progress_user_date_idx").on(table.userId, table.updatedAt),
 ]);
 
+export const userExplorationLearning = sqliteTable("user_exploration_learning", {
+  userId: text("user_id").notNull(),
+  nodeId: text("node_id").notNull(),
+  domainId: text("domain_id").notNull(),
+  state: text("state").notNull().default("learned"),
+  reviewStreak: integer("review_streak").notNull().default(0),
+  learnedAt: integer("learned_at").notNull(),
+  nextReviewAt: integer("next_review_at").notNull().default(0),
+  lastReviewedAt: integer("last_reviewed_at").notNull().default(0),
+  evidenceSummary: text("evidence_summary").notNull().default(""),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.nodeId] }),
+  index("user_exploration_learning_user_review_idx").on(table.userId, table.nextReviewAt),
+]);
+
+export const userExplorationAttempts = sqliteTable("user_exploration_attempts", {
+  attemptId: text("attempt_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  nodeId: text("node_id").notNull(),
+  attemptType: text("attempt_type").notNull(),
+  answer: text("answer").notNull(),
+  correct: integer("correct", { mode: "boolean" }).notNull().default(false),
+  feedback: text("feedback").notNull(),
+  modelSource: text("model_source").notNull().default("local"),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  index("user_exploration_attempts_user_node_idx").on(table.userId, table.nodeId, table.createdAt),
+]);
+
 export const importedBooks = sqliteTable("imported_books", {
   bookId: text("book_id").primaryKey(),
   slug: text("slug").notNull(),

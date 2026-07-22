@@ -175,7 +175,7 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(styles, /chapter-list-scroll button strong \{ font-size: 16px/);
 });
 
-test("provides a separate eight-domain knowledge expedition with durable account progress", async () => {
+test("provides a separate eight-domain knowledge expedition with evidence gates and spaced review", async () => {
   const [readingApp, catalog, explorationDb, styles, schema] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/exploration-catalog.ts", import.meta.url), "utf8"),
@@ -189,11 +189,26 @@ test("provides a separate eight-domain knowledge expedition with durable account
     assert.match(catalog, new RegExp(title));
   }
   assert.equal((catalog.match(/type: "(?:发现|观察|连接|创造)"/g) || []).length, 32);
+  assert.equal((catalog.match(/lesson: \{/g) || []).length, 4);
+  assert.match(readingApp, /我学完了，试试互动检查/);
+  assert.match(readingApp, /实践表达 · 把知识用起来/);
+  assert.match(readingApp, /到复习时间啦/);
+  assert.match(readingApp, /发给龟龟看看/);
+  assert.doesNotMatch(readingApp, /我完成了，点亮知识叶/);
   assert.match(explorationDb, /user_exploration_progress/);
+  assert.match(explorationDb, /user_exploration_learning/);
+  assert.match(explorationDb, /user_exploration_attempts/);
+  assert.match(explorationDb, /submitExplorationQuiz/);
+  assert.match(explorationDb, /submitExplorationProject/);
+  assert.match(explorationDb, /submitExplorationReview/);
+  assert.match(explorationDb, /nextStreak === 1 \? 2 : 4/);
   assert.match(explorationDb, /knowledge-exploration/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS user_exploration_progress/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS user_exploration_learning/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS user_exploration_attempts/);
   assert.match(styles, /\.interest-domain-grid/);
   assert.match(styles, /\.exploration-route/);
+  assert.match(styles, /\.exploration-stepper/);
   assert.doesNotMatch(explorationDb, /localStorage|sessionStorage/);
 });
 
