@@ -102,6 +102,10 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
   }>(`SELECT pet_name, hunger, cleanliness, boredom, fruits, stars, tickets, last_seen, reading_font_size
     FROM user_pet_state WHERE user_id = ?`, [userId]);
   if (!pet) return null;
+  const playTicketWallet = await database.first<{ balance: number }>(
+    "SELECT balance FROM user_play_ticket_wallet WHERE user_id = ?",
+    [userId],
+  );
   const now = Date.now();
   await database.run("DELETE FROM user_chat_messages WHERE expires_at <= ?", [now]);
   const parentControls = await database.first<{ chat_cleared_at: number }>(
@@ -153,6 +157,7 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     fruits: pet.fruits,
     stars: pet.stars,
     tickets: pet.tickets,
+    playTickets: Math.max(0, playTicketWallet?.balance || 0),
     lastSeen: pet.last_seen,
     readingFontSize: ["small", "medium", "large"].includes(pet.reading_font_size) ? pet.reading_font_size : "medium",
     readingRecords: readingRecords.map((record) => ({
@@ -213,6 +218,10 @@ async function saveNormalizedState(
     "SELECT fruits, stars, tickets FROM user_pet_state WHERE user_id = ?",
     [userId],
   );
+  const currentPlayTicketWallet = await database.first<{ balance: number }>(
+    "SELECT balance FROM user_play_ticket_wallet WHERE user_id = ?",
+    [userId],
+  );
   const previousMistakes = await database.all<{ mistake_id: string; review_count: number }>(
     "SELECT mistake_id, review_count FROM user_mistakes WHERE user_id = ?",
     [userId],
@@ -223,6 +232,7 @@ async function saveNormalizedState(
     stars: Math.max(0, integer(state.stars)),
     tickets: Math.max(0, integer(state.tickets)),
   };
+  const nextPlayTickets = Math.max(0, integer(state.playTickets));
   const statements: SqlStatement[] = [{
     sql: `INSERT INTO user_state_meta (user_id, updated_at) VALUES (?, ?)
       ON CONFLICT(user_id) DO UPDATE SET updated_at = excluded.updated_at WHERE excluded.updated_at >= user_state_meta.updated_at`,
@@ -240,6 +250,12 @@ async function saveNormalizedState(
       nextBalances.fruits, nextBalances.stars, nextBalances.tickets, Math.max(0, integer(state.lastSeen, updatedAt)),
       ["small", "medium", "large"].includes(String(state.readingFontSize)) ? String(state.readingFontSize) : "medium", updatedAt,
     ],
+  }, {
+    sql: `INSERT INTO user_play_ticket_wallet (user_id, balance, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET balance = excluded.balance, updated_at = excluded.updated_at
+      WHERE excluded.updated_at >= user_play_ticket_wallet.updated_at`,
+    params: [userId, nextPlayTickets, updatedAt],
   }];
 
   for (const resource of ["fruits", "stars", "tickets"] as const) {
@@ -252,6 +268,16 @@ async function saveNormalizedState(
         (entry_id, user_id, resource_type, amount, balance_after, source_type, source_id, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       params: [`${userId}:${resource}:${sourceId}`, userId, resource, amount, nextBalances[resource], sourceType, sourceId, updatedAt],
+    });
+  }
+  const playTicketChange = nextPlayTickets - (currentPlayTicketWallet?.balance || 0);
+  if (playTicketChange) {
+    const sourceId = `${sourceType}:${updatedAt}`;
+    statements.push({
+      sql: `INSERT OR IGNORE INTO user_reward_ledger
+        (entry_id, user_id, resource_type, amount, balance_after, source_type, source_id, created_at)
+        VALUES (?, ?, 'play_tickets', ?, ?, ?, ?, ?)`,
+      params: [`${userId}:play_tickets:${sourceId}`, userId, playTicketChange, nextPlayTickets, sourceType, sourceId, updatedAt],
     });
   }
 

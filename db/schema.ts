@@ -250,6 +250,12 @@ export const userPetState = sqliteTable("user_pet_state", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+export const userPlayTicketWallet = sqliteTable("user_play_ticket_wallet", {
+  userId: text("user_id").primaryKey(),
+  balance: integer("balance").notNull().default(0),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export const userReadingRecords = sqliteTable("user_reading_records", {
   userId: text("user_id").notNull(),
   recordId: text("record_id").notNull(),

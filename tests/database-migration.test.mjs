@@ -376,8 +376,11 @@ test("JSON data migrates to isolated SQLite rows and can build a parent report",
     assert.equal(mistakeResult.otherAccountReview, null);
     assert.equal(mistakeResult.otherAccountDelete, null);
     assert.equal(mistakeResult.wrong.rewardStars, 0);
+    assert.equal(mistakeResult.wrong.rewardPlayTickets, 0);
     assert.equal(mistakeResult.correct.rewardStars, 2);
+    assert.equal(mistakeResult.correct.rewardPlayTickets, 1);
     assert.equal(mistakeResult.repeatedCorrect.rewardStars, 0);
+    assert.equal(mistakeResult.repeatedCorrect.rewardPlayTickets, 0);
 
     const reviewedDatabase = new DatabaseSync(databasePath);
     assert.equal(reviewedDatabase.prepare("SELECT COUNT(*) AS count FROM user_mistake_answer_attempts WHERE user_id = 'student-a'").get().count, 3);
@@ -385,7 +388,8 @@ test("JSON data migrates to isolated SQLite rows and can build a parent report",
     assert.equal(reviewedDatabase.prepare("SELECT stars FROM user_pet_state WHERE user_id = 'student-a'").get().stars, 19);
     assert.equal(reviewedDatabase.prepare("SELECT stars FROM user_pet_state WHERE user_id = 'student-b'").get().stars, 2);
     assert.equal(reviewedDatabase.prepare("SELECT model_source FROM user_mistake_analyses WHERE user_id = 'student-a' AND mistake_id = ?").get(String(mistakeResult.record.id)).model_source, "mimo-v2.5");
-    assert.equal(reviewedDatabase.prepare("SELECT COUNT(*) AS count FROM user_reward_ledger WHERE user_id = 'student-a' AND source_type = 'mistake-mastered'").get().count, 1);
+    assert.equal(reviewedDatabase.prepare("SELECT COUNT(*) AS count FROM user_reward_ledger WHERE user_id = 'student-a' AND source_type = 'mistake-mastered'").get().count, 2);
+    assert.equal(reviewedDatabase.prepare("SELECT balance FROM user_play_ticket_wallet WHERE user_id = 'student-a'").get().balance, 1);
     assert.equal(reviewedDatabase.prepare("PRAGMA integrity_check").get().integrity_check, "ok");
     reviewedDatabase.close();
 
@@ -403,6 +407,7 @@ test("JSON data migrates to isolated SQLite rows and can build a parent report",
     assert.equal(report.reading.books[0].bookId, "scarecrow-zh");
     assert.equal(report.mistakes.photoAnswerAttempts, 3);
     assert.equal(report.mistakes.correctPhotoAnswers, 2);
+    assert.equal(report.currentResources.playTickets, 1);
     assert.deepEqual(report.interests, ["恐龙"]);
     assert.equal("chatMessages" in report, false);
 

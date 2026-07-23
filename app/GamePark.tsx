@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- The game reuses the project's local pixel-art assets. */
 "use client";
 
-import { ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Lock, Map, Sparkles, Star, Trophy, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Lock, Map, Sparkles, Star, Ticket, Trophy, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import CourierGame from "./CourierGame";
 import WeatherOutfitGame from "./WeatherOutfitGame";
@@ -33,6 +33,8 @@ export type LearningMiniGameResult = {
   game: "turtle-courier" | "weather-outfit";
   detail: string;
 };
+
+export type GameParkGameId = "fruit-catch" | "turtle-courier" | "weather-outfit";
 
 type FruitKind = "orange" | "red" | "blue";
 type FruitDrop = {
@@ -99,21 +101,26 @@ function clampPlayerX(value: number) {
 export default function GamePark({
   turtleName,
   daily,
+  playTickets,
   onBackHome,
   onRoundComplete,
   onLearningGameComplete,
+  onSpendPlayTicket,
   onPlayingChange,
 }: {
   turtleName: string;
   daily: FruitCatchDailyState;
+  playTickets: number;
   onBackHome: () => void;
   onRoundComplete: (result: FruitCatchResult) => void;
   onLearningGameComplete: (result: LearningMiniGameResult) => void;
+  onSpendPlayTicket: (game: GameParkGameId) => void;
   onPlayingChange: (playing: boolean) => void;
 }) {
-  const [activeGame, setActiveGame] = useState<"fruit-catch" | "turtle-courier" | "weather-outfit" | null>(null);
+  const [activeGame, setActiveGame] = useState<GameParkGameId | null>(null);
   const [run, setRun] = useState<FruitCatchRun>(() => initialRun());
   const [earnedRewardThisRound, setEarnedRewardThisRound] = useState(false);
+  const [ticketNotice, setTicketNotice] = useState("");
   const fieldRef = useRef<HTMLDivElement | null>(null);
   const reportedResultRef = useRef(false);
 
@@ -220,6 +227,23 @@ export default function GamePark({
     setActiveGame(null);
   };
 
+  const openTicketedGame = (game: GameParkGameId) => {
+    if (playTickets < 1) {
+      setTicketNotice("游玩票用完啦。完成阅读、旅行或错题复习，就能获得新的游玩票。");
+      return;
+    }
+    onSpendPlayTicket(game);
+    setTicketNotice("");
+    if (game === "fruit-catch") setRun(initialRun());
+    setActiveGame(game);
+  };
+
+  const replayFruitCatch = () => {
+    if (playTickets < 1) return;
+    onSpendPlayTicket("fruit-catch");
+    startRound();
+  };
+
   if (!activeGame) {
     return (
       <section className="game-park-panel">
@@ -231,6 +255,12 @@ export default function GamePark({
           </div>
           <button type="button" onClick={onBackHome}><ChevronLeft aria-hidden="true" /> 回家园</button>
         </header>
+
+        <div className={`game-park-ticket-balance ${playTickets < 1 ? "empty" : ""}`} role="status">
+          <Ticket aria-hidden="true" />
+          <div><strong>游玩票 × {playTickets}</strong><span>每进入一个游戏消耗 1 张；阅读、旅行和错题复习都能获得。</span></div>
+        </div>
+        {ticketNotice && <p className="game-park-ticket-notice"><Lock aria-hidden="true" /> {ticketNotice}</p>}
 
         <section className="game-park-featured" aria-label="可以玩的小游戏">
           <div className="game-park-hero-art" aria-hidden="true">
@@ -256,12 +286,10 @@ export default function GamePark({
             <button
               className="game-park-start"
               type="button"
-              onClick={() => {
-                setRun(initialRun());
-                setActiveGame("fruit-catch");
-              }}
+              disabled={playTickets < 1}
+              onClick={() => openTicketedGame("fruit-catch")}
             >
-              开始接果子 <ChevronRight aria-hidden="true" />
+              {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
             </button>
           </div>
         </section>
@@ -280,7 +308,9 @@ export default function GamePark({
                 <h3>乌龟快递员</h3>
                 <p>看清道路和距离，安排送件顺序，帮助龟龟找到真正的最短路线。</p>
                 <ul><li>点击相邻地点前进</li><li>送完所有包裹</li><li>和最短距离比一比</li></ul>
-                <button type="button" onClick={() => setActiveGame("turtle-courier")}>开始送快递 <ChevronRight aria-hidden="true" /></button>
+                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("turtle-courier")}>
+                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                </button>
               </div>
             </article>
             <article className="game-park-choice weather">
@@ -294,7 +324,9 @@ export default function GamePark({
                 <h3>天气穿搭</h3>
                 <p>根据温度、降雨、风力和行程，为龟龟选择衣服与旅行用品。</p>
                 <ul><li>先读天气任务</li><li>衣服用品都要选</li><li>合适就好，不是越多越好</li></ul>
-                <button type="button" onClick={() => setActiveGame("weather-outfit")}>开始准备穿搭 <ChevronRight aria-hidden="true" /></button>
+                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("weather-outfit")}>
+                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                </button>
               </div>
             </article>
           </div>
@@ -427,7 +459,9 @@ export default function GamePark({
                   : `再得到 ${Math.max(0, FRUIT_CATCH_TARGET_SCORE - result.score)} 分就能过关`}
               </div>
               <div className="fruit-catch-result-actions">
-                <button type="button" onClick={startRound}>再玩一局</button>
+                <button type="button" disabled={playTickets < 1} onClick={replayFruitCatch}>
+                  {playTickets < 1 ? "游玩票不足" : "使用 1 张票再玩"}
+                </button>
                 <button type="button" onClick={leaveRound}>返回乐园</button>
               </div>
             </div>

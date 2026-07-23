@@ -22,6 +22,7 @@ import {
   Send,
   Sparkles,
   Star,
+  Ticket,
   Trophy,
   Trash2,
   Upload,
@@ -33,7 +34,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { chapterKnowledge } from "./book-knowledge";
 import { chapterPrompts, type ChapterPrompt } from "./book-prompts";
 import classicBookManifest from "./classic-books-manifest.json";
-import GamePark, { type FruitCatchDailyState, type FruitCatchResult, type LearningMiniGameResult } from "./GamePark";
+import GamePark, {
+  type FruitCatchDailyState,
+  type FruitCatchResult,
+  type GameParkGameId,
+  type LearningMiniGameResult,
+} from "./GamePark";
 import {
   interestDomains,
   type ExplorationNode,
@@ -94,7 +100,9 @@ type MistakeReviewSave = {
   reviewNumber: number;
   status: MistakeStatus;
   rewardStars: number;
+  rewardPlayTickets: number;
   stars: number;
+  playTickets: number;
   boredom: number;
   attemptId: string;
 };
@@ -135,6 +143,7 @@ type GameState = {
   fruits: number;
   stars: number;
   tickets: number;
+  playTickets: number;
   lastSeen: number;
   readingRecords: ReadingRecord[];
   readingRewards: string[];
@@ -333,6 +342,7 @@ const initialState: GameState = {
   fruits: 5,
   stars: 12,
   tickets: 3,
+  playTickets: 0,
   lastSeen: Date.now(),
   readingRecords: [],
   readingRewards: [],
@@ -1403,6 +1413,13 @@ export default function ReadingApp({
     void remember({ type: "activity", activity, detail: result.detail });
   }, [remember, showToast]);
 
+  const spendPlayTicket = useCallback((gameId: GameParkGameId) => {
+    const activity = gameId === "fruit-catch" ? "龟龟接果子" : gameId === "turtle-courier" ? "乌龟快递员" : "天气穿搭";
+    setGame((current) => current.playTickets < 1 ? current : ({ ...current, playTickets: current.playTickets - 1 }));
+    showToast(`使用 1 张游玩票，开始${activity}`);
+    void remember({ type: "activity", activity: "进入龟龟乐园", detail: `使用1张游玩票开始${activity}` });
+  }, [remember, showToast]);
+
   const openExplorationNode = useCallback((node: ExplorationNode) => {
     const progress = explorationOverview?.nodeProgress[node.id];
     const dueForReview = explorationOverview?.dueReviewNodeIds.includes(node.id);
@@ -1700,6 +1717,7 @@ export default function ReadingApp({
           hunger: clamp(current.hunger + 6),
           stars: current.stars + 4,
           fruits: current.fruits + 1,
+          playTickets: current.playTickets + 1,
           travelRecords: [record, ...current.travelRecords],
         };
       });
@@ -2114,14 +2132,20 @@ export default function ReadingApp({
         setReadingEvaluation("correct");
         setAnsweredChapterQuestions((questions) => questions.includes(currentChapterQuestionKey) ? questions : [...questions, currentChapterQuestionKey]);
         const alreadyRewarded = game.readingRewards.includes(currentChapterQuestionKey);
-        const rewardKind = Math.random() < 0.5 ? "star" : "ticket";
-        const rewardLabel = rewardKind === "star" ? "1 颗成长星星" : "1 张旅行票";
+        const rewardRoll = Math.random();
+        const rewardKind = rewardRoll < 0.34 ? "star" : rewardRoll < 0.67 ? "ticket" : "play-ticket";
+        const rewardLabel = rewardKind === "star"
+          ? "1 颗成长星星"
+          : rewardKind === "ticket"
+            ? "1 张旅行票"
+            : "1 张游玩票";
         if (!alreadyRewarded) {
           setGame((current) => current.readingRewards.includes(currentChapterQuestionKey) ? current : ({
             ...current,
             boredom: clamp(current.boredom - 8),
             stars: current.stars + (rewardKind === "star" ? 1 : 0),
             tickets: current.tickets + (rewardKind === "ticket" ? 1 : 0),
+            playTickets: current.playTickets + (rewardKind === "play-ticket" ? 1 : 0),
             readingRewards: [...current.readingRewards, currentChapterQuestionKey],
           }));
         }
@@ -2158,6 +2182,7 @@ export default function ReadingApp({
       boredom: clamp(current.boredom - 12),
       stars: current.stars + 3,
       tickets: current.tickets + 1,
+      playTickets: current.playTickets + 1,
       fruits: current.fruits + 1,
       readingRecords: [record, ...current.readingRecords.filter((item) => item.title !== record.title)],
     }, "reading"));
@@ -2511,6 +2536,7 @@ export default function ReadingApp({
       setGame((current) => advanceDailyTask({
         ...current,
         stars: review.stars,
+        playTickets: review.playTickets,
         boredom: review.boredom,
         mistakes: current.mistakes.map((item) => item.id === reviewMistake.id ? {
           ...item,
@@ -2525,7 +2551,9 @@ export default function ReadingApp({
           : { activity: "整理错题", detail: `拍照复习了一道${reviewMistake.subject}错题，龟龟给出了修改建议` }),
       });
       showToast(data.result.correct
-        ? (review.rewardStars ? `掌握啦！获得 ${review.rewardStars} 颗成长星星` : "答对啦，这道题依然很稳")
+        ? (review.rewardStars || review.rewardPlayTickets
+          ? `掌握啦！获得 ${review.rewardStars} 颗成长星星和 ${review.rewardPlayTickets} 张游玩票`
+          : "答对啦，这道题依然很稳")
         : "龟龟找到了一处可以改进的地方，再试一次吧");
     } catch (error) {
       const message = error instanceof Error ? error.message : "龟龟暂时没有看清答案，请重新拍照";
@@ -2667,10 +2695,11 @@ export default function ReadingApp({
         </div>
 
         <div className="wallet-group">
-          <div className="wallet" aria-label={`${game.stars}颗星星，${game.fruits}个果子，${game.tickets}张旅行票`}>
+          <div className="wallet" aria-label={`${game.stars}颗星星，${game.fruits}个果子，${game.tickets}张旅行票，${game.playTickets}张游玩票`}>
             <span><Star className="wallet-star" fill="currentColor" aria-hidden="true" /> {game.stars}</span>
             <span><img className="wallet-icon" src={`${ASSET}/objects/fruit_orange.png`} alt="" /> {game.fruits}</span>
             <span className="wallet-ticket"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="" /> {game.tickets}</span>
+            <span className="wallet-play-ticket" title="游玩票"><Ticket aria-hidden="true" /> {game.playTickets}</span>
             <button
               className={`leaderboard-button ${view === "leaderboard" ? "active" : ""}`}
               type="button"
@@ -2883,9 +2912,11 @@ export default function ReadingApp({
             <GamePark
               turtleName={game.name}
               daily={fruitCatchDaily}
+              playTickets={game.playTickets}
               onBackHome={() => navigateTo("home")}
               onRoundComplete={completeFruitCatchRound}
               onLearningGameComplete={completeLearningMiniGame}
+              onSpendPlayTicket={spendPlayTicket}
               onPlayingChange={setMiniGamePlaying}
             />
           </section>
@@ -3545,7 +3576,7 @@ export default function ReadingApp({
                     ) : (
                       <div className="reading-companion-card embedded">
                         <div className="companion-card-heading"><img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪读的龟龟" /><div><small>伴读区 · 非原文</small><strong>{game.name}陪你读</strong></div></div>
-                        <div className="companion-reward-rule"><Sparkles /><span>回答正确随机奖励 <strong>1 颗星星或 1 张旅行票</strong></span></div>
+                        <div className="companion-reward-rule"><Sparkles /><span>回答正确随机奖励 <strong>1 颗星星、1 张旅行票或 1 张游玩票</strong></span></div>
                         <h3>这一章，龟龟陪你留心</h3>
                         {activeChapterPrompt ? <p className="reading-guide"><Lightbulb /> {activeChapterPrompt.guide}</p> : null}
                         {currentChapterQuestionAnswered ? (
@@ -3862,6 +3893,7 @@ export default function ReadingApp({
                       <article><div className="item-art"><img src={`${ASSET}/objects/fruit_basket.png`} alt="果篮" /></div><strong>野外果子</strong><span>× {game.fruits}</span></article>
                       <article><div className="item-art star-item"><Star /></div><strong>成长星星</strong><span>× {game.stars}</span></article>
                       <article><div className="item-art ticket-item"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="旅行票" /></div><strong>旅行票</strong><span>× {game.tickets}</span></article>
+                      <article><div className="item-art play-ticket-item"><Ticket aria-hidden="true" /></div><strong>游玩票</strong><span>× {game.playTickets}</span></article>
                       {journalTravelItems.map((record) => {
                         const discovery = discoveryForRecord(record);
                         return discovery ? (
@@ -4084,7 +4116,9 @@ export default function ReadingApp({
                     {reviewOutcome.result.recognizedSteps && <div className="recognized-steps"><small>龟龟认出的步骤</small><p>{reviewOutcome.result.recognizedSteps}</p></div>}
                     <div className="review-ai-feedback"><strong>{reviewOutcome.result.correct ? "做得真棒！" : "可以这样修改"}</strong><p>{reviewOutcome.result.feedback}</p></div>
                     {!reviewOutcome.result.correct && <div className="correction-panel"><small>上次卡住：{reviewMistake.cause}</small><strong>参考思路</strong><p>{reviewMistake.correction}</p></div>}
-                    {reviewOutcome.result.correct && Boolean(reviewOutcome.review?.rewardStars) && <p className="mistake-review-reward"><Star fill="currentColor" /> 第一次掌握，获得 {reviewOutcome.review?.rewardStars} 颗成长星星</p>}
+                    {reviewOutcome.result.correct && Boolean(reviewOutcome.review?.rewardStars || reviewOutcome.review?.rewardPlayTickets) && (
+                      <p className="mistake-review-reward"><Star fill="currentColor" /> 第一次掌握，获得 {reviewOutcome.review?.rewardStars} 颗成长星星和 {reviewOutcome.review?.rewardPlayTickets} 张游玩票</p>
+                    )}
                     <div className="review-result-actions">
                       {!reviewOutcome.result.correct && <button type="button" onClick={resetMistakeReviewPhoto}><RotateCcw /> 重新拍照再试</button>}
                       <button type="button" onClick={closeMistakeReview}><Check /> {reviewOutcome.result.correct ? "完成复习" : "稍后再练"}</button>
@@ -4109,7 +4143,7 @@ export default function ReadingApp({
             <button className="modal-close" type="button" onClick={resetReading} aria-label="关闭"><X /></button>
             <div className="summary-celebration">
               <img src={`${ASSET}/characters/turtle/turtle_happy_hearts.png`} alt="开心的龟龟" />
-              <div><span className="modal-kicker">阅读完成 · +3 星星 · +1 旅行票</span><h2 id="summary-title">今天的阅读小结</h2></div>
+              <div><span className="modal-kicker">阅读完成 · +3 星星 · +1 旅行票 · +1 游玩票</span><h2 id="summary-title">今天的阅读小结</h2></div>
             </div>
             <div className="summary-block"><small>今天读了</small><strong>《{selectedBook.title}》</strong></div>
             <div className="summary-block"><small>故事讲了</small><p>{selectedBook.summary}</p></div>
@@ -4127,7 +4161,7 @@ export default function ReadingApp({
             <header className="travel-reward-heading">
               <img className="returning-turtle" src={`${ASSET}/characters/turtle/turtle_travel_return.png`} alt="旅行回来的龟龟" />
               <div>
-                <span className="modal-kicker">旅行平安归来 · +4 星星</span>
+                <span className="modal-kicker">旅行平安归来 · +4 星星 · +1 游玩票</span>
                 <h2 id="reward-title">从{travelReward.destination.name}带回了新发现</h2>
                 <p>龟龟找到了一张新的知识卡，快看看这次带回了什么！</p>
               </div>

@@ -7,7 +7,18 @@ import { useMemo, useRef, useState } from "react";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_idle_standing.png`;
 
-type StopId = "post" | "bakery" | "school" | "park" | "library" | "clinic" | "station";
+type StopId =
+  | "post"
+  | "bakery"
+  | "school"
+  | "museum"
+  | "park"
+  | "library"
+  | "clinic"
+  | "fire-station"
+  | "station"
+  | "harbor"
+  | "farm";
 
 type Stop = {
   id: StopId;
@@ -28,50 +39,111 @@ type Mission = {
   title: string;
   story: string;
   required: StopId[];
+  difficulty: "入门" | "进阶" | "挑战" | "终极";
+  ordered?: boolean;
+  returnToPost?: boolean;
 };
 
 const stops: Stop[] = [
-  { id: "post", label: "快递站", icon: "📦", x: 12, y: 72 },
-  { id: "bakery", label: "面包店", icon: "🥐", x: 28, y: 25 },
-  { id: "school", label: "学校", icon: "🏫", x: 31, y: 75 },
-  { id: "park", label: "公园", icon: "🌳", x: 51, y: 48 },
-  { id: "library", label: "图书馆", icon: "📚", x: 69, y: 21 },
-  { id: "clinic", label: "诊所", icon: "🏥", x: 69, y: 74 },
-  { id: "station", label: "车站", icon: "🚉", x: 89, y: 47 },
+  { id: "post", label: "快递站", icon: "📦", x: 9, y: 73 },
+  { id: "bakery", label: "面包店", icon: "🥐", x: 23, y: 18 },
+  { id: "school", label: "学校", icon: "🏫", x: 25, y: 70 },
+  { id: "museum", label: "博物馆", icon: "🏛️", x: 42, y: 17 },
+  { id: "park", label: "公园", icon: "🌳", x: 46, y: 46 },
+  { id: "fire-station", label: "消防站", icon: "🚒", x: 46, y: 80 },
+  { id: "library", label: "图书馆", icon: "📚", x: 63, y: 16 },
+  { id: "clinic", label: "诊所", icon: "🏥", x: 65, y: 69 },
+  { id: "harbor", label: "港口", icon: "⚓", x: 86, y: 17 },
+  { id: "station", label: "车站", icon: "🚉", x: 83, y: 44 },
+  { id: "farm", label: "农场", icon: "🌾", x: 87, y: 77 },
 ];
 
 const roads: Road[] = [
   { from: "post", to: "bakery", distance: 2 },
   { from: "post", to: "school", distance: 3 },
+  { from: "post", to: "fire-station", distance: 4 },
   { from: "bakery", to: "school", distance: 2 },
-  { from: "bakery", to: "park", distance: 2 },
-  { from: "bakery", to: "library", distance: 4 },
+  { from: "bakery", to: "museum", distance: 2 },
+  { from: "bakery", to: "park", distance: 3 },
   { from: "school", to: "park", distance: 2 },
-  { from: "school", to: "clinic", distance: 3 },
+  { from: "school", to: "fire-station", distance: 2 },
+  { from: "museum", to: "park", distance: 2 },
+  { from: "museum", to: "library", distance: 3 },
   { from: "park", to: "library", distance: 2 },
   { from: "park", to: "clinic", distance: 2 },
+  { from: "park", to: "fire-station", distance: 3 },
+  { from: "library", to: "clinic", distance: 3 },
+  { from: "library", to: "harbor", distance: 3 },
   { from: "library", to: "station", distance: 3 },
   { from: "clinic", to: "station", distance: 2 },
+  { from: "clinic", to: "fire-station", distance: 2 },
+  { from: "clinic", to: "farm", distance: 3 },
+  { from: "harbor", to: "station", distance: 2 },
+  { from: "station", to: "farm", distance: 2 },
+  { from: "fire-station", to: "farm", distance: 4 },
 ];
 
 const missions: Mission[] = [
   {
-    id: "school-clinic",
-    title: "上午急送",
-    story: "先后都可以：把作业本送到学校，把药品送到诊所。",
-    required: ["school", "clinic"],
+    id: "school-starter",
+    title: "第一份作业本",
+    story: "从快递站出发，把作业本送到学校。先熟悉道路上的数字。",
+    required: ["school"],
+    difficulty: "入门",
   },
   {
-    id: "bakery-library",
-    title: "书香午后",
-    story: "把点心送到面包店，再把新书送到图书馆。",
-    required: ["bakery", "library"],
+    id: "bakery-park",
+    title: "早餐与树苗",
+    story: "面包店和公园都在等包裹，送达顺序由你决定。",
+    required: ["bakery", "park"],
+    difficulty: "入门",
   },
   {
-    id: "park-station-library",
-    title: "傍晚三连送",
-    story: "公园、图书馆和车站各有一个包裹，路线顺序由你决定。",
-    required: ["park", "library", "station"],
+    id: "museum-library-clinic",
+    title: "城市三连送",
+    story: "博物馆、图书馆和诊所各有一份快递，比较不同的送件顺序。",
+    required: ["museum", "library", "clinic"],
+    difficulty: "进阶",
+  },
+  {
+    id: "school-park-library-order",
+    title: "按时接力",
+    story: "必须按“学校 → 公园 → 图书馆”的顺序送达，提前路过不算送件。",
+    required: ["school", "park", "library"],
+    difficulty: "进阶",
+    ordered: true,
+  },
+  {
+    id: "four-corners",
+    title: "四区派送",
+    story: "面包店、博物馆、诊所和车站都要送到，顺序由你规划。",
+    required: ["bakery", "museum", "clinic", "station"],
+    difficulty: "挑战",
+  },
+  {
+    id: "harbor-chain",
+    title: "港口接力单",
+    story: "必须依次送到博物馆、图书馆、港口、车站和农场。",
+    required: ["museum", "library", "harbor", "station", "farm"],
+    difficulty: "挑战",
+    ordered: true,
+  },
+  {
+    id: "return-round",
+    title: "全城往返",
+    story: "学校、消防站、诊所、港口和农场都要送到，最后还要回到快递站。",
+    required: ["school", "fire-station", "clinic", "harbor", "farm"],
+    difficulty: "终极",
+    returnToPost: true,
+  },
+  {
+    id: "grand-route",
+    title: "金牌快递路线",
+    story: "按指定顺序完成八站派送，最后回快递站：面包店 → 博物馆 → 图书馆 → 港口 → 车站 → 农场 → 消防站 → 学校。",
+    required: ["bakery", "museum", "library", "harbor", "station", "farm", "fire-station", "school"],
+    difficulty: "终极",
+    ordered: true,
+    returnToPost: true,
   },
 ];
 
@@ -84,30 +156,42 @@ function roadBetween(from: StopId, to: StopId) {
 
 function missionOptimalDistance(mission: Mission) {
   const targetBits = new Map(mission.required.map((id, index) => [id, 1 << index]));
-  const allVisited = (1 << mission.required.length) - 1;
-  const queue: Array<{ stop: StopId; visited: number; distance: number }> = [{ stop: "post", visited: 0, distance: 0 }];
+  const completedProgress = mission.ordered ? mission.required.length : (1 << mission.required.length) - 1;
+  const queue: Array<{ stop: StopId; progress: number; distance: number }> = [{ stop: "post", progress: 0, distance: 0 }];
   const best = new Map<string, number>([["post|0", 0]]);
 
   while (queue.length) {
     queue.sort((left, right) => left.distance - right.distance);
     const current = queue.shift();
     if (!current) break;
-    if (current.visited === allVisited) return current.distance;
-    const key = `${current.stop}|${current.visited}`;
+    if (current.progress === completedProgress && (!mission.returnToPost || current.stop === "post")) return current.distance;
+    const key = `${current.stop}|${current.progress}`;
     if (current.distance !== best.get(key)) continue;
 
     for (const road of roads) {
       const next = road.from === current.stop ? road.to : road.to === current.stop ? road.from : null;
       if (!next) continue;
-      const nextVisited = current.visited | (targetBits.get(next) || 0);
+      const nextProgress = mission.ordered
+        ? next === mission.required[current.progress] ? current.progress + 1 : current.progress
+        : current.progress | (targetBits.get(next) || 0);
       const nextDistance = current.distance + road.distance;
-      const nextKey = `${next}|${nextVisited}`;
+      const nextKey = `${next}|${nextProgress}`;
       if (nextDistance >= (best.get(nextKey) ?? Number.POSITIVE_INFINITY)) continue;
       best.set(nextKey, nextDistance);
-      queue.push({ stop: next, visited: nextVisited, distance: nextDistance });
+      queue.push({ stop: next, progress: nextProgress, distance: nextDistance });
     }
   }
   return 0;
+}
+
+function deliveredStops(route: StopId[], mission: Mission) {
+  if (!mission.ordered) return new Set(mission.required.filter((stop) => route.includes(stop)));
+  let nextDelivery = 0;
+  for (const stop of route.slice(1)) {
+    if (stop === mission.required[nextDelivery]) nextDelivery += 1;
+    if (nextDelivery >= mission.required.length) break;
+  }
+  return new Set(mission.required.slice(0, nextDelivery));
 }
 
 function roadStyle(road: Road) {
@@ -145,7 +229,8 @@ export default function CourierGame({
   const optimalDistance = useMemo(() => missionOptimalDistance(mission), [mission]);
   const currentStop = stopById.get(route.at(-1) || "post") || stops[0];
   const visited = new Set(route);
-  const deliveredCount = mission.required.filter((stop) => visited.has(stop)).length;
+  const delivered = deliveredStops(route, mission);
+  const deliveredCount = delivered.size;
 
   const resetRoute = () => {
     setRoute(["post"]);
@@ -180,11 +265,17 @@ export default function CourierGame({
     setAttempts((current) => current + 1);
     if (deliveredCount < mission.required.length) {
       const missing = mission.required
-        .filter((id) => !visited.has(id))
+        .filter((id) => !delivered.has(id))
         .map((id) => stopById.get(id)?.label)
         .filter(Boolean)
         .join("、");
-      setFeedback(`还有包裹没送到：${missing}。`);
+      setFeedback(mission.ordered
+        ? `还没有按指定顺序送完。接下来应去：${stopById.get(mission.required[deliveredCount])?.label || missing}。`
+        : `还有包裹没送到：${missing}。`);
+      return;
+    }
+    if (mission.returnToPost && currentStop.id !== "post") {
+      setFeedback("包裹都送到了，但这关还要回到快递站才算完成。");
       return;
     }
     if (distance !== optimalDistance) {
@@ -204,7 +295,7 @@ export default function CourierGame({
     setAllComplete(true);
     if (!reportedRef.current) {
       reportedRef.current = true;
-      onComplete(`完成3个快递任务，用${attempts}次检查找到了全部最短路线`);
+      onComplete(`完成${missions.length}个由易到难的快递任务，用${attempts}次检查找到了全部最短路线`);
     }
   };
 
@@ -238,6 +329,7 @@ export default function CourierGame({
             {stops.map((stop) => {
               const required = mission.required.includes(stop.id);
               const isVisited = visited.has(stop.id);
+              const isDelivered = delivered.has(stop.id);
               const adjacent = Boolean(roadBetween(currentStop.id, stop.id));
               return (
                 <button
@@ -246,10 +338,10 @@ export default function CourierGame({
                   key={stop.id}
                   style={{ left: `${stop.x}%`, top: `${stop.y}%` }}
                   onClick={() => selectStop(stop.id)}
-                  aria-label={`${stop.label}${required ? "，需要送达" : ""}${isVisited ? "，已经到过" : ""}`}
+                  aria-label={`${stop.label}${required ? "，需要送达" : ""}${isDelivered ? "，已经送达" : isVisited ? "，已经到过" : ""}`}
                 >
                   <i>{stop.icon}</i><strong>{stop.label}</strong>
-                  {required && <em>{isVisited ? <Check aria-hidden="true" /> : "待送"}</em>}
+                  {required && <em>{isDelivered ? <Check aria-hidden="true" /> : "待送"}</em>}
                 </button>
               );
             })}
@@ -259,13 +351,17 @@ export default function CourierGame({
           </section>
 
           <aside className="courier-task-card">
-            <small>任务 {missionIndex + 1} / {missions.length}</small>
+            <small>{mission.difficulty} · 任务 {missionIndex + 1} / {missions.length}</small>
             <h2>{mission.title}</h2>
             <p>{mission.story}</p>
+            <div className="courier-rule-chips">
+              <span>{mission.ordered ? "按指定顺序送达" : "送达顺序自由"}</span>
+              {mission.returnToPost && <span>送完必须返回快递站</span>}
+            </div>
             <div className="courier-deliveries">
-              {mission.required.map((id) => {
+              {mission.required.map((id, index) => {
                 const stop = stopById.get(id);
-                return <span className={visited.has(id) ? "done" : ""} key={id}>{stop?.icon} {stop?.label}{visited.has(id) && <Check aria-hidden="true" />}</span>;
+                return <span className={delivered.has(id) ? "done" : ""} key={id}>{mission.ordered && <b>{index + 1}</b>}{stop?.icon} {stop?.label}{delivered.has(id) && <Check aria-hidden="true" />}</span>;
               })}
             </div>
             <div className="courier-distance">
@@ -292,7 +388,7 @@ export default function CourierGame({
       ) : (
         <div className="learning-game-finish">
           <img src={`${BASE_PATH}/assets/characters/turtle/turtle_happy_hearts.png`} alt={`${turtleName}完成快递任务`} />
-          <div><small>最短路线全部找到</small><h2>{turtleName}成为路线规划小能手啦！</h2><p>你先看道路，再比较顺序，帮助每一个包裹更快到达。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div>
+          <div><small>{missions.length} 条最短路线全部找到</small><h2>{turtleName}成为金牌快递员啦！</h2><p>你已经会比较距离、安排顺序，还能规划送完返回的完整路线。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div>
         </div>
       )}
     </section>

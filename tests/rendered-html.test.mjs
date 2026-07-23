@@ -261,10 +261,16 @@ test("provides three responsive turtle games with route planning, weather choice
   assert.match(gamePark, /onPointerMove=\{moveFromPointer\}/);
   assert.match(gamePark, /event\.key === "ArrowLeft"/);
   assert.match(gamePark, /今天首次过关，获得 1 颗星星/);
+  assert.match(gamePark, /每进入一个游戏消耗 1 张/);
+  assert.match(gamePark, /onSpendPlayTicket/);
+  assert.match(gamePark, /playTickets < 1/);
   assert.match(courierGame, /missionOptimalDistance/);
-  assert.match(courierGame, /current\.visited === allVisited/);
+  assert.match(courierGame, /current\.progress === completedProgress/);
   assert.match(courierGame, /distance !== optimalDistance/);
-  assert.equal((courierGame.match(/id: "(?:school-clinic|bakery-library|park-station-library)"/g) || []).length, 3);
+  assert.equal((courierGame.match(/id: "(?:school-starter|bakery-park|museum-library-clinic|school-park-library-order|four-corners|harbor-chain|return-round|grand-route)"/g) || []).length, 8);
+  assert.match(courierGame, /ordered\?: boolean/);
+  assert.match(courierGame, /returnToPost\?: boolean/);
+  assert.match(courierGame, /完成\$\{missions\.length\}个由易到难的快递任务/);
   assert.match(courierGame, /turtle_idle_standing\.png/);
   assert.match(weatherGame, /衣服和旅行用品/);
   assert.equal((weatherGame.match(/id: "(?:sunny-park|rainy-library|cold-hill|cloudy-trail)"/g) || []).length, 4);
@@ -281,7 +287,9 @@ test("provides three responsive turtle games with route planning, weather choice
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.courier-map/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.weather-item-grid/);
   assert.match(userState, /user_minigame_daily/);
+  assert.match(userState, /user_play_ticket_wallet/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS user_minigame_daily/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS user_play_ticket_wallet/);
 });
 
 test("forces first-login password reset and isolates every student's data", async () => {
@@ -480,6 +488,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /随机未来科学知识卡/);
   assert.match(page, /优先不重复/);
   assert.match(page, /tickets: 3/);
+  assert.match(page, /playTickets: 0/);
   assert.match(page, /mistakes: \[\]/);
   assert.match(page, /dailyPlan:/);
   assert.match(page, /createDailyPlan/);
@@ -550,10 +559,11 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.chat-panel \{[\s\S]*?width: min\(1180px, calc\(100vw - clamp\(56px, 10vw, 180px\)\)\);/);
   assert.match(styles, /\.message p \{[\s\S]*?font-size: 17px;/);
   assert.match(page, /回答正确随机奖励/);
-  assert.match(page, /1 颗星星或 1 张旅行票/);
-  assert.match(page, /const rewardKind = Math\.random\(\) < 0\.5 \? "star" : "ticket"/);
+  assert.match(page, /1 颗星星、1 张旅行票或 1 张游玩票/);
+  assert.match(page, /rewardRoll < 0\.34 \? "star" : rewardRoll < 0\.67 \? "ticket" : "play-ticket"/);
   assert.match(page, /stars: current\.stars \+ \(rewardKind === "star" \? 1 : 0\)/);
   assert.match(page, /tickets: current\.tickets \+ \(rewardKind === "ticket" \? 1 : 0\)/);
+  assert.match(page, /playTickets: current\.playTickets \+ \(rewardKind === "play-ticket" \? 1 : 0\)/);
   assert.match(page, /这道题的奖励已经领取过啦/);
   assert.match(page, /龟龟的问题/);
   assert.match(page, /这次先跳过/);

@@ -197,6 +197,11 @@ export const SCHEMA_STATEMENTS = [
     reading_font_size TEXT NOT NULL DEFAULT 'medium',
     updated_at INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS user_play_ticket_wallet (
+    user_id TEXT PRIMARY KEY NOT NULL,
+    balance INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS user_reading_records (
     user_id TEXT NOT NULL,
     record_id TEXT NOT NULL,

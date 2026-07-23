@@ -10,7 +10,7 @@ export type ParentReportData = {
   userId: string;
   username: string;
   range: ParentReportRange;
-  currentResources: { stars: number; fruits: number; tickets: number };
+  currentResources: { stars: number; fruits: number; tickets: number; playTickets: number };
   dailyTasks: { activeDays: number; fullyCompletedDays: number };
   reading: {
     books: Array<{ bookId: string; firstReadAt: number; lastReadAt: number; completedAt: number | null }>;
@@ -51,11 +51,12 @@ export async function buildParentReport(
   const user = await database.first<{ username: string }>("SELECT username FROM app_users WHERE id = ?", [userId]);
   if (!user) return null;
 
-  const [pet, daily, books, answers, mistakeRows, reviews, photoAnswers, rewards, facts, activities] = await Promise.all([
+  const [pet, playTicketWallet, daily, books, answers, mistakeRows, reviews, photoAnswers, rewards, facts, activities] = await Promise.all([
     database.first<{ stars: number; fruits: number; tickets: number }>(
       "SELECT stars, fruits, tickets FROM user_pet_state WHERE user_id = ?",
       [userId],
     ),
+    database.first<{ balance: number }>("SELECT balance FROM user_play_ticket_wallet WHERE user_id = ?", [userId]),
     database.first<{ active_days: number; completed_days: number }>(`SELECT COUNT(*) AS active_days,
       COALESCE(SUM(CASE WHEN feed_progress >= feed_target AND swim_progress >= swim_target
         AND reading_progress >= reading_target AND mistake_progress >= mistake_target THEN 1 ELSE 0 END), 0) AS completed_days
@@ -94,6 +95,7 @@ export async function buildParentReport(
       stars: pet?.stars || 0,
       fruits: pet?.fruits || 0,
       tickets: pet?.tickets || 0,
+      playTickets: playTicketWallet?.balance || 0,
     },
     dailyTasks: {
       activeDays: daily?.active_days || 0,

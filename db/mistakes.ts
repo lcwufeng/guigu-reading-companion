@@ -162,13 +162,23 @@ export async function recordMistakeReviewForUser(userId: string, mistakeId: stri
       "SELECT stars, boredom FROM user_pet_state WHERE user_id = ?",
       [userId],
     );
+    const playTicketWallet = await database.first<{ balance: number }>(
+      "SELECT balance FROM user_play_ticket_wallet WHERE user_id = ?",
+      [userId],
+    );
     const rewardSourceId = `mistake:${mistakeId}:mastered`;
-    const existingReward = await database.first<{ entry_id: string }>(
+    const existingStarReward = await database.first<{ entry_id: string }>(
       "SELECT entry_id FROM user_reward_ledger WHERE user_id = ? AND resource_type = 'stars' AND source_id = ?",
       [userId, rewardSourceId],
     );
-    const rewardStars = firstMastery && pet && !existingReward ? 2 : 0;
+    const existingPlayTicketReward = await database.first<{ entry_id: string }>(
+      "SELECT entry_id FROM user_reward_ledger WHERE user_id = ? AND resource_type = 'play_tickets' AND source_id = ?",
+      [userId, rewardSourceId],
+    );
+    const rewardStars = firstMastery && pet && !existingStarReward ? 2 : 0;
+    const rewardPlayTickets = firstMastery && pet && !existingPlayTicketReward ? 1 : 0;
     const nextStars = (pet?.stars || 0) + rewardStars;
+    const nextPlayTickets = (playTicketWallet?.balance || 0) + rewardPlayTickets;
     const nextBoredom = Math.max(0, (pet?.boredom || 0) - (rewardStars ? 5 : 2));
     const statements: SqlStatement[] = [{
       sql: `UPDATE user_mistakes SET status = ?, review_count = ?, updated_at = ?
@@ -190,6 +200,10 @@ export async function recordMistakeReviewForUser(userId: string, mistakeId: stri
     if (pet) statements.push({
       sql: "UPDATE user_pet_state SET stars = ?, boredom = ?, updated_at = ? WHERE user_id = ?",
       params: [nextStars, nextBoredom, now, userId],
+    }, {
+      sql: `INSERT INTO user_play_ticket_wallet (user_id, balance, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET balance = excluded.balance, updated_at = excluded.updated_at`,
+      params: [userId, nextPlayTickets, now],
     });
     if (rewardStars) statements.push({
       sql: `INSERT INTO user_reward_ledger
@@ -197,14 +211,32 @@ export async function recordMistakeReviewForUser(userId: string, mistakeId: stri
         VALUES (?, ?, 'stars', ?, ?, 'mistake-mastered', ?, ?)`,
       params: [crypto.randomUUID(), userId, rewardStars, nextStars, rewardSourceId, now],
     });
+    if (rewardPlayTickets) statements.push({
+      sql: `INSERT INTO user_reward_ledger
+        (entry_id, user_id, resource_type, amount, balance_after, source_type, source_id, created_at)
+        VALUES (?, ?, 'play_tickets', ?, ?, 'mistake-mastered', ?, ?)`,
+      params: [crypto.randomUUID(), userId, rewardPlayTickets, nextPlayTickets, rewardSourceId, now],
+    });
     await database.batch(statements);
-    return { reviewNumber, status: nextStatus, rewardStars, stars: nextStars, boredom: nextBoredom, attemptId };
+    return {
+      reviewNumber,
+      status: nextStatus,
+      rewardStars,
+      rewardPlayTickets,
+      stars: nextStars,
+      playTickets: nextPlayTickets,
+      boredom: nextBoredom,
+      attemptId,
+    };
   }
   const state = object(await getUserState(userId));
   const currentStars = number(state.stars);
+  const currentPlayTickets = number(state.playTickets);
   const currentBoredom = number(state.boredom);
   const rewardStars = firstMastery ? 2 : 0;
+  const rewardPlayTickets = firstMastery ? 1 : 0;
   const nextStars = currentStars + rewardStars;
+  const nextPlayTickets = currentPlayTickets + rewardPlayTickets;
   const nextBoredom = Math.max(0, currentBoredom - (firstMastery ? 5 : 2));
   const mistakes = list(state.mistakes).map((item) => {
     const parsed = mistakeFromObject(item);
@@ -214,11 +246,21 @@ export async function recordMistakeReviewForUser(userId: string, mistakeId: stri
   await saveUserState(userId, {
     ...state,
     stars: nextStars,
+    playTickets: nextPlayTickets,
     boredom: nextBoredom,
     mistakes,
     mistakeAnswerAttempts: [{ attemptId, mistakeId, ...attempt, createdAt: now }, ...priorAttempts].slice(0, 500),
   }, now);
-  return { reviewNumber, status: nextStatus, rewardStars, stars: nextStars, boredom: nextBoredom, attemptId };
+  return {
+    reviewNumber,
+    status: nextStatus,
+    rewardStars,
+    rewardPlayTickets,
+    stars: nextStars,
+    playTickets: nextPlayTickets,
+    boredom: nextBoredom,
+    attemptId,
+  };
 }
 
 export async function deleteMistakeForUser(userId: string, mistakeId: string) {
