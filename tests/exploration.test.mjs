@@ -85,7 +85,7 @@ test("knowledge exploration requires learning evidence, schedules 1/3/7 day revi
     `]);
     const data = JSON.parse(result.stdout);
     assert.equal(data.before.completedNodeIds.length, 0);
-    assert.equal(data.before.availableNodes, 24);
+    assert.equal(data.before.availableNodes, 32);
     assert.equal(data.before.recommended[0].domainId, "nature");
     assert.match(data.lockedError, /请先完成前一个学习任务/);
     assert.equal(data.wrongQuiz.correct, false);

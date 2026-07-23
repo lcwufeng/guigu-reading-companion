@@ -488,6 +488,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "规律不只藏在数字里，也藏在形状、动作和声音中。找到重复单位，再观察它怎样变化，就能预测下一步。",
         challenge: "自己设计一串至少有两层规律的符号，让家人猜下一个是什么。",
         takeaway: "识别重复单位和变化方式能帮助我们发现规律。",
+        lesson: extraExplorationLessons["math-pattern-detective"],
       },
       {
         id: "math-scale-world",
@@ -496,6 +497,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "地图和模型不能和真实物体一样大，所以会用相同的比例缩小。比例保持不变，形状和距离关系才不会走样。",
         challenge: "把一张桌子的长和宽都缩小十倍，画出它的平面小模型。",
         takeaway: "按同一比例缩放能保持物体各部分的关系。",
+        lesson: extraExplorationLessons["math-scale-world"],
       },
       {
         id: "math-data-story",
@@ -504,6 +506,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "一组数字看起来很安静，整理成表格或图表后，就能看出最多、最少、变化和例外。但图表也要说明数据从哪里来。",
         challenge: "记录一周天气，用图表展示，并说出你发现的一个趋势。",
         takeaway: "整理和比较数据可以发现趋势，也要留意数据来源。",
+        lesson: extraExplorationLessons["math-data-story"],
       },
       {
         id: "math-fair-game",
@@ -512,6 +515,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "如果每位玩家获胜的机会一样，游戏才算公平。转盘、骰子和抽卡的规则，可以用可能结果的数量来检查。",
         challenge: "设计一个两人小游戏，列出所有可能结果，证明双方机会一样。",
         takeaway: "公平游戏需要让参与者拥有相同的获胜可能。",
+        lesson: extraExplorationLessons["math-fair-game"],
       },
     ]),
   },
@@ -531,6 +535,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "情绪像天气一样会变化。给它准确命名，再观察身体感觉和发生的事情，能帮助我们选择更合适的行动。",
         challenge: "用晴、阴、雨、风描述今天三次情绪变化，并找出每次变化前发生了什么。",
         takeaway: "识别情绪、身体信号和原因能帮助我们调节行动。",
+        lesson: extraExplorationLessons["life-emotion-weather"],
       },
       {
         id: "life-listening",
@@ -539,6 +544,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "真正的倾听不只是安静，还包括看着对方、抓住重点和确认自己有没有理解。这样能减少误会。",
         challenge: "听家人讲一分钟，再用“你的意思是……”复述，请对方给你打分。",
         takeaway: "复述和确认是有效倾听的重要方法。",
+        lesson: extraExplorationLessons["life-listening"],
       },
       {
         id: "life-food-journey",
@@ -547,6 +553,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "一只苹果从果园到餐桌，要经过种植、采收、运输、销售和保存。每一步都有人工作，也会使用资源。",
         challenge: "选择一种食物，画出它到达餐桌前至少四站的旅行图。",
         takeaway: "日常食物连接着生产、运输、销售和资源使用。",
+        lesson: extraExplorationLessons["life-food-journey"],
       },
       {
         id: "life-friendly-community",
@@ -555,6 +562,7 @@ export const interestDomains: InterestDomain[] = [
         guide: "友好社区要让儿童、老人和行动不便的人都能安全使用，还要有交流、休息和亲近自然的空间。",
         challenge: "画一个小社区，加入三处照顾不同人需要的设计，并写出理由。",
         takeaway: "公共空间设计要看见不同人的真实需要。",
+        lesson: extraExplorationLessons["life-friendly-community"],
       },
     ]),
   },

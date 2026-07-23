@@ -192,8 +192,8 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   assert.equal((catalog.match(/type: "(?:发现|观察|连接|创造)"/g) || []).length, 32);
   assert.equal((catalog.match(/lesson: \{/g) || []).length, 4);
   assert.equal((catalog.match(/illustration: "\/assets\/exploration\/nature\//g) || []).length, 4);
-  assert.equal((catalog.match(/lesson: extraExplorationLessons\[/g) || []).length, 20);
-  assert.equal((extraLessons.match(/illustration: "\/assets\/exploration\//g) || []).length, 20);
+  assert.equal((catalog.match(/lesson: extraExplorationLessons\[/g) || []).length, 28);
+  assert.equal((extraLessons.match(/illustration: "\/assets\/exploration\//g) || []).length, 28);
   assert.match(readingApp, /exploration-lesson-illustration/);
   assert.match(readingApp, /我学完了，试试互动检查/);
   assert.match(readingApp, /实践表达 · 把知识用起来/);
@@ -225,6 +225,8 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
     literature: ["character-choice.png", "fairy-tale-repetition.png", "different-ending.png", "science-story.png"],
     geography: ["map-directions.png", "landform-forces.png", "climate-and-life.png", "travel-route.png"],
     art: ["color-emotion.png", "sound-rhythm.png", "pattern-math.png", "knowledge-card-cover.png"],
+    math: ["pattern-detective.png", "scale-world.png", "data-story.png", "fair-game.png"],
+    life: ["emotion-weather.png", "listening-together.png", "food-journey.png", "friendly-community.png"],
   };
   for (const [domain, assets] of Object.entries(newRouteAssets)) {
     for (const asset of assets) {
