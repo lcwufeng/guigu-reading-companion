@@ -1,8 +1,10 @@
 /* eslint-disable @next/next/no-img-element -- The game reuses the project's local pixel-art assets. */
 "use client";
 
-import { ChevronLeft, ChevronRight, Clock3, Gamepad2, Lock, Sparkles, Star, Trophy, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Lock, Map, Sparkles, Star, Trophy, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import CourierGame from "./CourierGame";
+import WeatherOutfitGame from "./WeatherOutfitGame";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const ASSET = `${BASE_PATH}/assets`;
@@ -25,6 +27,11 @@ export type FruitCatchResult = {
   missed: number;
   bestCombo: number;
   success: boolean;
+};
+
+export type LearningMiniGameResult = {
+  game: "turtle-courier" | "weather-outfit";
+  detail: string;
 };
 
 type FruitKind = "orange" | "red" | "blue";
@@ -94,15 +101,17 @@ export default function GamePark({
   daily,
   onBackHome,
   onRoundComplete,
+  onLearningGameComplete,
   onPlayingChange,
 }: {
   turtleName: string;
   daily: FruitCatchDailyState;
   onBackHome: () => void;
   onRoundComplete: (result: FruitCatchResult) => void;
+  onLearningGameComplete: (result: LearningMiniGameResult) => void;
   onPlayingChange: (playing: boolean) => void;
 }) {
-  const [activeGame, setActiveGame] = useState<"fruit-catch" | null>(null);
+  const [activeGame, setActiveGame] = useState<"fruit-catch" | "turtle-courier" | "weather-outfit" | null>(null);
   const [run, setRun] = useState<FruitCatchRun>(() => initialRun());
   const [earnedRewardThisRound, setEarnedRewardThisRound] = useState(false);
   const fieldRef = useRef<HTMLDivElement | null>(null);
@@ -119,9 +128,9 @@ export default function GamePark({
   }), [run.bestCombo, run.caught, run.missed, run.score]);
 
   useEffect(() => {
-    onPlayingChange(run.phase === "playing");
+    onPlayingChange(activeGame === "fruit-catch" ? run.phase === "playing" : activeGame !== null);
     return () => onPlayingChange(false);
-  }, [onPlayingChange, run.phase]);
+  }, [activeGame, onPlayingChange, run.phase]);
 
   useEffect(() => {
     if (run.phase !== "playing") return;
@@ -217,8 +226,8 @@ export default function GamePark({
         <header className="game-park-heading">
           <div>
             <span><Gamepad2 aria-hidden="true" /> 龟龟乐园</span>
-            <h1>和{turtleName}痛痛快快玩一局</h1>
-            <p>每局只有几分钟，动动手、动动脑，再带着好心情去学习。</p>
+            <h1>和{turtleName}一起玩，也一起动脑</h1>
+            <p>接果子练反应，送快递练路线，天气穿搭练生活判断。</p>
           </div>
           <button type="button" onClick={onBackHome}><ChevronLeft aria-hidden="true" /> 回家园</button>
         </header>
@@ -257,6 +266,40 @@ export default function GamePark({
           </div>
         </section>
 
+        <section className="game-park-open-games" aria-label="动脑小游戏">
+          <header><Sparkles aria-hidden="true" /><div><h2>两个新任务开放啦</h2><p>每个游戏都有连续小关卡，做完才算真正掌握。</p></div></header>
+          <div className="game-park-open-grid">
+            <article className="game-park-choice courier">
+              <div className="game-park-choice-art" aria-hidden="true">
+                <Map />
+                <span>📦</span><span>🏫</span><span>🏥</span>
+                <img src={`${ASSET}/characters/turtle/turtle_travel_start.png`} alt="" />
+              </div>
+              <div>
+                <small>路线规划游戏</small>
+                <h3>乌龟快递员</h3>
+                <p>看清道路和距离，安排送件顺序，帮助龟龟找到真正的最短路线。</p>
+                <ul><li>点击相邻地点前进</li><li>送完所有包裹</li><li>和最短距离比一比</li></ul>
+                <button type="button" onClick={() => setActiveGame("turtle-courier")}>开始送快递 <ChevronRight aria-hidden="true" /></button>
+              </div>
+            </article>
+            <article className="game-park-choice weather">
+              <div className="game-park-choice-art" aria-hidden="true">
+                <CloudSun />
+                <span>☀️</span><span>🌧️</span><span>❄️</span>
+                <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+              </div>
+              <div>
+                <small>生活判断游戏</small>
+                <h3>天气穿搭</h3>
+                <p>根据温度、降雨、风力和行程，为龟龟选择衣服与旅行用品。</p>
+                <ul><li>先读天气任务</li><li>衣服用品都要选</li><li>合适就好，不是越多越好</li></ul>
+                <button type="button" onClick={() => setActiveGame("weather-outfit")}>开始准备穿搭 <ChevronRight aria-hidden="true" /></button>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <section className="game-park-coming" aria-label="正在准备的小游戏">
           <header><Sparkles aria-hidden="true" /><div><h2>更多游戏正在准备</h2><p>以后可以在同一个乐园里选择不同玩法。</p></div></header>
           <div>
@@ -266,6 +309,26 @@ export default function GamePark({
           </div>
         </section>
       </section>
+    );
+  }
+
+  if (activeGame === "turtle-courier") {
+    return (
+      <CourierGame
+        turtleName={turtleName}
+        onBack={() => setActiveGame(null)}
+        onComplete={(detail) => onLearningGameComplete({ game: "turtle-courier", detail })}
+      />
+    );
+  }
+
+  if (activeGame === "weather-outfit") {
+    return (
+      <WeatherOutfitGame
+        turtleName={turtleName}
+        onBack={() => setActiveGame(null)}
+        onComplete={(detail) => onLearningGameComplete({ game: "weather-outfit", detail })}
+      />
     );
   }
 

@@ -236,10 +236,12 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   assert.doesNotMatch(explorationDb, /localStorage|sessionStorage/);
 });
 
-test("provides a responsive turtle fruit-catching game with a daily isolated reward record", async () => {
-  const [readingApp, gamePark, styles, userState, schema] = await Promise.all([
+test("provides three responsive turtle games with route planning, weather choices, and isolated records", async () => {
+  const [readingApp, gamePark, courierGame, weatherGame, styles, userState, schema] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/GamePark.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/CourierGame.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/WeatherOutfitGame.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
@@ -248,6 +250,10 @@ test("provides a responsive turtle fruit-catching game with a daily isolated rew
   assert.match(readingApp, /fruitCatchDaily/);
   assert.match(readingApp, /stars: current\.stars \+ \(shouldReward \? 1 : 0\)/);
   assert.match(gamePark, /龟龟接果子/);
+  assert.match(gamePark, /乌龟快递员/);
+  assert.match(gamePark, /天气穿搭/);
+  assert.match(gamePark, /"turtle-courier"/);
+  assert.match(gamePark, /"weather-outfit"/);
   assert.match(gamePark, /ROUND_DURATION_MS = 30_000/);
   assert.match(gamePark, /FRUIT_CATCH_TARGET_SCORE = 12/);
   assert.match(gamePark, /turtle_idle_standing\.png/);
@@ -255,9 +261,25 @@ test("provides a responsive turtle fruit-catching game with a daily isolated rew
   assert.match(gamePark, /onPointerMove=\{moveFromPointer\}/);
   assert.match(gamePark, /event\.key === "ArrowLeft"/);
   assert.match(gamePark, /今天首次过关，获得 1 颗星星/);
+  assert.match(courierGame, /missionOptimalDistance/);
+  assert.match(courierGame, /current\.visited === allVisited/);
+  assert.match(courierGame, /distance !== optimalDistance/);
+  assert.equal((courierGame.match(/id: "(?:school-clinic|bakery-library|park-station-library)"/g) || []).length, 3);
+  assert.match(courierGame, /turtle_idle_standing\.png/);
+  assert.match(weatherGame, /衣服和旅行用品/);
+  assert.equal((weatherGame.match(/id: "(?:sunny-park|rainy-library|cold-hill|cloudy-trail)"/g) || []).length, 4);
+  assert.match(weatherGame, /challenge\.required/);
+  assert.match(weatherGame, /challenge\.avoid/);
+  assert.match(weatherGame, /turtle_idle_front\.png/);
+  assert.match(readingApp, /completeLearningMiniGame/);
+  assert.match(readingApp, /type: "activity"/);
   assert.match(styles, /\.game-park-scene \{[\s\S]*overflow-y: auto/);
   assert.match(styles, /touch-action: none/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.fruit-catch-field/);
+  assert.match(styles, /\.courier-game-layout/);
+  assert.match(styles, /\.weather-game-layout/);
+  assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.courier-map/);
+  assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.weather-item-grid/);
   assert.match(userState, /user_minigame_daily/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS user_minigame_daily/);
 });

@@ -33,7 +33,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { chapterKnowledge } from "./book-knowledge";
 import { chapterPrompts, type ChapterPrompt } from "./book-prompts";
 import classicBookManifest from "./classic-books-manifest.json";
-import GamePark, { type FruitCatchDailyState, type FruitCatchResult } from "./GamePark";
+import GamePark, { type FruitCatchDailyState, type FruitCatchResult, type LearningMiniGameResult } from "./GamePark";
 import {
   interestDomains,
   type ExplorationNode,
@@ -1396,6 +1396,13 @@ export default function ReadingApp({
     });
   }, [game, remember, showToast]);
 
+  const completeLearningMiniGame = useCallback((result: LearningMiniGameResult) => {
+    const activity = result.game === "turtle-courier" ? "乌龟快递员" : "天气穿搭";
+    setGame((current) => ({ ...current, boredom: clamp(current.boredom - 6) }));
+    showToast(`${activity}挑战完成，龟龟又学会了一项新本领！`);
+    void remember({ type: "activity", activity, detail: result.detail });
+  }, [remember, showToast]);
+
   const openExplorationNode = useCallback((node: ExplorationNode) => {
     const progress = explorationOverview?.nodeProgress[node.id];
     const dueForReview = explorationOverview?.dueReviewNodeIds.includes(node.id);
@@ -2720,7 +2727,7 @@ export default function ReadingApp({
                 <span>
                   <small>轻松玩一小会儿</small>
                   <strong>龟龟乐园</strong>
-                  <em>接果子开放啦</em>
+                  <em>3 个小游戏开放啦</em>
                 </span>
                 <ChevronRight aria-hidden="true" />
               </button>
@@ -2878,6 +2885,7 @@ export default function ReadingApp({
               daily={fruitCatchDaily}
               onBackHome={() => navigateTo("home")}
               onRoundComplete={completeFruitCatchRound}
+              onLearningGameComplete={completeLearningMiniGame}
               onPlayingChange={setMiniGamePlaying}
             />
           </section>
