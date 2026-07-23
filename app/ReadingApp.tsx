@@ -1407,14 +1407,25 @@ export default function ReadingApp({
   }, [game, remember, showToast]);
 
   const completeLearningMiniGame = useCallback((result: LearningMiniGameResult) => {
-    const activity = result.game === "turtle-courier" ? "乌龟快递员" : "天气穿搭";
+    const activity = {
+      "turtle-courier": "乌龟快递员",
+      "weather-outfit": "天气穿搭",
+      "lotus-jump": "荷叶跳跳",
+      "spot-difference": "龟龟找不同",
+    }[result.game];
     setGame((current) => ({ ...current, boredom: clamp(current.boredom - 6) }));
     showToast(`${activity}挑战完成，龟龟又学会了一项新本领！`);
     void remember({ type: "activity", activity, detail: result.detail });
   }, [remember, showToast]);
 
   const spendPlayTicket = useCallback((gameId: GameParkGameId) => {
-    const activity = gameId === "fruit-catch" ? "龟龟接果子" : gameId === "turtle-courier" ? "乌龟快递员" : "天气穿搭";
+    const activity = {
+      "fruit-catch": "龟龟接果子",
+      "turtle-courier": "乌龟快递员",
+      "weather-outfit": "天气穿搭",
+      "lotus-jump": "荷叶跳跳",
+      "spot-difference": "龟龟找不同",
+    }[gameId];
     setGame((current) => current.playTickets < 1 ? current : ({ ...current, playTickets: current.playTickets - 1 }));
     showToast(`使用 1 张游玩票，开始${activity}`);
     void remember({ type: "activity", activity: "进入龟龟乐园", detail: `使用1张游玩票开始${activity}` });
@@ -2756,7 +2767,7 @@ export default function ReadingApp({
                 <span>
                   <small>轻松玩一小会儿</small>
                   <strong>龟龟乐园</strong>
-                  <em>3 个小游戏开放啦</em>
+                  <em>5 个小游戏开放啦</em>
                 </span>
                 <ChevronRight aria-hidden="true" />
               </button>

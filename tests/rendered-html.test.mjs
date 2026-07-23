@@ -236,12 +236,14 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   assert.doesNotMatch(explorationDb, /localStorage|sessionStorage/);
 });
 
-test("provides three responsive turtle games with route planning, weather choices, and isolated records", async () => {
-  const [readingApp, gamePark, courierGame, weatherGame, styles, userState, schema] = await Promise.all([
+test("provides five responsive turtle games with progressive learning challenges and isolated records", async () => {
+  const [readingApp, gamePark, courierGame, weatherGame, lotusGame, differenceGame, styles, userState, schema] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/GamePark.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/CourierGame.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/WeatherOutfitGame.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/LotusJumpGame.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/SpotDifferenceGame.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
@@ -252,8 +254,12 @@ test("provides three responsive turtle games with route planning, weather choice
   assert.match(gamePark, /龟龟接果子/);
   assert.match(gamePark, /乌龟快递员/);
   assert.match(gamePark, /天气穿搭/);
+  assert.match(gamePark, /荷叶跳跳/);
+  assert.match(gamePark, /龟龟找不同/);
   assert.match(gamePark, /"turtle-courier"/);
   assert.match(gamePark, /"weather-outfit"/);
+  assert.match(gamePark, /"lotus-jump"/);
+  assert.match(gamePark, /"spot-difference"/);
   assert.match(gamePark, /ROUND_DURATION_MS = 30_000/);
   assert.match(gamePark, /FRUIT_CATCH_TARGET_SCORE = 12/);
   assert.match(gamePark, /turtle_idle_standing\.png/);
@@ -277,15 +283,35 @@ test("provides three responsive turtle games with route planning, weather choice
   assert.match(weatherGame, /challenge\.required/);
   assert.match(weatherGame, /challenge\.avoid/);
   assert.match(weatherGame, /turtle_idle_front\.png/);
+  assert.equal((lotusGame.match(/id: "(?:count-1-4|even-2-8|odd-plus-two|multiples-three|expression-results|growing-pattern)"/g) || []).length, 6);
+  assert.match(lotusGame, /pad\.order !== expectedOrder/);
+  assert.match(lotusGame, /每个数都是前两个数相加/);
+  assert.match(lotusGame, /turtle_idle_standing\.png/);
+  assert.match(lotusGame, /龟龟提示/);
+  assert.equal((differenceGame.match(/id: "(?:pond-morning|picnic-day|forest-trail|seaside-camp)"/g) || []).length, 4);
+  assert.equal((differenceGame.match(/different: true/g) || []).length, 18);
+  assert.match(differenceGame, /feature\.different/);
+  assert.match(differenceGame, /颜色、数量和形状/);
+  assert.match(differenceGame, /turtle_idle_front\.png/);
+  assert.match(differenceGame, /龟龟提示/);
   assert.match(readingApp, /completeLearningMiniGame/);
+  assert.match(readingApp, /"lotus-jump": "荷叶跳跳"/);
+  assert.match(readingApp, /"spot-difference": "龟龟找不同"/);
+  assert.match(readingApp, /5 个小游戏开放啦/);
   assert.match(readingApp, /type: "activity"/);
   assert.match(styles, /\.game-park-scene \{[\s\S]*overflow-y: auto/);
   assert.match(styles, /touch-action: none/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.fruit-catch-field/);
   assert.match(styles, /\.courier-game-layout/);
   assert.match(styles, /\.weather-game-layout/);
+  assert.match(styles, /\.lotus-game-layout/);
+  assert.match(styles, /\.difference-scenes/);
+  assert.match(styles, /@keyframes lotusJump/);
+  assert.match(styles, /@keyframes differenceHint/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.courier-map/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.weather-item-grid/);
+  assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.lotus-pond/);
+  assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.difference-scene/);
   assert.match(userState, /user_minigame_daily/);
   assert.match(userState, /user_play_ticket_wallet/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS user_minigame_daily/);
