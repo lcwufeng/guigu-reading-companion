@@ -310,6 +310,12 @@ test("provides five responsive turtle games with progressive learning challenges
   assert.match(styles, /\.lotus-game-layout/);
   assert.match(styles, /\.difference-scenes/);
   assert.match(styles, /\.wallet-play-ticket img \{[\s\S]*image-rendering: pixelated/);
+  assert.match(styles, /\.game-park-choice p \{[^}]*font-size: 20px;/);
+  assert.match(styles, /\.learning-game-feedback p \{[^}]*font-size: 19px !important;/);
+  assert.match(styles, /\.courier-rule-chips span \{[^}]*font-size: 15px;/);
+  assert.match(styles, /\.weather-item-grid button \{[^}]*font-size: 16px;/);
+  assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.game-park-choice p \{ font-size: 19px;/);
+  assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.difference-task-bar p \{ font-size: 18px;/);
   assert.match(styles, /@keyframes lotusJump/);
   assert.match(styles, /@keyframes differenceHint/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.courier-map/);
