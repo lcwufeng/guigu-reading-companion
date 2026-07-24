@@ -723,6 +723,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /--mobile-topbar/);
   assert.match(styles, /--mobile-nav/);
   assert.match(styles, /overscroll-behavior-x: none/);
+  assert.match(styles, /Viewport safety: every long child-facing page owns its vertical scrolling/);
+  assert.match(styles, /\.wallet-group \.wallet \{[\s\S]*?min-width: 0;[\s\S]*?width: 100%;/);
+  assert.match(styles, /\.view-journal \.journal-scene,[\s\S]*?overflow-y: auto;/);
+  assert.match(styles, /\.library-mode-reader \.complete-reader \{[\s\S]*?overflow-y: auto;/);
+  assert.match(styles, /\.library-mode-reader \.complete-reading-paper \{[\s\S]*?min-height: 520px;/);
+  assert.match(styles, /\.library-mode-reader \.reader-side-panel \{[\s\S]*?min-height: 220px;/);
   assert.match(page, /const \[dailyTasksOpen, setDailyTasksOpen\] = useState\(false\)/);
   assert.match(nextConfig, /NEXT_PUBLIC_BASE_PATH/);
   assert.match(page, /fetch\(`\$\{BASE_PATH\}\/api\/companion`/);
@@ -763,6 +769,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(modelConfig, /AES-GCM/);
   assert.match(modelConfig, /MODEL_CONFIG_ENCRYPTION_KEY/);
   assert.match(adminStyles, /height: 100dvh; overflow-y: auto/);
+  assert.match(adminStyles, /\.fileDrop \{[\s\S]*?position: relative;/);
   assert.match(parentStyles, /height: 100dvh; min-height: 100vh; overflow-y: auto/);
   assert.match(accountLogins, /account_login_events/);
   assert.doesNotMatch(adminCenter, /chatMessages|message_text/);

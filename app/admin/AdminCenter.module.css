@@ -152,7 +152,7 @@
 .importPipeline span { color: #75837b; font-size: 11px; line-height: 1.55; }
 .importForm { display: grid; gap: 20px; grid-template-columns: minmax(300px, .8fr) minmax(480px, 1.2fr); margin-bottom: 24px; }
 .importForm .panel { margin: 0; }
-.fileDrop { align-items: center; background: #f6faf7; border: 2px dashed #b8cebf; border-radius: 16px; cursor: pointer; display: flex; flex-direction: column; gap: 7px; justify-content: center; min-height: 190px; padding: 20px; text-align: center; }
+.fileDrop { align-items: center; background: #f6faf7; border: 2px dashed #b8cebf; border-radius: 16px; cursor: pointer; display: flex; flex-direction: column; gap: 7px; justify-content: center; min-height: 190px; padding: 20px; position: relative; text-align: center; }
 .fileDrop:hover { background: #edf7f0; border-color: #5e9472; }
 .fileDrop input { height: 1px; opacity: 0; overflow: hidden; position: absolute; width: 1px; }
 .fileDrop svg { color: var(--green); height: 38px; width: 38px; }

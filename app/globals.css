@@ -10280,3 +10280,126 @@ button:disabled {
   .wallet-ticket img { height: 23px; width: 28px; }
   .wallet-play-ticket img { height: 21px; width: 38px; }
 }
+
+/* Viewport safety: every long child-facing page owns its vertical scrolling.
+   These rules intentionally come last so later tablet rules cannot make phone
+   controls wider than the viewport or collapse the book text on short screens. */
+@media (max-width: 820px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) 42px;
+  }
+
+  .identity-cluster,
+  .wallet-group {
+    min-width: 0;
+  }
+
+  .pet-name {
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .wallet-group .wallet {
+    gap: 0;
+    justify-content: space-around;
+    max-width: none;
+    min-width: 0;
+    padding-inline: 5px;
+    width: 100%;
+  }
+
+  .wallet-group .wallet > span {
+    flex: 1 1 0;
+    gap: 1px;
+    min-width: 0;
+    padding-inline: 1px;
+  }
+
+  .wallet-group .wallet-ticket img {
+    height: 23px;
+    width: 28px;
+  }
+
+  .wallet-group .wallet-play-ticket img {
+    height: 21px;
+    width: 38px;
+  }
+
+  .wallet-group .leaderboard-button {
+    flex: 0 0 33px;
+  }
+
+  .login-screen,
+  .account-loading {
+    height: 100dvh;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  .view-journal,
+  .view-journal .scene-shell,
+  .view-leaderboard,
+  .view-leaderboard .scene-shell,
+  .view-mistakes,
+  .view-mistakes .scene-shell {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .view-journal .journal-scene,
+  .view-leaderboard .leaderboard-scene,
+  .view-mistakes .mistake-scene {
+    height: 100dvh;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-backdrop,
+  .exploration-modal-backdrop {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+}
+
+@media (max-width: 820px) {
+  .library-mode-reader .complete-reader {
+    display: block;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-color: #aebbab transparent;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .library-mode-reader .chapter-drawer {
+    left: auto;
+    position: sticky;
+    top: 0;
+  }
+
+  .library-mode-reader .complete-reading-paper {
+    height: clamp(520px, 72dvh, 660px);
+    left: auto;
+    min-height: 520px;
+    position: relative;
+    top: auto;
+  }
+
+  .library-mode-reader .reader-side-panel {
+    bottom: auto;
+    height: auto;
+    left: auto;
+    margin-top: 8px;
+    min-height: 220px;
+    overflow-y: visible;
+    position: relative;
+  }
+}
