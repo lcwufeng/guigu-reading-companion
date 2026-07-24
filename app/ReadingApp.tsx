@@ -22,7 +22,6 @@ import {
   Send,
   Sparkles,
   Star,
-  Ticket,
   Trophy,
   Trash2,
   Upload,
@@ -2710,7 +2709,7 @@ export default function ReadingApp({
             <span><Star className="wallet-star" fill="currentColor" aria-hidden="true" /> {game.stars}</span>
             <span><img className="wallet-icon" src={`${ASSET}/objects/fruit_orange.png`} alt="" /> {game.fruits}</span>
             <span className="wallet-ticket"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="" /> {game.tickets}</span>
-            <span className="wallet-play-ticket" title="游玩票"><Ticket aria-hidden="true" /> {game.playTickets}</span>
+            <span className="wallet-play-ticket" title="游玩票"><img src={`${ASSET}/ui/icons/play-ticket-pixel.png`} alt="" /> {game.playTickets}</span>
             <button
               className={`leaderboard-button ${view === "leaderboard" ? "active" : ""}`}
               type="button"
@@ -3904,7 +3903,7 @@ export default function ReadingApp({
                       <article><div className="item-art"><img src={`${ASSET}/objects/fruit_basket.png`} alt="果篮" /></div><strong>野外果子</strong><span>× {game.fruits}</span></article>
                       <article><div className="item-art star-item"><Star /></div><strong>成长星星</strong><span>× {game.stars}</span></article>
                       <article><div className="item-art ticket-item"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="旅行票" /></div><strong>旅行票</strong><span>× {game.tickets}</span></article>
-                      <article><div className="item-art play-ticket-item"><Ticket aria-hidden="true" /></div><strong>游玩票</strong><span>× {game.playTickets}</span></article>
+                      <article><div className="item-art play-ticket-item"><img src={`${ASSET}/ui/icons/play-ticket-pixel.png`} alt="游玩票" /></div><strong>游玩票</strong><span>× {game.playTickets}</span></article>
                       {journalTravelItems.map((record) => {
                         const discovery = discoveryForRecord(record);
                         return discovery ? (

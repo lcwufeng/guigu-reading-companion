@@ -102,6 +102,7 @@
   - `legacy/travel/location_ancient_city.png`
   - `legacy/travel/location_future_station.png`
 - 旅行票：`legacy/travel/travel_ticket.png`
+- 游玩票：`ui/icons/play-ticket-pixel.png`
 - 出发动作：`characters/turtle/turtle_travel_start.png`
 - 返回动作：`characters/turtle/turtle_travel_return.png`
 - 旅行照片：

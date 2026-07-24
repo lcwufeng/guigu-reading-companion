@@ -338,7 +338,7 @@
   padding: 10px 14px;
 }
 .game-park-ticket-balance.empty { background: #f3ead3; border-color: #c6a978; color: #765d3b; }
-.game-park-ticket-balance > svg { flex: 0 0 auto; height: 31px; width: 31px; }
+.game-park-ticket-balance > img { flex: 0 0 auto; height: 40px; image-rendering: pixelated; object-fit: contain; width: 88px; }
 .game-park-ticket-balance strong { display: block; font-size: 19px; }
 .game-park-ticket-balance span { display: block; font-size: 14px; font-weight: 750; margin-top: 1px; }
 .game-park-ticket-notice { align-items: center; background: #fff0d6; border: 2px solid #d49b53; border-radius: 12px; color: #7f4e23; display: flex; font-size: 15px; font-weight: 850; gap: 7px; margin: 9px 0 0; padding: 9px 12px; }
@@ -1065,7 +1065,7 @@
 
   .game-park-featured { gap: 8px; grid-template-columns: 1fr; margin-top: 17px; min-height: 0; padding: 16px 13px 19px; }
   .game-park-ticket-balance { margin-top: 13px; padding: 8px 10px; }
-  .game-park-ticket-balance > svg { height: 27px; width: 27px; }
+  .game-park-ticket-balance > img { height: 32px; width: 70px; }
   .game-park-ticket-balance strong { font-size: 17px; }
   .game-park-ticket-balance span { font-size: 12px; }
   .game-park-ticket-notice { font-size: 13px; }
@@ -1880,10 +1880,11 @@ button:disabled {
   color: #7653a5 !important;
 }
 
-.wallet-play-ticket svg {
-  height: 30px;
-  stroke-width: 2.6;
-  width: 30px;
+.wallet-play-ticket img {
+  height: 28px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  width: 52px;
 }
 
 .wallet-icon {
@@ -3888,11 +3889,11 @@ button:disabled {
   width: 96px;
 }
 
-.play-ticket-item svg {
-  color: #7653a5;
-  height: 66px;
-  stroke-width: 2.2;
-  width: 66px;
+.play-ticket-item img {
+  height: 68px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  width: 112px;
 }
 
 .inventory-grid strong {
@@ -7034,9 +7035,9 @@ button:disabled {
     width: 31px;
   }
 
-  .wallet-play-ticket svg {
-    height: 23px;
-    width: 23px;
+  .wallet-play-ticket img {
+    height: 22px;
+    width: 41px;
   }
 
   .home-status-panel .status-pill {
@@ -10277,5 +10278,5 @@ button:disabled {
   .wallet-star,
   .wallet-icon { height: 23px; width: 23px; }
   .wallet-ticket img { height: 23px; width: 28px; }
-  .wallet-play-ticket svg { height: 22px; width: 22px; }
+  .wallet-play-ticket img { height: 21px; width: 38px; }
 }

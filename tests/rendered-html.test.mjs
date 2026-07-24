@@ -248,6 +248,7 @@ test("provides five responsive turtle games with progressive learning challenges
     readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
   ]);
+  await access(new URL("../public/assets/ui/icons/play-ticket-pixel.png", import.meta.url));
   assert.match(readingApp, /进入龟龟乐园玩小游戏/);
   assert.match(readingApp, /fruitCatchDaily/);
   assert.match(readingApp, /stars: current\.stars \+ \(shouldReward \? 1 : 0\)/);
@@ -270,6 +271,7 @@ test("provides five responsive turtle games with progressive learning challenges
   assert.match(gamePark, /每进入一个游戏消耗 1 张/);
   assert.match(gamePark, /onSpendPlayTicket/);
   assert.match(gamePark, /playTickets < 1/);
+  assert.match(gamePark, /ui\/icons\/play-ticket-pixel\.png/);
   assert.match(courierGame, /missionOptimalDistance/);
   assert.match(courierGame, /current\.progress === completedProgress/);
   assert.match(courierGame, /distance !== optimalDistance/);
@@ -298,6 +300,7 @@ test("provides five responsive turtle games with progressive learning challenges
   assert.match(readingApp, /"lotus-jump": "荷叶跳跳"/);
   assert.match(readingApp, /"spot-difference": "龟龟找不同"/);
   assert.match(readingApp, /5 个小游戏开放啦/);
+  assert.equal((readingApp.match(/ui\/icons\/play-ticket-pixel\.png/g) || []).length, 2);
   assert.match(readingApp, /type: "activity"/);
   assert.match(styles, /\.game-park-scene \{[\s\S]*overflow-y: auto/);
   assert.match(styles, /touch-action: none/);
@@ -306,6 +309,7 @@ test("provides five responsive turtle games with progressive learning challenges
   assert.match(styles, /\.weather-game-layout/);
   assert.match(styles, /\.lotus-game-layout/);
   assert.match(styles, /\.difference-scenes/);
+  assert.match(styles, /\.wallet-play-ticket img \{[\s\S]*image-rendering: pixelated/);
   assert.match(styles, /@keyframes lotusJump/);
   assert.match(styles, /@keyframes differenceHint/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.courier-map/);

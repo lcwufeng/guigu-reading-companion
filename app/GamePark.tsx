@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- The game reuses the project's local pixel-art assets. */
 "use client";
 
-import { ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Lock, Map, Search, Sparkles, Star, Ticket, Trophy, Waves, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Lock, Map, Search, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import CourierGame from "./CourierGame";
 import LotusJumpGame from "./LotusJumpGame";
@@ -259,7 +259,7 @@ export default function GamePark({
         </header>
 
         <div className={`game-park-ticket-balance ${playTickets < 1 ? "empty" : ""}`} role="status">
-          <Ticket aria-hidden="true" />
+          <img src={`${ASSET}/ui/icons/play-ticket-pixel.png`} alt="" />
           <div><strong>游玩票 × {playTickets}</strong><span>每进入一个游戏消耗 1 张；阅读、旅行和错题复习都能获得。</span></div>
         </div>
         {ticketNotice && <p className="game-park-ticket-notice"><Lock aria-hidden="true" /> {ticketNotice}</p>}

@@ -86,6 +86,7 @@
 | `legacy/travel/location_ancient_city.png` | 古城遗迹地点图 | 100 颗星解锁的透明底像素地点图。 |
 | `legacy/travel/location_future_station.png` | 未来车站地点图 | 150 颗星解锁的透明底独立地点图；不含路线石或界面文字。 |
 | `legacy/travel/travel_ticket.png` | 旅行票资源图 | 用于顶栏库存、小背包和出发消耗。 |
+| `ui/icons/play-ticket-pixel.png` | 游玩票资源图 | 参考旅行票轮廓制作的暖黄色像素票券，用于顶栏、乐园和小背包。 |
 | `legacy/icons/knowledge_card.png` | 知识卡入口 | 用于奖励、手账和库存入口。 |
 | `optimized/backgrounds/*.webp` | 场景背景 | 与原始 PNG 同画面，供运行时加载。 |
 | `optimized/travel/photos/*.webp` | 旅行照片 | 海湾、森林、博物馆三张正式照片。 |
