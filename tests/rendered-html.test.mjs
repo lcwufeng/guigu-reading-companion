@@ -236,8 +236,8 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   assert.doesNotMatch(explorationDb, /localStorage|sessionStorage/);
 });
 
-test("provides seven responsive turtle games with progressive learning challenges and isolated records", async () => {
-  const [readingApp, gamePark, courierGame, weatherGame, lotusGame, differenceGame, storyGame, flightGame, styles, userState, schema] = await Promise.all([
+test("provides eight responsive turtle games with progressive learning challenges and isolated records", async () => {
+  const [readingApp, gamePark, courierGame, weatherGame, lotusGame, differenceGame, storyGame, flightGame, raceGame, styles, userState, schema] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/GamePark.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/CourierGame.tsx", import.meta.url), "utf8"),
@@ -246,6 +246,7 @@ test("provides seven responsive turtle games with progressive learning challenge
     readFile(new URL("../app/SpotDifferenceGame.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/StoryPuzzleGame.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/TurtleSkyGame.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/TortoiseRaceGame.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
@@ -261,12 +262,14 @@ test("provides seven responsive turtle games with progressive learning challenge
   assert.match(gamePark, /龟龟找不同/);
   assert.match(gamePark, /拼故事/);
   assert.match(gamePark, /龟龟飞机大战/);
+  assert.match(gamePark, /龟兔赛跑/);
   assert.match(gamePark, /"turtle-courier"/);
   assert.match(gamePark, /"weather-outfit"/);
   assert.match(gamePark, /"lotus-jump"/);
   assert.match(gamePark, /"spot-difference"/);
   assert.match(gamePark, /"story-puzzle"/);
   assert.match(gamePark, /"turtle-sky"/);
+  assert.match(gamePark, /"tortoise-race"/);
   assert.match(gamePark, /ROUND_DURATION_MS = 30_000/);
   assert.match(gamePark, /FRUIT_CATCH_TARGET_SCORE = 12/);
   assert.match(gamePark, /turtle_idle_standing\.png/);
@@ -311,12 +314,20 @@ test("provides seven responsive turtle games with progressive learning challenge
   assert.match(flightGame, /避开乌云/);
   assert.match(flightGame, /turtle_excited\.png/);
   assert.match(flightGame, /不会出现攻击或击毁画面/);
+  assert.match(raceGame, /RABBIT_STEP = 0\.18/);
+  assert.match(raceGame, /current\.lastTapAt <= 430/);
+  assert.match(raceGame, /点击越快，龟龟爬得越快/);
+  assert.match(raceGame, /龟龟和灰兔都在起点准备/);
+  assert.match(raceGame, /onClick=\{tapTurtle\}/);
+  assert.match(raceGame, /turtle_idle_standing\.png/);
+  assert.match(raceGame, /不用再花游玩票/);
   assert.match(readingApp, /completeLearningMiniGame/);
   assert.match(readingApp, /"lotus-jump": "荷叶跳跳"/);
   assert.match(readingApp, /"spot-difference": "龟龟找不同"/);
   assert.match(readingApp, /"story-puzzle": "拼故事"/);
   assert.match(readingApp, /"turtle-sky": "龟龟飞机大战"/);
-  assert.match(readingApp, /7 个小游戏开放啦/);
+  assert.match(readingApp, /"tortoise-race": "龟兔赛跑"/);
+  assert.match(readingApp, /8 个小游戏开放啦/);
   assert.equal((readingApp.match(/ui\/icons\/play-ticket-pixel\.png/g) || []).length, 2);
   assert.match(readingApp, /type: "activity"/);
   assert.match(styles, /\.game-park-scene \{[\s\S]*overflow-y: auto/);
@@ -328,6 +339,7 @@ test("provides seven responsive turtle games with progressive learning challenge
   assert.match(styles, /\.difference-scenes/);
   assert.match(styles, /\.story-game-layout/);
   assert.match(styles, /\.flight-game-layout/);
+  assert.match(styles, /\.race-game-layout/);
   assert.match(styles, /\.wallet-play-ticket img \{[\s\S]*image-rendering: pixelated/);
   assert.match(styles, /\.game-park-choice p \{[^}]*font-size: 20px;/);
   assert.match(styles, /\.learning-game-feedback p \{[^}]*font-size: 19px !important;/);
@@ -339,12 +351,14 @@ test("provides seven responsive turtle games with progressive learning challenge
   assert.match(styles, /@keyframes differenceHint/);
   assert.match(styles, /@keyframes storyHint/);
   assert.match(styles, /@keyframes flightGoldPulse/);
+  assert.match(styles, /@keyframes raceTapCoach/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.courier-map/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.weather-item-grid/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.lotus-pond/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.difference-scene/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.story-game-layout/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.flight-sky/);
+  assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.race-track/);
   assert.match(userState, /user_minigame_daily/);
   assert.match(userState, /user_play_ticket_wallet/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS user_minigame_daily/);

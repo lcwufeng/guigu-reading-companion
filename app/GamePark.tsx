@@ -7,6 +7,7 @@ import CourierGame from "./CourierGame";
 import LotusJumpGame from "./LotusJumpGame";
 import SpotDifferenceGame from "./SpotDifferenceGame";
 import StoryPuzzleGame from "./StoryPuzzleGame";
+import TortoiseRaceGame from "./TortoiseRaceGame";
 import TurtleSkyGame from "./TurtleSkyGame";
 import WeatherOutfitGame from "./WeatherOutfitGame";
 
@@ -34,7 +35,7 @@ export type FruitCatchResult = {
 };
 
 export type LearningMiniGameResult = {
-  game: "turtle-courier" | "weather-outfit" | "lotus-jump" | "spot-difference" | "story-puzzle" | "turtle-sky";
+  game: "turtle-courier" | "weather-outfit" | "lotus-jump" | "spot-difference" | "story-puzzle" | "turtle-sky" | "tortoise-race";
   detail: string;
 };
 
@@ -255,7 +256,7 @@ export default function GamePark({
           <div>
             <span><Gamepad2 aria-hidden="true" /> 龟龟乐园</span>
             <h1>和{turtleName}一起玩，也一起动脑</h1>
-            <p>七种小游戏，练反应、路线、生活判断、故事表达和细致观察。</p>
+            <p>八种小游戏，练反应、路线、生活判断、故事表达和细致观察。</p>
           </div>
           <button type="button" onClick={onBackHome}><ChevronLeft aria-hidden="true" /> 回家园</button>
         </header>
@@ -299,7 +300,7 @@ export default function GamePark({
         </section>
 
         <section className="game-park-open-games" aria-label="动脑小游戏">
-          <header><Sparkles aria-hidden="true" /><div><h2>六项动脑挑战开放啦</h2><p>每个游戏都有连续小关卡，难度会一步一步增加。</p></div></header>
+          <header><Sparkles aria-hidden="true" /><div><h2>七项动脑挑战开放啦</h2><p>既有连续闯关，也有适合反复挑战的轻松比赛。</p></div></header>
           <div className="game-park-open-grid">
             <article className="game-park-choice courier">
               <div className="game-park-choice-art" aria-hidden="true">
@@ -397,6 +398,22 @@ export default function GamePark({
                 </button>
               </div>
             </article>
+            <article className="game-park-choice race">
+              <div className="game-park-choice-art" aria-hidden="true">
+                <Trophy />
+                <span>🏁</span><span>🐇</span><span>加速！</span>
+                <img src={`${ASSET}/characters/turtle/turtle_idle_standing.png`} alt="" />
+              </div>
+              <div>
+                <small>手速与坚持游戏</small>
+                <h3>龟兔赛跑</h3>
+                <p>灰兔会慢慢向前跑，直接连续点击龟龟；点得越快，龟龟爬得越快。</p>
+                <ul><li>双方同时从起点出发</li><li>连点形成加速</li><li>本局重赛不重复扣票</li></ul>
+                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("tortoise-race")}>
+                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                </button>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -467,6 +484,16 @@ export default function GamePark({
         turtleName={turtleName}
         onBack={() => setActiveGame(null)}
         onComplete={(detail) => onLearningGameComplete({ game: "turtle-sky", detail })}
+      />
+    );
+  }
+
+  if (activeGame === "tortoise-race") {
+    return (
+      <TortoiseRaceGame
+        turtleName={turtleName}
+        onBack={() => setActiveGame(null)}
+        onComplete={(detail) => onLearningGameComplete({ game: "tortoise-race", detail })}
       />
     );
   }
