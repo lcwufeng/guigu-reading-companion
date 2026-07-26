@@ -323,6 +323,13 @@ export const SCHEMA_STATEMENTS = [
     PRIMARY KEY (user_id, date_key, game_id)
   )`,
   "CREATE INDEX IF NOT EXISTS user_minigame_daily_user_date_idx ON user_minigame_daily(user_id, date_key DESC)",
+  `CREATE TABLE IF NOT EXISTS user_minigame_progress (
+    user_id TEXT NOT NULL,
+    game_id TEXT NOT NULL,
+    completed_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, game_id)
+  )`,
+  "CREATE INDEX IF NOT EXISTS user_minigame_progress_user_date_idx ON user_minigame_progress(user_id, completed_at)",
   `CREATE TABLE IF NOT EXISTS user_chat_messages (
     user_id TEXT NOT NULL,
     message_id TEXT NOT NULL,

@@ -34,6 +34,7 @@ import { chapterKnowledge } from "./book-knowledge";
 import { chapterPrompts, type ChapterPrompt } from "./book-prompts";
 import classicBookManifest from "./classic-books-manifest.json";
 import GamePark, {
+  GAME_PARK_ORDER,
   type FruitCatchDailyState,
   type FruitCatchResult,
   type GameParkGameId,
@@ -154,6 +155,7 @@ type GameState = {
   fruitPicking: DailyFruitPicking;
   hideAndSeekDaily: DailyHideAndSeek;
   fruitCatchDaily: FruitCatchDailyState;
+  completedMiniGames: GameParkGameId[];
   readingFontSize: ReadingFontSize;
 };
 
@@ -365,6 +367,7 @@ const initialState: GameState = {
   fruitPicking: { dateKey: "", picked: 0 },
   hideAndSeekDaily: { dateKey: "", completed: 0 },
   fruitCatchDaily: { dateKey: "", plays: 0, rewarded: false, bestScore: 0, totalCaught: 0 },
+  completedMiniGames: [],
   readingFontSize: "medium",
 };
 
@@ -1393,6 +1396,9 @@ export default function ReadingApp({
           bestScore: Math.max(daily.bestScore, result.score),
           totalCaught: daily.totalCaught + result.caught,
         },
+        completedMiniGames: result.success
+          ? [...new Set([...current.completedMiniGames, "fruit-catch" as const])]
+          : current.completedMiniGames,
       };
     });
     showToast(result.success
@@ -1415,7 +1421,11 @@ export default function ReadingApp({
       "turtle-sky": "龟龟飞机大战",
       "tortoise-race": "龟兔赛跑",
     }[result.game];
-    setGame((current) => ({ ...current, boredom: clamp(current.boredom - 6) }));
+    setGame((current) => ({
+      ...current,
+      boredom: clamp(current.boredom - 6),
+      completedMiniGames: [...new Set([...current.completedMiniGames, result.game])],
+    }));
     showToast(`${activity}挑战完成，龟龟又学会了一项新本领！`);
     void remember({ type: "activity", activity, detail: result.detail });
   }, [remember, showToast]);
@@ -1522,6 +1532,9 @@ export default function ReadingApp({
               boredom: clamp((parsed.boredom ?? initialState.boredom) + hours * 2),
               readingRewards: Array.isArray(parsed.readingRewards)
                 ? [...new Set(parsed.readingRewards.filter((key): key is string => typeof key === "string" && key.startsWith("chapter:")))]
+                : [],
+              completedMiniGames: Array.isArray(parsed.completedMiniGames)
+                ? [...new Set(parsed.completedMiniGames.filter((gameId): gameId is GameParkGameId => GAME_PARK_ORDER.includes(gameId as GameParkGameId)))]
                 : [],
               readingFontSize: isReadingFontSize(parsed.readingFontSize) ? parsed.readingFontSize : "medium",
               lastSeen: Date.now(),
@@ -2929,6 +2942,7 @@ export default function ReadingApp({
               turtleName={game.name}
               daily={fruitCatchDaily}
               playTickets={game.playTickets}
+              completedGames={game.completedMiniGames}
               onBackHome={() => navigateTo("home")}
               onRoundComplete={completeFruitCatchRound}
               onLearningGameComplete={completeLearningMiniGame}

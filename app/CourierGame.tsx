@@ -211,10 +211,12 @@ function roadStyle(road: Road) {
 export default function CourierGame({
   turtleName,
   onBack,
+  onMistake,
   onComplete,
 }: {
   turtleName: string;
   onBack: () => void;
+  onMistake: () => void;
   onComplete: (detail: string) => void;
 }) {
   const [missionIndex, setMissionIndex] = useState(0);
@@ -243,6 +245,7 @@ export default function CourierGame({
     if (solved || allComplete || stopId === currentStop.id) return;
     const road = roadBetween(currentStop.id, stopId);
     if (!road) {
+      onMistake();
       setFeedback("这里没有直达道路，请选择有道路相连的地点。");
       return;
     }
@@ -264,6 +267,7 @@ export default function CourierGame({
   const checkRoute = () => {
     setAttempts((current) => current + 1);
     if (deliveredCount < mission.required.length) {
+      onMistake();
       const missing = mission.required
         .filter((id) => !delivered.has(id))
         .map((id) => stopById.get(id)?.label)
@@ -275,10 +279,12 @@ export default function CourierGame({
       return;
     }
     if (mission.returnToPost && currentStop.id !== "post") {
+      onMistake();
       setFeedback("包裹都送到了，但这关还要回到快递站才算完成。");
       return;
     }
     if (distance !== optimalDistance) {
+      onMistake();
       setFeedback(`包裹都送到了，不过走了 ${distance} 格；最短只要 ${optimalDistance} 格。试试换个顺序。`);
       return;
     }

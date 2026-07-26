@@ -343,6 +343,24 @@
 .game-park-ticket-balance span { display: block; font-size: 17px; font-weight: 750; margin-top: 2px; }
 .game-park-ticket-notice { align-items: center; background: #fff0d6; border: 2px solid #d49b53; border-radius: 12px; color: #7f4e23; display: flex; font-size: 17px; font-weight: 850; gap: 7px; margin: 9px 0 0; padding: 10px 13px; }
 .game-park-ticket-notice svg { flex: 0 0 auto; height: 20px; width: 20px; }
+.game-unlock-progress {
+  align-items: center;
+  background: rgba(255, 248, 215, 0.92);
+  border: 2px solid #d2a54f;
+  border-radius: 15px;
+  color: #6c4c22;
+  display: grid;
+  gap: 5px 12px;
+  grid-template-columns: 30px auto minmax(150px, 1fr) auto;
+  margin-top: 10px;
+  padding: 10px 14px;
+}
+.game-unlock-progress > svg { color: #e2a51d; height: 27px; width: 27px; }
+.game-unlock-progress span { font-size: 17px; font-weight: 850; }
+.game-unlock-progress strong { color: #4f7435; font-size: 22px; margin-left: 7px; }
+.game-unlock-progress > i { background: #e5dcb8; border-radius: 999px; height: 11px; overflow: hidden; }
+.game-unlock-progress > i > b { background: linear-gradient(90deg, #7bb44d, #f1b732); border-radius: inherit; display: block; height: 100%; }
+.game-unlock-progress em { color: #57743e; font-size: 16px; font-style: normal; font-weight: 900; }
 
 .game-park-featured {
   background: linear-gradient(135deg, #dff2b9, #fff1a9 64%, #ffe0a5);
@@ -420,6 +438,23 @@
   overflow: hidden;
   padding: 18px;
 }
+.game-park-choice.locked { filter: grayscale(0.5); opacity: 0.68; }
+.game-park-choice.locked .game-park-choice-art::after {
+  align-items: center;
+  background: rgba(255, 250, 225, 0.9);
+  border: 2px solid #8d846c;
+  border-radius: 999px;
+  color: #665c48;
+  content: "🔒 尚未解锁";
+  display: flex;
+  font-size: 18px;
+  font-weight: 950;
+  inset: auto 12% 10%;
+  justify-content: center;
+  min-height: 42px;
+  position: absolute;
+  z-index: 5;
+}
 .game-park-choice.courier { background: linear-gradient(135deg, #e2f1c4, #fff5c6); border-color: #7da45a; }
 .game-park-choice.weather { background: linear-gradient(135deg, #d9f1f5, #fff1b7); border-color: #6da8aa; }
 .game-park-choice.lotus { background: linear-gradient(135deg, #d9f2dc, #d7f0ed); border-color: #5c9c73; }
@@ -466,6 +501,79 @@
   width: min(100%, 260px);
 }
 .game-park-choice button svg { height: 19px; width: 19px; }
+
+.game-challenge-shell { min-height: 100%; position: relative; }
+.game-challenge-health {
+  align-items: center;
+  background: rgba(255, 248, 220, 0.98);
+  border: 3px solid #c99343;
+  border-radius: 15px;
+  box-shadow: 0 5px 0 rgba(91, 64, 27, 0.2);
+  color: #69491e;
+  display: grid;
+  gap: 1px 9px;
+  grid-template-columns: auto auto;
+  padding: 8px 13px;
+  position: absolute;
+  right: clamp(165px, 14vw, 210px);
+  top: 19px;
+  z-index: 30;
+}
+.game-challenge-health > span { align-items: center; display: flex; font-size: 15px; font-weight: 900; gap: 5px; }
+.game-challenge-health > span svg { height: 17px; width: 17px; }
+.game-challenge-health > strong { display: flex; gap: 3px; grid-row: 1 / 3; grid-column: 2; }
+.game-challenge-health > strong svg { color: #c6b69a; height: 25px; width: 25px; }
+.game-challenge-health > strong svg.filled { color: #e36559; fill: currentColor; }
+.game-challenge-health > small { color: #836d4d; font-size: 13px; font-weight: 850; }
+.game-challenge-health.empty { background: #fff0d7; border-color: #c87850; }
+.game-heart-notice {
+  background: #fff0d5;
+  border: 3px solid #d1844e;
+  border-radius: 14px;
+  box-shadow: 0 5px 0 rgba(117, 66, 34, 0.19);
+  color: #853f2c;
+  font-size: 19px;
+  font-weight: 950;
+  left: 50%;
+  padding: 9px 18px;
+  position: fixed;
+  top: 106px;
+  transform: translateX(-50%);
+  z-index: 45;
+}
+.game-challenge-failed {
+  align-items: center;
+  background: linear-gradient(145deg, #fff7d8, #ffe5c4);
+  border: 4px solid #bd7949;
+  border-radius: 25px;
+  box-shadow: inset 0 0 0 5px rgba(255,255,255,0.55), 0 10px 0 rgba(93, 57, 33, 0.2);
+  display: grid;
+  gap: clamp(20px, 4vw, 55px);
+  grid-template-columns: minmax(190px, 0.6fr) minmax(320px, 1.4fr);
+  margin: clamp(30px, 8vh, 100px) auto;
+  max-width: 940px;
+  min-height: 440px;
+  padding: clamp(28px, 5vw, 68px);
+}
+.game-challenge-failed > img { filter: drop-shadow(0 8px 5px rgba(72, 55, 34, 0.22)); max-height: 280px; object-fit: contain; width: 100%; }
+.game-challenge-failed small { color: #a05a31; font-size: 19px; font-weight: 950; }
+.game-challenge-failed h2 { color: #563417; font-size: clamp(35px, 4vw, 52px); margin: 4px 0 10px; }
+.game-challenge-failed p { color: #715338; font-size: 21px; font-weight: 760; line-height: 1.65; }
+.game-challenge-failed > div > div { display: flex; flex-wrap: wrap; gap: 11px; }
+.game-challenge-failed button {
+  background: linear-gradient(#79b954, #4d9439);
+  border: 2px solid #386c2e;
+  border-radius: 12px;
+  box-shadow: 0 4px 0 #2f6128;
+  color: white;
+  cursor: pointer;
+  font-size: 19px;
+  font-weight: 950;
+  min-height: 51px;
+  padding: 9px 17px;
+}
+.game-challenge-failed button:nth-child(2) { background: #fff5d4; border-color: #af834b; box-shadow: 0 4px 0 #936a3d; color: #68451f; }
+.game-challenge-failed button:disabled { cursor: not-allowed; filter: grayscale(0.6); opacity: 0.62; }
 
 .game-park-coming { margin-top: 30px; }
 .game-park-coming > header { align-items: center; color: #5d7c41; display: flex; gap: 10px; }
@@ -1121,6 +1229,7 @@
   min-height: 530px;
   overflow: hidden;
   position: relative;
+  touch-action: none;
 }
 .flight-cloud-scenery i { color: rgba(255, 255, 255, 0.62); filter: drop-shadow(0 3px 0 rgba(79, 140, 171, 0.15)); font-size: 92px; font-style: normal; line-height: 1; position: absolute; }
 .flight-cloud-scenery i:nth-child(1) { left: 7%; top: 4%; }
@@ -1128,11 +1237,9 @@
 .flight-cloud-scenery i:nth-child(3) { left: 35%; top: 74%; transform: scale(0.72); }
 .flight-lanes { inset: 0; position: absolute; }
 .flight-lanes i { border-top: 2px dashed rgba(255, 255, 255, 0.27); left: 3%; position: absolute; right: 3%; }
-.flight-lanes i:nth-child(1) { top: 10%; }
-.flight-lanes i:nth-child(2) { top: 30%; }
-.flight-lanes i:nth-child(3) { top: 50%; }
-.flight-lanes i:nth-child(4) { top: 70%; }
-.flight-lanes i:nth-child(5) { top: 90%; }
+.flight-lanes i:nth-child(1) { top: 18%; }
+.flight-lanes i:nth-child(2) { top: 50%; }
+.flight-lanes i:nth-child(3) { top: 82%; }
 .flight-object {
   filter: drop-shadow(0 4px 3px rgba(45, 73, 85, 0.25));
   font-size: 46px;
@@ -1220,6 +1327,21 @@
 }
 .flight-controls button:disabled { cursor: default; opacity: 0.45; }
 .flight-controls svg { height: 22px; width: 22px; }
+.flight-pointer-guide {
+  align-items: center;
+  background: #e6f3d1;
+  border: 2px solid #8eaf67;
+  border-radius: 12px;
+  color: #4d7138;
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 11px 12px;
+}
+.flight-pointer-guide > svg { flex: 0 0 auto; height: 29px; width: 29px; }
+.flight-pointer-guide span { display: grid; gap: 1px; }
+.flight-pointer-guide strong { font-size: 18px; }
+.flight-pointer-guide small { color: #678050; font-size: 15px; font-weight: 750; }
 
 /* 龟兔赛跑 */
 .race-game-layout {
@@ -1714,6 +1836,24 @@
   .flight-overlay p { font-size: 18px; }
   .flight-overlay button { margin-inline: auto; width: 100%; }
   .flight-controls button { font-size: 18px; }
+
+  .game-unlock-progress { grid-template-columns: 27px 1fr auto; }
+  .game-unlock-progress > i { grid-column: 1 / -1; }
+  .game-unlock-progress em { font-size: 14px; }
+  .game-challenge-health {
+    margin: 8px auto 0;
+    position: relative;
+    right: auto;
+    top: auto;
+    width: min(calc(100% - 24px), 390px);
+    z-index: 30;
+  }
+  .game-heart-notice { font-size: 17px; max-width: calc(100% - 24px); text-align: center; top: 86px; width: max-content; }
+  .game-challenge-failed { grid-template-columns: 1fr; margin: 18px 10px; min-height: 0; padding: 24px 19px; text-align: center; }
+  .game-challenge-failed > img { margin: auto; max-height: 170px; width: 190px; }
+  .game-challenge-failed p { font-size: 19px; }
+  .game-challenge-failed > div > div { justify-content: center; }
+  .game-challenge-failed button { flex: 1 1 190px; }
 
   .race-track { border-radius: 17px; border-width: 3px; height: 480px; min-height: 480px; }
   .rabbit-runner { height: 78px; width: 78px; }

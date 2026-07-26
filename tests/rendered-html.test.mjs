@@ -280,6 +280,11 @@ test("provides eight responsive turtle games with progressive learning challenge
   assert.match(gamePark, /每进入一个游戏消耗 1 张/);
   assert.match(gamePark, /onSpendPlayTicket/);
   assert.match(gamePark, /playTickets < 1/);
+  assert.match(gamePark, /GAME_PARK_ORDER/);
+  assert.match(gamePark, /completedGames/);
+  assert.match(gamePark, /challengeHeartsRef\.current > 0/);
+  assert.match(gamePark, /再选错一次会失败/);
+  assert.match(gamePark, /使用 1 张票重新挑战/);
   assert.match(gamePark, /ui\/icons\/play-ticket-pixel\.png/);
   assert.match(courierGame, /missionOptimalDistance/);
   assert.match(courierGame, /current\.progress === completedProgress/);
@@ -309,11 +314,13 @@ test("provides eight responsive turtle games with progressive learning challenge
   assert.match(storyGame, /起因、经过、转折和结果/);
   assert.match(storyGame, /turtle_reading\.png/);
   assert.match(storyGame, /龟龟提示/);
-  assert.equal((flightGame.match(/id: "(?:sunny-training|cloud-valley|wind-corridor|starlight-sky)"/g) || []).length, 4);
+  assert.equal((flightGame.match(/id: "(?:sunny-training|cloud-valley|wind-corridor)"/g) || []).length, 3);
   assert.match(flightGame, /event\.key === "ArrowUp"/);
+  assert.match(flightGame, /onPointerMove=\{moveFromPointer\}/);
+  assert.match(flightGame, /Math\.floor\(pointerY \/ bounds\.height \* 3\)/);
   assert.match(flightGame, /避开乌云/);
   assert.match(flightGame, /turtle_excited\.png/);
-  assert.match(flightGame, /不会出现攻击或击毁画面/);
+  assert.match(flightGame, /鼠标跟随控制/);
   assert.match(raceGame, /RABBIT_STEP = 0\.18/);
   assert.match(raceGame, /current\.lastTapAt <= 430/);
   assert.match(raceGame, /点击越快，龟龟爬得越快/);
@@ -322,6 +329,7 @@ test("provides eight responsive turtle games with progressive learning challenge
   assert.match(raceGame, /turtle_idle_standing\.png/);
   assert.match(raceGame, /不用再花游玩票/);
   assert.match(readingApp, /completeLearningMiniGame/);
+  assert.match(readingApp, /completedMiniGames/);
   assert.match(readingApp, /"lotus-jump": "荷叶跳跳"/);
   assert.match(readingApp, /"spot-difference": "龟龟找不同"/);
   assert.match(readingApp, /"story-puzzle": "拼故事"/);
@@ -339,6 +347,8 @@ test("provides eight responsive turtle games with progressive learning challenge
   assert.match(styles, /\.difference-scenes/);
   assert.match(styles, /\.story-game-layout/);
   assert.match(styles, /\.flight-game-layout/);
+  assert.match(styles, /\.game-challenge-health/);
+  assert.match(styles, /\.game-park-choice\.locked/);
   assert.match(styles, /\.race-game-layout/);
   assert.match(styles, /\.wallet-play-ticket img \{[\s\S]*image-rendering: pixelated/);
   assert.match(styles, /\.game-park-choice p \{[^}]*font-size: 20px;/);
@@ -360,8 +370,10 @@ test("provides eight responsive turtle games with progressive learning challenge
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.flight-sky/);
   assert.match(styles, /@media \(max-width: 820px\) \{[\s\S]*\.race-track/);
   assert.match(userState, /user_minigame_daily/);
+  assert.match(userState, /user_minigame_progress/);
   assert.match(userState, /user_play_ticket_wallet/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS user_minigame_daily/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS user_minigame_progress/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS user_play_ticket_wallet/);
 });
 

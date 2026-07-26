@@ -392,6 +392,15 @@ export const userMinigameDaily = sqliteTable("user_minigame_daily", {
   index("user_minigame_daily_user_date_idx").on(table.userId, table.dateKey),
 ]);
 
+export const userMinigameProgress = sqliteTable("user_minigame_progress", {
+  userId: text("user_id").notNull(),
+  gameId: text("game_id").notNull(),
+  completedAt: integer("completed_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.gameId] }),
+  index("user_minigame_progress_user_date_idx").on(table.userId, table.completedAt),
+]);
+
 export const userChatMessages = sqliteTable("user_chat_messages", {
   userId: text("user_id").notNull(),
   messageId: text("message_id").notNull(),

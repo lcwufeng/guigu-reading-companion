@@ -115,10 +115,12 @@ const itemById = new Map(items.map((item) => [item.id, item]));
 export default function WeatherOutfitGame({
   turtleName,
   onBack,
+  onMistake,
   onComplete,
 }: {
   turtleName: string;
   onBack: () => void;
+  onMistake: () => void;
   onComplete: (detail: string) => void;
 }) {
   const [challengeIndex, setChallengeIndex] = useState(0);
@@ -148,10 +150,12 @@ export default function WeatherOutfitGame({
     const missing = challenge.required.filter((id) => !selectedSet.has(id));
     const unsuitable = challenge.avoid.filter((id) => selectedSet.has(id));
     if (missing.length) {
+      onMistake();
       setFeedback(`还要想想：${missing.map((id) => itemById.get(id)?.label).join("、")}能解决天气或行程中的什么问题？`);
       return;
     }
     if (unsuitable.length) {
+      onMistake();
       setFeedback(`${unsuitable.map((id) => itemById.get(id)?.label).join("、")}不适合这次天气，带得太多也会增加负担。`);
       return;
     }

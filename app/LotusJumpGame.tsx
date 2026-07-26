@@ -136,10 +136,12 @@ const levels: LotusLevel[] = [
 export default function LotusJumpGame({
   turtleName,
   onBack,
+  onMistake,
   onComplete,
 }: {
   turtleName: string;
   onBack: () => void;
+  onMistake: () => void;
   onComplete: (detail: string) => void;
 }) {
   const [levelIndex, setLevelIndex] = useState(0);
@@ -157,6 +159,7 @@ export default function LotusJumpGame({
     if (completed || allComplete) return;
     const expectedOrder = step + 1;
     if (pad.order !== expectedOrder) {
+      onMistake();
       setWrongJumps((current) => current + 1);
       setFeedback("这片荷叶还不是下一步。看看规律，再选一次。");
       return;

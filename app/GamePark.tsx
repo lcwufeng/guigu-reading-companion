@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element -- The game reuses the project's local pixel-art assets. */
 "use client";
 
-import { BookOpen, ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Lock, Map, Plane, Search, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { BookOpen, ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Heart, Lock, Map, Plane, Search, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import CourierGame from "./CourierGame";
 import LotusJumpGame from "./LotusJumpGame";
 import SpotDifferenceGame from "./SpotDifferenceGame";
@@ -40,6 +40,28 @@ export type LearningMiniGameResult = {
 };
 
 export type GameParkGameId = "fruit-catch" | LearningMiniGameResult["game"];
+
+export const GAME_PARK_ORDER: GameParkGameId[] = [
+  "fruit-catch",
+  "turtle-courier",
+  "weather-outfit",
+  "lotus-jump",
+  "spot-difference",
+  "story-puzzle",
+  "turtle-sky",
+  "tortoise-race",
+];
+
+const GAME_NAMES: Record<GameParkGameId, string> = {
+  "fruit-catch": "龟龟接果子",
+  "turtle-courier": "乌龟快递员",
+  "weather-outfit": "天气穿搭",
+  "lotus-jump": "荷叶跳跳",
+  "spot-difference": "龟龟找不同",
+  "story-puzzle": "拼故事",
+  "turtle-sky": "龟龟飞机大战",
+  "tortoise-race": "龟兔赛跑",
+};
 
 type FruitKind = "orange" | "red" | "blue";
 type FruitDrop = {
@@ -107,6 +129,7 @@ export default function GamePark({
   turtleName,
   daily,
   playTickets,
+  completedGames,
   onBackHome,
   onRoundComplete,
   onLearningGameComplete,
@@ -116,6 +139,7 @@ export default function GamePark({
   turtleName: string;
   daily: FruitCatchDailyState;
   playTickets: number;
+  completedGames: GameParkGameId[];
   onBackHome: () => void;
   onRoundComplete: (result: FruitCatchResult) => void;
   onLearningGameComplete: (result: LearningMiniGameResult) => void;
@@ -126,8 +150,48 @@ export default function GamePark({
   const [run, setRun] = useState<FruitCatchRun>(() => initialRun());
   const [earnedRewardThisRound, setEarnedRewardThisRound] = useState(false);
   const [ticketNotice, setTicketNotice] = useState("");
+  const [challengeHearts, setChallengeHearts] = useState(3);
+  const [challengeFailed, setChallengeFailed] = useState(false);
+  const [challengeRunKey, setChallengeRunKey] = useState(0);
+  const [heartNotice, setHeartNotice] = useState("");
   const fieldRef = useRef<HTMLDivElement | null>(null);
   const reportedResultRef = useRef(false);
+  const challengeHeartsRef = useRef(3);
+
+  const completedSet = useMemo(() => new Set(completedGames), [completedGames]);
+  const unlockedCount = GAME_PARK_ORDER.filter((gameId, index) => index === 0 || completedSet.has(GAME_PARK_ORDER[index - 1])).length;
+  const isGameUnlocked = (gameId: GameParkGameId) => {
+    const index = GAME_PARK_ORDER.indexOf(gameId);
+    return index <= 0 || completedSet.has(GAME_PARK_ORDER[index - 1]);
+  };
+  const previousGameName = (gameId: GameParkGameId) => {
+    const index = GAME_PARK_ORDER.indexOf(gameId);
+    return index > 0 ? GAME_NAMES[GAME_PARK_ORDER[index - 1]] : "";
+  };
+  const gameButtonLabel = (gameId: GameParkGameId) => {
+    if (!isGameUnlocked(gameId)) return `先通关${previousGameName(gameId)}`;
+    if (playTickets < 1) return "需要 1 张游玩票";
+    return completedSet.has(gameId) ? "使用 1 张票再玩" : "使用 1 张游玩票开始";
+  };
+
+  const resetChallenge = () => {
+    challengeHeartsRef.current = 3;
+    setChallengeHearts(3);
+    setChallengeFailed(false);
+    setHeartNotice("");
+  };
+
+  const registerMistake = () => {
+    if (challengeHeartsRef.current > 0) {
+      const next = challengeHeartsRef.current - 1;
+      challengeHeartsRef.current = next;
+      setChallengeHearts(next);
+      setHeartNotice(next > 0 ? `选错了，少掉 1 颗爱心，还剩 ${next} 颗` : "爱心用完啦，再选错一次挑战就会失败");
+      return;
+    }
+    setHeartNotice("");
+    setChallengeFailed(true);
+  };
 
   const secondsLeft = Math.max(0, Math.ceil((ROUND_DURATION_MS - run.elapsedMs) / 1000));
   const progress = Math.min(100, (run.score / FRUIT_CATCH_TARGET_SCORE) * 100);
@@ -143,6 +207,12 @@ export default function GamePark({
     onPlayingChange(activeGame === "fruit-catch" ? run.phase === "playing" : activeGame !== null);
     return () => onPlayingChange(false);
   }, [activeGame, onPlayingChange, run.phase]);
+
+  useEffect(() => {
+    if (!heartNotice) return;
+    const timer = window.setTimeout(() => setHeartNotice(""), 2_200);
+    return () => window.clearTimeout(timer);
+  }, [heartNotice]);
 
   useEffect(() => {
     if (run.phase !== "playing") return;
@@ -233,12 +303,18 @@ export default function GamePark({
   };
 
   const openTicketedGame = (game: GameParkGameId) => {
+    if (!isGameUnlocked(game)) {
+      setTicketNotice(`先通关“${previousGameName(game)}”，就能解锁“${GAME_NAMES[game]}”。`);
+      return;
+    }
     if (playTickets < 1) {
       setTicketNotice("游玩票用完啦。完成阅读、旅行或错题复习，就能获得新的游玩票。");
       return;
     }
     onSpendPlayTicket(game);
     setTicketNotice("");
+    resetChallenge();
+    setChallengeRunKey((current) => current + 1);
     if (game === "fruit-catch") setRun(initialRun());
     setActiveGame(game);
   };
@@ -246,8 +322,55 @@ export default function GamePark({
   const replayFruitCatch = () => {
     if (playTickets < 1) return;
     onSpendPlayTicket("fruit-catch");
+    resetChallenge();
     startRound();
   };
+
+  const retryFailedChallenge = () => {
+    if (!activeGame || playTickets < 1) {
+      setTicketNotice("游玩票用完啦。返回乐园完成阅读、旅行或错题复习，就能获得新的游玩票。");
+      return;
+    }
+    onSpendPlayTicket(activeGame);
+    resetChallenge();
+    setChallengeRunKey((current) => current + 1);
+  };
+
+  const leaveChallenge = () => {
+    resetChallenge();
+    setActiveGame(null);
+  };
+
+  const challengeFrame = (content: ReactNode) => (
+    <div className="game-challenge-shell">
+      <div className={`game-challenge-health ${challengeHearts === 0 ? "empty" : ""}`} aria-live="polite">
+        <span><Heart aria-hidden="true" /> 1 张游玩票的生命</span>
+        <strong aria-label={`还剩${challengeHearts}颗爱心`}>
+          {[0, 1, 2].map((index) => <Heart key={index} className={index < challengeHearts ? "filled" : ""} aria-hidden="true" />)}
+        </strong>
+        <small>{challengeHearts > 0 ? "选错一次少 1 颗" : "再选错一次会失败"}</small>
+      </div>
+      {heartNotice && !challengeFailed && <div className="game-heart-notice" role="status">{heartNotice}</div>}
+      {!challengeFailed && content}
+      {challengeFailed && (
+        <section className="game-challenge-failed" role="dialog" aria-label="本次挑战失败">
+          <img src={`${ASSET}/characters/turtle/turtle_thinking.png`} alt={`${turtleName}准备重新挑战`} />
+          <div>
+            <small>本次挑战结束</small>
+            <h2>爱心用完后又选错了一次</h2>
+            <p>没关系，刚才的尝试已经帮助你发现容易出错的地方。再使用 1 张游玩票，就会重新得到 3 颗爱心。</p>
+            <div>
+              <button type="button" disabled={playTickets < 1} onClick={retryFailedChallenge}>
+                {playTickets < 1 ? "游玩票不足" : "使用 1 张票重新挑战"}
+              </button>
+              <button type="button" onClick={leaveChallenge}>返回乐园</button>
+            </div>
+            {ticketNotice && <p className="game-park-ticket-notice"><Lock aria-hidden="true" /> {ticketNotice}</p>}
+          </div>
+        </section>
+      )}
+    </div>
+  );
 
   if (!activeGame) {
     return (
@@ -256,7 +379,7 @@ export default function GamePark({
           <div>
             <span><Gamepad2 aria-hidden="true" /> 龟龟乐园</span>
             <h1>和{turtleName}一起玩，也一起动脑</h1>
-            <p>八种小游戏，练反应、路线、生活判断、故事表达和细致观察。</p>
+            <p>从第一个游戏开始逐个通关；完成前一项，下一项就会自动解锁。</p>
           </div>
           <button type="button" onClick={onBackHome}><ChevronLeft aria-hidden="true" /> 回家园</button>
         </header>
@@ -264,6 +387,12 @@ export default function GamePark({
         <div className={`game-park-ticket-balance ${playTickets < 1 ? "empty" : ""}`} role="status">
           <img src={`${ASSET}/ui/icons/play-ticket-pixel.png`} alt="" />
           <div><strong>游玩票 × {playTickets}</strong><span>每进入一个游戏消耗 1 张；阅读、旅行和错题复习都能获得。</span></div>
+        </div>
+        <div className="game-unlock-progress" aria-label={`已通关${completedSet.size}个游戏，已解锁${unlockedCount}个游戏`}>
+          <Trophy aria-hidden="true" />
+          <span>闯关进度<strong>{Math.min(completedSet.size, GAME_PARK_ORDER.length)} / {GAME_PARK_ORDER.length}</strong></span>
+          <i><b style={{ width: `${Math.min(100, completedSet.size / GAME_PARK_ORDER.length * 100)}%` }} /></i>
+          <em>已解锁 {unlockedCount} 个</em>
         </div>
         {ticketNotice && <p className="game-park-ticket-notice"><Lock aria-hidden="true" /> {ticketNotice}</p>}
 
@@ -294,15 +423,15 @@ export default function GamePark({
               disabled={playTickets < 1}
               onClick={() => openTicketedGame("fruit-catch")}
             >
-              {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+              {gameButtonLabel("fruit-catch")} <ChevronRight aria-hidden="true" />
             </button>
           </div>
         </section>
 
         <section className="game-park-open-games" aria-label="动脑小游戏">
-          <header><Sparkles aria-hidden="true" /><div><h2>七项动脑挑战开放啦</h2><p>既有连续闯关，也有适合反复挑战的轻松比赛。</p></div></header>
+          <header><Sparkles aria-hidden="true" /><div><h2>沿着游戏路线继续闯关</h2><p>灰色项目还没有解锁；先完成它前面的游戏吧。</p></div></header>
           <div className="game-park-open-grid">
-            <article className="game-park-choice courier">
+            <article className={`game-park-choice courier ${isGameUnlocked("turtle-courier") ? "" : "locked"}`}>
               <div className="game-park-choice-art" aria-hidden="true">
                 <Map />
                 <span>📦</span><span>🏫</span><span>🏥</span>
@@ -313,12 +442,12 @@ export default function GamePark({
                 <h3>乌龟快递员</h3>
                 <p>看清道路和距离，安排送件顺序，帮助龟龟找到真正的最短路线。</p>
                 <ul><li>点击相邻地点前进</li><li>送完所有包裹</li><li>和最短距离比一比</li></ul>
-                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("turtle-courier")}>
-                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                <button type="button" disabled={playTickets < 1 || !isGameUnlocked("turtle-courier")} onClick={() => openTicketedGame("turtle-courier")}>
+                  {gameButtonLabel("turtle-courier")} {isGameUnlocked("turtle-courier") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
               </div>
             </article>
-            <article className="game-park-choice weather">
+            <article className={`game-park-choice weather ${isGameUnlocked("weather-outfit") ? "" : "locked"}`}>
               <div className="game-park-choice-art" aria-hidden="true">
                 <CloudSun />
                 <span>☀️</span><span>🌧️</span><span>❄️</span>
@@ -329,12 +458,12 @@ export default function GamePark({
                 <h3>天气穿搭</h3>
                 <p>根据温度、降雨、风力和行程，为龟龟选择衣服与旅行用品。</p>
                 <ul><li>先读天气任务</li><li>衣服用品都要选</li><li>合适就好，不是越多越好</li></ul>
-                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("weather-outfit")}>
-                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                <button type="button" disabled={playTickets < 1 || !isGameUnlocked("weather-outfit")} onClick={() => openTicketedGame("weather-outfit")}>
+                  {gameButtonLabel("weather-outfit")} {isGameUnlocked("weather-outfit") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
               </div>
             </article>
-            <article className="game-park-choice lotus">
+            <article className={`game-park-choice lotus ${isGameUnlocked("lotus-jump") ? "" : "locked"}`}>
               <div className="game-park-choice-art" aria-hidden="true">
                 <Waves />
                 <span>1</span><span>3</span><span>5</span>
@@ -345,12 +474,12 @@ export default function GamePark({
                 <h3>荷叶跳跳</h3>
                 <p>观察数字和算式的规律，带龟龟按正确顺序跳过六片池塘。</p>
                 <ul><li>数字顺序与奇偶</li><li>倍数和算式</li><li>递推规律挑战</li></ul>
-                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("lotus-jump")}>
-                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                <button type="button" disabled={playTickets < 1 || !isGameUnlocked("lotus-jump")} onClick={() => openTicketedGame("lotus-jump")}>
+                  {gameButtonLabel("lotus-jump")} {isGameUnlocked("lotus-jump") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
               </div>
             </article>
-            <article className="game-park-choice difference">
+            <article className={`game-park-choice difference ${isGameUnlocked("spot-difference") ? "" : "locked"}`}>
               <div className="game-park-choice-art" aria-hidden="true">
                 <Search />
                 <span>🌸</span><span>🌼</span><span>🔎</span>
@@ -361,12 +490,12 @@ export default function GamePark({
                 <h3>龟龟找不同</h3>
                 <p>比较两幅龟龟场景，找出颜色、数量、形状和位置的变化。</p>
                 <ul><li>四幅不同场景</li><li>每关逐步加难</li><li>找不到可请龟龟提示</li></ul>
-                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("spot-difference")}>
-                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                <button type="button" disabled={playTickets < 1 || !isGameUnlocked("spot-difference")} onClick={() => openTicketedGame("spot-difference")}>
+                  {gameButtonLabel("spot-difference")} {isGameUnlocked("spot-difference") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
               </div>
             </article>
-            <article className="game-park-choice story">
+            <article className={`game-park-choice story ${isGameUnlocked("story-puzzle") ? "" : "locked"}`}>
               <div className="game-park-choice-art" aria-hidden="true">
                 <BookOpen />
                 <span>①</span><span>②</span><span>③</span>
@@ -377,12 +506,12 @@ export default function GamePark({
                 <h3>拼故事</h3>
                 <p>读懂每张情节卡，按前因后果把故事拼完整，成为小小故事导演。</p>
                 <ul><li>五个原创小故事</li><li>由三步增加到六步</li><li>理解起因、经过和结果</li></ul>
-                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("story-puzzle")}>
-                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                <button type="button" disabled={playTickets < 1 || !isGameUnlocked("story-puzzle")} onClick={() => openTicketedGame("story-puzzle")}>
+                  {gameButtonLabel("story-puzzle")} {isGameUnlocked("story-puzzle") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
               </div>
             </article>
-            <article className="game-park-choice flight">
+            <article className={`game-park-choice flight ${isGameUnlocked("turtle-sky") ? "" : "locked"}`}>
               <div className="game-park-choice-art" aria-hidden="true">
                 <Plane />
                 <span>⭐</span><span>☁️</span><span>💛</span>
@@ -391,14 +520,14 @@ export default function GamePark({
               <div>
                 <small>反应与方向游戏</small>
                 <h3>龟龟飞机大战</h3>
-                <p>驾驶龟龟飞行器穿越云海，收集星星、避开乌云，挑战越来越快的航线。</p>
-                <ul><li>上下控制飞行航线</li><li>四关逐步加速</li><li>儿童友好的星光挑战</li></ul>
-                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("turtle-sky")}>
-                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                <p>移动鼠标或拖动手指驾驶龟龟飞行器，收集星星、轻松避开乌云。</p>
+                <ul><li>鼠标跟随控制</li><li>三关缓慢加速</li><li>儿童友好的星光挑战</li></ul>
+                <button type="button" disabled={playTickets < 1 || !isGameUnlocked("turtle-sky")} onClick={() => openTicketedGame("turtle-sky")}>
+                  {gameButtonLabel("turtle-sky")} {isGameUnlocked("turtle-sky") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
               </div>
             </article>
-            <article className="game-park-choice race">
+            <article className={`game-park-choice race ${isGameUnlocked("tortoise-race") ? "" : "locked"}`}>
               <div className="game-park-choice-art" aria-hidden="true">
                 <Trophy />
                 <span>🏁</span><span>🐇</span><span>加速！</span>
@@ -409,8 +538,8 @@ export default function GamePark({
                 <h3>龟兔赛跑</h3>
                 <p>灰兔会慢慢向前跑，直接连续点击龟龟；点得越快，龟龟爬得越快。</p>
                 <ul><li>双方同时从起点出发</li><li>连点形成加速</li><li>本局重赛不重复扣票</li></ul>
-                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("tortoise-race")}>
-                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                <button type="button" disabled={playTickets < 1 || !isGameUnlocked("tortoise-race")} onClick={() => openTicketedGame("tortoise-race")}>
+                  {gameButtonLabel("tortoise-race")} {isGameUnlocked("tortoise-race") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
               </div>
             </article>
@@ -429,76 +558,90 @@ export default function GamePark({
   }
 
   if (activeGame === "turtle-courier") {
-    return (
+    return challengeFrame(
       <CourierGame
+        key={challengeRunKey}
         turtleName={turtleName}
-        onBack={() => setActiveGame(null)}
+        onBack={leaveChallenge}
+        onMistake={registerMistake}
         onComplete={(detail) => onLearningGameComplete({ game: "turtle-courier", detail })}
       />
     );
   }
 
   if (activeGame === "weather-outfit") {
-    return (
+    return challengeFrame(
       <WeatherOutfitGame
+        key={challengeRunKey}
         turtleName={turtleName}
-        onBack={() => setActiveGame(null)}
+        onBack={leaveChallenge}
+        onMistake={registerMistake}
         onComplete={(detail) => onLearningGameComplete({ game: "weather-outfit", detail })}
       />
     );
   }
 
   if (activeGame === "lotus-jump") {
-    return (
+    return challengeFrame(
       <LotusJumpGame
+        key={challengeRunKey}
         turtleName={turtleName}
-        onBack={() => setActiveGame(null)}
+        onBack={leaveChallenge}
+        onMistake={registerMistake}
         onComplete={(detail) => onLearningGameComplete({ game: "lotus-jump", detail })}
       />
     );
   }
 
   if (activeGame === "spot-difference") {
-    return (
+    return challengeFrame(
       <SpotDifferenceGame
+        key={challengeRunKey}
         turtleName={turtleName}
-        onBack={() => setActiveGame(null)}
+        onBack={leaveChallenge}
+        onMistake={registerMistake}
         onComplete={(detail) => onLearningGameComplete({ game: "spot-difference", detail })}
       />
     );
   }
 
   if (activeGame === "story-puzzle") {
-    return (
+    return challengeFrame(
       <StoryPuzzleGame
+        key={challengeRunKey}
         turtleName={turtleName}
-        onBack={() => setActiveGame(null)}
+        onBack={leaveChallenge}
+        onMistake={registerMistake}
         onComplete={(detail) => onLearningGameComplete({ game: "story-puzzle", detail })}
       />
     );
   }
 
   if (activeGame === "turtle-sky") {
-    return (
+    return challengeFrame(
       <TurtleSkyGame
+        key={challengeRunKey}
         turtleName={turtleName}
-        onBack={() => setActiveGame(null)}
+        hearts={challengeHearts}
+        onBack={leaveChallenge}
+        onMistake={registerMistake}
         onComplete={(detail) => onLearningGameComplete({ game: "turtle-sky", detail })}
       />
     );
   }
 
   if (activeGame === "tortoise-race") {
-    return (
+    return challengeFrame(
       <TortoiseRaceGame
+        key={challengeRunKey}
         turtleName={turtleName}
-        onBack={() => setActiveGame(null)}
+        onBack={leaveChallenge}
         onComplete={(detail) => onLearningGameComplete({ game: "tortoise-race", detail })}
       />
     );
   }
 
-  return (
+  return challengeFrame(
     <section className="fruit-catch-panel">
       <header className="fruit-catch-heading">
         <div>
@@ -608,6 +751,6 @@ export default function GamePark({
         <p>跟着果子移动，让果篮接住它</p>
         <button type="button" onPointerDown={() => movePlayer(run.playerX + 10)} disabled={run.phase !== "playing"}>向右 <ChevronRight aria-hidden="true" /></button>
       </div>
-    </section>
+    </section>,
   );
 }

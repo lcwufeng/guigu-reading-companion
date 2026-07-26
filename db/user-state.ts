@@ -113,7 +113,7 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     [userId],
   );
   const chatClearedAt = parentControls?.chat_cleared_at || 0;
-  const [readingRecords, readingRewards, travelRecords, activeTravel, mistakes, dailyRows, minigameRows, chatRows] = await Promise.all([
+  const [readingRecords, readingRewards, travelRecords, activeTravel, mistakes, dailyRows, minigameRows, completedMinigames, chatRows] = await Promise.all([
     database.all<{ record_id: string; title: string; read_date: string; answer: string; summary: string }>(
       "SELECT record_id, title, read_date, answer, summary FROM user_reading_records WHERE user_id = ? ORDER BY created_at DESC",
       [userId],
@@ -142,6 +142,10 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     database.all<{
       date_key: string; plays: number; best_score: number; total_caught: number; reward_claimed: number;
     }>("SELECT date_key, plays, best_score, total_caught, reward_claimed FROM user_minigame_daily WHERE user_id = ? AND game_id = 'fruit-catch' ORDER BY date_key DESC LIMIT 1", [userId]),
+    database.all<{ game_id: string }>(
+      "SELECT game_id FROM user_minigame_progress WHERE user_id = ? ORDER BY completed_at ASC",
+      [userId],
+    ),
     database.all<{ message_id: string; role: string; message_text: string; created_at: number }>(`SELECT message_id, role, message_text, created_at FROM (
       SELECT message_id, role, message_text, created_at FROM user_chat_messages
       WHERE user_id = ? AND expires_at > ? AND created_at > ? ORDER BY created_at DESC LIMIT 16
@@ -201,6 +205,7 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
       bestScore: fruitCatch.best_score,
       totalCaught: fruitCatch.total_caught,
     } : undefined,
+    completedMiniGames: completedMinigames.map((row) => row.game_id),
   };
 }
 
@@ -278,6 +283,25 @@ async function saveNormalizedState(
         (entry_id, user_id, resource_type, amount, balance_after, source_type, source_id, created_at)
         VALUES (?, ?, 'play_tickets', ?, ?, ?, ?, ?)`,
       params: [`${userId}:play_tickets:${sourceId}`, userId, playTicketChange, nextPlayTickets, sourceType, sourceId, updatedAt],
+    });
+  }
+
+  const validMinigames = new Set([
+    "fruit-catch",
+    "turtle-courier",
+    "weather-outfit",
+    "lotus-jump",
+    "spot-difference",
+    "story-puzzle",
+    "turtle-sky",
+    "tortoise-race",
+  ]);
+  for (const rawGameId of list(state.completedMiniGames).slice(0, validMinigames.size)) {
+    const gameId = text(rawGameId, 80);
+    if (!validMinigames.has(gameId)) continue;
+    statements.push({
+      sql: "INSERT OR IGNORE INTO user_minigame_progress (user_id, game_id, completed_at) VALUES (?, ?, ?)",
+      params: [userId, gameId, updatedAt],
     });
   }
 

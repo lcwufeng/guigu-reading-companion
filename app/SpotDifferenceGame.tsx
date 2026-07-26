@@ -142,10 +142,12 @@ function Scene({
 export default function SpotDifferenceGame({
   turtleName,
   onBack,
+  onMistake,
   onComplete,
 }: {
   turtleName: string;
   onBack: () => void;
+  onMistake: () => void;
   onComplete: (detail: string) => void;
 }) {
   const [levelIndex, setLevelIndex] = useState(0);
@@ -164,6 +166,7 @@ export default function SpotDifferenceGame({
   const chooseFeature = (feature: SceneFeature) => {
     if (levelComplete || allComplete) return;
     if (!feature.different) {
+      onMistake();
       setWrongClicks((current) => current + 1);
       setFeedback("这里左右是一样的，再看看颜色、数量和形状。");
       return;

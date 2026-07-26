@@ -101,10 +101,12 @@ const levels: StoryLevel[] = [
 export default function StoryPuzzleGame({
   turtleName,
   onBack,
+  onMistake,
   onComplete,
 }: {
   turtleName: string;
   onBack: () => void;
+  onMistake: () => void;
   onComplete: (detail: string) => void;
 }) {
   const [levelIndex, setLevelIndex] = useState(0);
@@ -122,6 +124,7 @@ export default function StoryPuzzleGame({
     if (levelComplete || chosenIds.includes(card.id)) return;
     const expectedId = level.order[chosenIds.length];
     if (card.id !== expectedId) {
+      onMistake();
       setMistakes((current) => current + 1);
       setFeedback("这个情节还没有发生。先找一找：故事此刻最需要发生什么？");
       return;
