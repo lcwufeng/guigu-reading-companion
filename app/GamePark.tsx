@@ -1,11 +1,13 @@
 /* eslint-disable @next/next/no-img-element -- The game reuses the project's local pixel-art assets. */
 "use client";
 
-import { ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Lock, Map, Search, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Lock, Map, Plane, Search, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import CourierGame from "./CourierGame";
 import LotusJumpGame from "./LotusJumpGame";
 import SpotDifferenceGame from "./SpotDifferenceGame";
+import StoryPuzzleGame from "./StoryPuzzleGame";
+import TurtleSkyGame from "./TurtleSkyGame";
 import WeatherOutfitGame from "./WeatherOutfitGame";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -32,7 +34,7 @@ export type FruitCatchResult = {
 };
 
 export type LearningMiniGameResult = {
-  game: "turtle-courier" | "weather-outfit" | "lotus-jump" | "spot-difference";
+  game: "turtle-courier" | "weather-outfit" | "lotus-jump" | "spot-difference" | "story-puzzle" | "turtle-sky";
   detail: string;
 };
 
@@ -253,7 +255,7 @@ export default function GamePark({
           <div>
             <span><Gamepad2 aria-hidden="true" /> 龟龟乐园</span>
             <h1>和{turtleName}一起玩，也一起动脑</h1>
-            <p>五种小游戏，练反应、路线、生活判断、数字规律和细致观察。</p>
+            <p>七种小游戏，练反应、路线、生活判断、故事表达和细致观察。</p>
           </div>
           <button type="button" onClick={onBackHome}><ChevronLeft aria-hidden="true" /> 回家园</button>
         </header>
@@ -297,7 +299,7 @@ export default function GamePark({
         </section>
 
         <section className="game-park-open-games" aria-label="动脑小游戏">
-          <header><Sparkles aria-hidden="true" /><div><h2>四项动脑挑战开放啦</h2><p>每个游戏都有连续小关卡，难度会一步一步增加。</p></div></header>
+          <header><Sparkles aria-hidden="true" /><div><h2>六项动脑挑战开放啦</h2><p>每个游戏都有连续小关卡，难度会一步一步增加。</p></div></header>
           <div className="game-park-open-grid">
             <article className="game-park-choice courier">
               <div className="game-park-choice-art" aria-hidden="true">
@@ -363,6 +365,38 @@ export default function GamePark({
                 </button>
               </div>
             </article>
+            <article className="game-park-choice story">
+              <div className="game-park-choice-art" aria-hidden="true">
+                <BookOpen />
+                <span>①</span><span>②</span><span>③</span>
+                <img src={`${ASSET}/characters/turtle/turtle_reading.png`} alt="" />
+              </div>
+              <div>
+                <small>阅读表达游戏</small>
+                <h3>拼故事</h3>
+                <p>读懂每张情节卡，按前因后果把故事拼完整，成为小小故事导演。</p>
+                <ul><li>五个原创小故事</li><li>由三步增加到六步</li><li>理解起因、经过和结果</li></ul>
+                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("story-puzzle")}>
+                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                </button>
+              </div>
+            </article>
+            <article className="game-park-choice flight">
+              <div className="game-park-choice-art" aria-hidden="true">
+                <Plane />
+                <span>⭐</span><span>☁️</span><span>💛</span>
+                <img src={`${ASSET}/characters/turtle/turtle_excited.png`} alt="" />
+              </div>
+              <div>
+                <small>反应与方向游戏</small>
+                <h3>龟龟飞机大战</h3>
+                <p>驾驶龟龟飞行器穿越云海，收集星星、避开乌云，挑战越来越快的航线。</p>
+                <ul><li>上下控制飞行航线</li><li>四关逐步加速</li><li>儿童友好的星光挑战</li></ul>
+                <button type="button" disabled={playTickets < 1} onClick={() => openTicketedGame("turtle-sky")}>
+                  {playTickets < 1 ? "需要 1 张游玩票" : "使用 1 张游玩票开始"} <ChevronRight aria-hidden="true" />
+                </button>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -371,7 +405,6 @@ export default function GamePark({
           <div>
             <article><Lock aria-hidden="true" /><strong>贝壳翻翻乐</strong><span>练一练观察和记忆</span></article>
             <article><Lock aria-hidden="true" /><strong>云朵配对</strong><span>把有关联的图案连起来</span></article>
-            <article><Lock aria-hidden="true" /><strong>故事拼拼看</strong><span>把故事情节排好顺序</span></article>
           </div>
         </section>
       </section>
@@ -414,6 +447,26 @@ export default function GamePark({
         turtleName={turtleName}
         onBack={() => setActiveGame(null)}
         onComplete={(detail) => onLearningGameComplete({ game: "spot-difference", detail })}
+      />
+    );
+  }
+
+  if (activeGame === "story-puzzle") {
+    return (
+      <StoryPuzzleGame
+        turtleName={turtleName}
+        onBack={() => setActiveGame(null)}
+        onComplete={(detail) => onLearningGameComplete({ game: "story-puzzle", detail })}
+      />
+    );
+  }
+
+  if (activeGame === "turtle-sky") {
+    return (
+      <TurtleSkyGame
+        turtleName={turtleName}
+        onBack={() => setActiveGame(null)}
+        onComplete={(detail) => onLearningGameComplete({ game: "turtle-sky", detail })}
       />
     );
   }

@@ -424,11 +424,15 @@
 .game-park-choice.weather { background: linear-gradient(135deg, #d9f1f5, #fff1b7); border-color: #6da8aa; }
 .game-park-choice.lotus { background: linear-gradient(135deg, #d9f2dc, #d7f0ed); border-color: #5c9c73; }
 .game-park-choice.difference { background: linear-gradient(135deg, #f4e2bd, #f6d9cf); border-color: #bb865a; }
+.game-park-choice.story { background: linear-gradient(135deg, #fff0c6, #f4dfbb); border-color: #b88943; }
+.game-park-choice.flight { background: linear-gradient(135deg, #d6eff8, #dfe9ff); border-color: #588ead; }
 .game-park-choice-art { align-items: center; border-radius: 16px; display: flex; justify-content: center; min-height: 235px; overflow: hidden; position: relative; }
 .game-park-choice.courier .game-park-choice-art { background: radial-gradient(circle at 50% 50%, #fff9d2 0 24%, transparent 25%), linear-gradient(145deg, #bcdc92, #86b76c); }
 .game-park-choice.weather .game-park-choice-art { background: linear-gradient(#9cdcf0 0 45%, #e7f7c6 46% 100%); }
 .game-park-choice.lotus .game-park-choice-art { background: radial-gradient(ellipse at 28% 73%, #6daa59 0 13%, transparent 14%), radial-gradient(ellipse at 72% 35%, #75b966 0 12%, transparent 13%), linear-gradient(#77d3ea, #51aeca); }
 .game-park-choice.difference .game-park-choice-art { background: linear-gradient(90deg, #a8dbef 0 48.5%, #fff2bd 49% 51%, #a8dbef 51.5% 100%); }
+.game-park-choice.story .game-park-choice-art { background: radial-gradient(circle at 26% 24%, #fff9d9 0 9%, transparent 10%), linear-gradient(145deg, #efc978, #d8a85a); }
+.game-park-choice.flight .game-park-choice-art { background: radial-gradient(ellipse at 80% 18%, #fff 0 11%, transparent 12%), radial-gradient(ellipse at 24% 66%, rgba(255, 255, 255, 0.72) 0 13%, transparent 14%), linear-gradient(#72caf0, #bceaf7); }
 .game-park-choice-art > svg { color: rgba(67, 100, 52, 0.23); height: 78%; position: absolute; width: 78%; }
 .game-park-choice-art > img { filter: drop-shadow(0 7px 4px rgba(48, 69, 32, 0.24)); max-height: 190px; object-fit: contain; position: relative; width: 78%; z-index: 2; }
 .game-park-choice-art > span { filter: drop-shadow(0 3px 2px rgba(58, 54, 29, 0.18)); font-size: 28px; position: absolute; z-index: 3; }
@@ -466,7 +470,7 @@
 .game-park-coming > header > svg { height: 28px; width: 28px; }
 .game-park-coming h2 { color: #53391e; font-size: 28px; margin: 0; }
 .game-park-coming header p { color: #826c50; font-size: 17px; font-weight: 700; margin: 2px 0 0; }
-.game-park-coming > div { display: grid; gap: 13px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 14px; }
+.game-park-coming > div { display: grid; gap: 13px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 14px; }
 .game-park-coming article { align-items: center; background: #eee9d2; border: 2px dashed #b9a988; border-radius: 15px; color: #8b7f68; display: grid; gap: 2px 10px; grid-template-columns: 34px 1fr; min-height: 78px; padding: 10px 13px; }
 .game-park-coming article > svg { grid-row: 1 / 3; height: 24px; width: 24px; }
 .game-park-coming article strong { color: #756953; font-size: 19px; }
@@ -999,6 +1003,222 @@
 .difference-footer .learning-game-feedback { margin-top: 0; }
 .difference-actions { justify-content: flex-end; margin-top: 0; }
 
+/* 拼故事 */
+.story-game-layout {
+  display: grid;
+  gap: 17px;
+  grid-template-columns: minmax(540px, 1.08fr) minmax(460px, 0.92fr);
+  margin: 0 auto;
+  max-width: 1240px;
+}
+.story-board,
+.story-card-tray {
+  background: #fff9dc;
+  border: 3px solid #c59b50;
+  border-radius: 21px;
+  box-shadow: 0 6px 0 rgba(105, 70, 24, 0.15), inset 0 0 0 4px #fffdf0;
+  padding: 18px;
+}
+.story-board {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 42px, rgba(180, 137, 73, 0.09) 43px 44px),
+    linear-gradient(135deg, #fff9dc, #f7e8be);
+}
+.story-board > header { align-items: center; display: grid; gap: 14px; grid-template-columns: 1fr 150px; }
+.story-board > header small,
+.story-card-tray > header small { color: #57813d; font-size: 18px; font-weight: 950; }
+.story-board > header h2,
+.story-card-tray > header h2 { color: #533518; font-size: 32px; margin: 3px 0 6px; }
+.story-board > header p,
+.story-card-tray > header p { color: #70583a; font-size: 19px; font-weight: 780; line-height: 1.55; margin: 0; }
+.story-board > header img { filter: drop-shadow(0 7px 4px rgba(56, 71, 37, 0.22)); height: 132px; object-fit: contain; width: 145px; }
+.story-timeline { display: grid; gap: 10px; margin-top: 15px; }
+.story-timeline > div {
+  align-items: center;
+  background: rgba(249, 236, 195, 0.75);
+  border: 2px dashed #c9a66d;
+  border-radius: 13px;
+  color: #8b7450;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 34px 44px minmax(0, 1fr);
+  min-height: 72px;
+  padding: 8px 11px;
+}
+.story-timeline > div.filled { background: #e6f2cc; border-color: #74a154; border-style: solid; color: #4d6f37; }
+.story-timeline b { align-items: center; background: #d7b36e; border-radius: 50%; color: #fff; display: flex; font-size: 17px; height: 31px; justify-content: center; width: 31px; }
+.story-timeline .filled b { background: #65a148; }
+.story-timeline span { font-size: 32px; line-height: 1; text-align: center; }
+.story-timeline p { color: #644b2f; font-size: 18px; font-weight: 820; line-height: 1.48; margin: 0; }
+.story-timeline em { font-size: 17px; font-style: normal; font-weight: 850; grid-column: 2 / -1; }
+.story-card-grid { display: grid; gap: 8px; margin-top: 13px; }
+.story-card-grid button {
+  align-items: center;
+  background: #fff3c5;
+  border: 2px solid #c69c55;
+  border-radius: 13px;
+  color: #634829;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 43px minmax(0, 1fr);
+  min-height: 68px;
+  padding: 9px 11px;
+  position: relative;
+  text-align: left;
+}
+.story-card-grid button:hover:not(:disabled) { filter: brightness(1.04); transform: translateY(-1px); }
+.story-card-grid button > span { font-size: 31px; line-height: 1; text-align: center; }
+.story-card-grid button > p { font-size: 18px; font-weight: 820; line-height: 1.45; margin: 0; }
+.story-card-grid button > b { align-items: center; background: #5c973f; border-radius: 999px; color: #fff; display: flex; font-size: 14px; gap: 3px; padding: 4px 7px; position: absolute; right: 6px; top: 5px; }
+.story-card-grid button > b svg { height: 15px; width: 15px; }
+.story-card-grid button.selected { background: #e5efce; border-color: #7d9d61; opacity: 0.68; }
+.story-card-grid button.hinted { animation: storyHint 700ms ease-in-out infinite alternate; border-color: #e3a327; box-shadow: 0 0 0 5px rgba(248, 198, 65, 0.26); }
+@keyframes storyHint { to { background: #fff0a7; transform: translateY(-2px); } }
+.story-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.story-actions button {
+  align-items: center;
+  background: #fff4c9;
+  border: 2px solid #bd9250;
+  border-radius: 11px;
+  color: #6d4d22;
+  cursor: pointer;
+  display: flex;
+  font-size: 18px;
+  font-weight: 900;
+  gap: 5px;
+  justify-content: center;
+  min-height: 47px;
+  padding: 8px 11px;
+}
+.story-actions button:disabled { cursor: default; opacity: 0.45; }
+.story-actions button.primary { background: linear-gradient(#75b94e, #4f963b); border-color: #39702e; box-shadow: 0 3px 0 #2e6427; color: #fff; min-width: 200px; }
+.story-actions svg { height: 19px; width: 19px; }
+
+/* 龟龟飞机大战 */
+.flight-game-layout {
+  display: grid;
+  gap: 17px;
+  grid-template-columns: minmax(650px, 1.45fr) minmax(310px, 0.55fr);
+  margin: 0 auto;
+  max-width: 1240px;
+}
+.flight-sky {
+  background:
+    radial-gradient(circle at 78% 19%, rgba(255, 249, 176, 0.75) 0 8%, transparent 8.5%),
+    linear-gradient(#62c4ed 0 62%, #b6eaf5 100%);
+  border: 4px solid #4f879f;
+  border-radius: 23px;
+  box-shadow: inset 0 0 0 5px rgba(226, 255, 255, 0.4), 0 7px 0 rgba(49, 92, 91, 0.2);
+  height: min(64vh, 620px);
+  min-height: 530px;
+  overflow: hidden;
+  position: relative;
+}
+.flight-cloud-scenery i { color: rgba(255, 255, 255, 0.62); filter: drop-shadow(0 3px 0 rgba(79, 140, 171, 0.15)); font-size: 92px; font-style: normal; line-height: 1; position: absolute; }
+.flight-cloud-scenery i:nth-child(1) { left: 7%; top: 4%; }
+.flight-cloud-scenery i:nth-child(2) { right: 9%; top: 43%; transform: scale(1.3); }
+.flight-cloud-scenery i:nth-child(3) { left: 35%; top: 74%; transform: scale(0.72); }
+.flight-lanes { inset: 0; position: absolute; }
+.flight-lanes i { border-top: 2px dashed rgba(255, 255, 255, 0.27); left: 3%; position: absolute; right: 3%; }
+.flight-lanes i:nth-child(1) { top: 10%; }
+.flight-lanes i:nth-child(2) { top: 30%; }
+.flight-lanes i:nth-child(3) { top: 50%; }
+.flight-lanes i:nth-child(4) { top: 70%; }
+.flight-lanes i:nth-child(5) { top: 90%; }
+.flight-object {
+  filter: drop-shadow(0 4px 3px rgba(45, 73, 85, 0.25));
+  font-size: 46px;
+  line-height: 1;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+.flight-object.gold-star { animation: flightGoldPulse 520ms ease-in-out infinite alternate; font-size: 57px; filter: drop-shadow(0 0 9px rgba(255, 222, 56, 0.85)); }
+.flight-object.cloud { filter: grayscale(0.5) brightness(0.76) drop-shadow(0 5px 4px rgba(38, 61, 77, 0.35)); font-size: 63px; }
+@keyframes flightGoldPulse { to { transform: translate(-50%, -50%) scale(1.18) rotate(8deg); } }
+.flight-player {
+  height: 92px;
+  left: 20%;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: top 180ms ease;
+  width: 145px;
+  z-index: 5;
+}
+.flight-player > span { color: #f3b849; filter: drop-shadow(0 5px 3px rgba(47, 70, 74, 0.3)); font-size: 112px; left: 0; line-height: 1; position: absolute; top: -16px; transform: rotate(7deg); }
+.flight-player > img { filter: drop-shadow(0 4px 2px rgba(46, 65, 38, 0.25)); height: 75px; left: 30px; object-fit: contain; position: absolute; top: -8px; width: 78px; z-index: 2; }
+.flight-overlay {
+  align-items: center;
+  backdrop-filter: blur(5px);
+  background: rgba(255, 251, 214, 0.94);
+  display: grid;
+  gap: 22px;
+  grid-template-columns: 190px minmax(0, 1fr);
+  inset: 0;
+  padding: clamp(23px, 5vw, 55px);
+  position: absolute;
+  z-index: 8;
+}
+.flight-overlay > img { filter: drop-shadow(0 8px 5px rgba(50, 70, 35, 0.22)); max-height: 210px; object-fit: contain; width: 100%; }
+.flight-overlay small { color: #56803e; font-size: 18px; font-weight: 950; }
+.flight-overlay h2 { color: #503316; font-size: clamp(34px, 3.5vw, 48px); margin: 3px 0 8px; }
+.flight-overlay p { color: #6c5337; font-size: 20px; font-weight: 770; line-height: 1.62; margin: 0; }
+.flight-overlay button {
+  align-items: center;
+  background: linear-gradient(#75b94e, #4f963b);
+  border: 2px solid #39702e;
+  border-radius: 12px;
+  box-shadow: 0 4px 0 #2e6427;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  font-size: 20px;
+  font-weight: 950;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 15px;
+  min-height: 51px;
+  padding: 9px 18px;
+  width: min(100%, 250px);
+}
+.flight-overlay button svg { height: 21px; width: 21px; }
+.flight-overlay.result.retry { background: rgba(255, 239, 205, 0.95); }
+.flight-dashboard { background: #fff9dc; border: 3px solid #c59b50; border-radius: 19px; box-shadow: 0 6px 0 rgba(105, 70, 24, 0.15), inset 0 0 0 4px #fffdf0; padding: 18px; }
+.flight-dashboard > small { color: #57813d; font-size: 18px; font-weight: 950; }
+.flight-dashboard > h2 { color: #533518; font-size: 32px; margin: 3px 0 7px; }
+.flight-dashboard > p { color: #70583a; font-size: 19px; font-weight: 780; line-height: 1.55; margin: 0; }
+.flight-stats { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; margin-top: 14px; }
+.flight-stats span { align-items: center; background: #eef2ce; border: 2px solid #a7b56c; border-radius: 12px; color: #55733f; display: grid; gap: 1px 6px; grid-template-columns: 24px 1fr; min-height: 72px; padding: 8px; }
+.flight-stats svg { height: 23px; width: 23px; }
+.flight-stats span:nth-child(1) svg { color: #e7a91e; fill: currentColor; }
+.flight-stats span:nth-child(2) svg { color: #dd745d; fill: currentColor; }
+.flight-stats b { font-size: 15px; }
+.flight-stats strong { color: #4e351a; font-size: 23px; grid-column: 1 / -1; }
+.flight-controls { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; margin-top: 14px; }
+.flight-controls button {
+  align-items: center;
+  background: #fff1bd;
+  border: 2px solid #b98c44;
+  border-radius: 11px;
+  color: #694a22;
+  cursor: pointer;
+  display: flex;
+  font-size: 18px;
+  font-weight: 950;
+  gap: 4px;
+  justify-content: center;
+  min-height: 50px;
+}
+.flight-controls button:disabled { cursor: default; opacity: 0.45; }
+.flight-controls svg { height: 22px; width: 22px; }
+
 .learning-game-finish { align-items: center; background: linear-gradient(135deg, #e5f5c8, #fff1ae); border: 3px solid #8eae51; border-radius: 24px; display: grid; gap: 28px; grid-template-columns: minmax(180px, 0.65fr) minmax(320px, 1.35fr); margin: 30px auto 0; max-width: 940px; min-height: 520px; padding: clamp(25px, 5vw, 60px); }
 .learning-game-finish > img { filter: drop-shadow(0 9px 5px rgba(51, 74, 33, 0.23)); margin: auto; max-height: 310px; object-fit: contain; width: min(100%, 300px); }
 .learning-game-finish small { color: #56823d; font-size: 19px; font-weight: 950; }
@@ -1011,7 +1231,9 @@
   .game-park-open-grid { grid-template-columns: 1fr; }
   .courier-game-layout,
   .weather-game-layout,
-  .lotus-game-layout { grid-template-columns: 1fr; }
+  .lotus-game-layout,
+  .story-game-layout,
+  .flight-game-layout { grid-template-columns: 1fr; }
   .courier-map { height: 560px; }
   .weather-stage { min-height: 540px; }
   .lotus-pond { height: 560px; }
@@ -1184,6 +1406,39 @@
   .difference-footer { grid-template-columns: 1fr; }
   .difference-actions { justify-content: stretch; }
   .difference-actions button { flex: 1 1 120px; font-size: 18px; }
+
+  .story-game-layout,
+  .flight-game-layout { grid-template-columns: 1fr; }
+  .story-board,
+  .story-card-tray,
+  .flight-dashboard { padding: 14px; }
+  .story-board > header { grid-template-columns: 1fr 100px; }
+  .story-board > header img { height: 95px; width: 100px; }
+  .story-board > header h2,
+  .story-card-tray > header h2,
+  .flight-dashboard > h2 { font-size: 29px; }
+  .story-board > header p,
+  .story-card-tray > header p,
+  .flight-dashboard > p { font-size: 18px; }
+  .story-timeline > div { grid-template-columns: 31px 38px minmax(0, 1fr); min-height: 68px; padding: 7px 8px; }
+  .story-timeline p,
+  .story-card-grid button > p { font-size: 17px; }
+  .story-card-grid button { grid-template-columns: 39px minmax(0, 1fr); }
+  .story-actions button { flex: 1 1 120px; }
+
+  .flight-sky { border-radius: 17px; border-width: 3px; height: 475px; min-height: 475px; }
+  .flight-player { height: 72px; width: 112px; }
+  .flight-player > span { font-size: 87px; top: -12px; }
+  .flight-player > img { height: 59px; left: 23px; top: -5px; width: 61px; }
+  .flight-object { font-size: 38px; }
+  .flight-object.gold-star { font-size: 46px; }
+  .flight-object.cloud { font-size: 52px; }
+  .flight-overlay { gap: 8px; grid-template-columns: 1fr; padding: 18px 20px; text-align: center; }
+  .flight-overlay > img { margin: auto; max-height: 125px; width: 135px; }
+  .flight-overlay h2 { font-size: 31px; }
+  .flight-overlay p { font-size: 18px; }
+  .flight-overlay button { margin-inline: auto; width: 100%; }
+  .flight-controls button { font-size: 18px; }
 
   .learning-game-finish { gap: 12px; grid-template-columns: 1fr; margin-top: 18px; min-height: 0; padding: 25px 18px; text-align: center; }
   .learning-game-finish > img { max-height: 160px; width: 170px; }

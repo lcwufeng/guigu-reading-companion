@@ -1411,6 +1411,8 @@ export default function ReadingApp({
       "weather-outfit": "天气穿搭",
       "lotus-jump": "荷叶跳跳",
       "spot-difference": "龟龟找不同",
+      "story-puzzle": "拼故事",
+      "turtle-sky": "龟龟飞机大战",
     }[result.game];
     setGame((current) => ({ ...current, boredom: clamp(current.boredom - 6) }));
     showToast(`${activity}挑战完成，龟龟又学会了一项新本领！`);
@@ -1424,6 +1426,8 @@ export default function ReadingApp({
       "weather-outfit": "天气穿搭",
       "lotus-jump": "荷叶跳跳",
       "spot-difference": "龟龟找不同",
+      "story-puzzle": "拼故事",
+      "turtle-sky": "龟龟飞机大战",
     }[gameId];
     setGame((current) => current.playTickets < 1 ? current : ({ ...current, playTickets: current.playTickets - 1 }));
     showToast(`使用 1 张游玩票，开始${activity}`);
@@ -2766,7 +2770,7 @@ export default function ReadingApp({
                 <span>
                   <small>轻松玩一小会儿</small>
                   <strong>龟龟乐园</strong>
-                  <em>5 个小游戏开放啦</em>
+                  <em>7 个小游戏开放啦</em>
                 </span>
                 <ChevronRight aria-hidden="true" />
               </button>
