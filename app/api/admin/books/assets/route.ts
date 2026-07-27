@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
 import { saveImportedBookAsset } from "../../../../../db/book-assets";
 import { registerImportedBookAsset } from "../../../../../db/book-imports";
+import { decodeImageDataUrl } from "../../../../../lib/image-data";
 import { getActiveAdmin, validAdminMutationOrigin } from "../../../../admin-auth-user";
 
-const imagePattern = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/;
-
 function decodeImage(value: unknown) {
-  if (typeof value !== "string" || value.length > 5_500_000) throw new Error("插图文件无效或超过 4MB。");
-  const match = value.match(imagePattern);
-  if (!match) throw new Error("插图仅支持 JPEG、PNG 或 WebP。");
-  const binary = atob(match[2]);
-  if (!binary.length || binary.length > 4_000_000) throw new Error("插图文件无效或超过 4MB。");
-  return { bytes: Uint8Array.from(binary, (character) => character.charCodeAt(0)), contentType: `image/${match[1]}` };
+  try {
+    return decodeImageDataUrl(value, {
+      maxDataLength: 2_700_000,
+      maxBytes: 1_900_000,
+      maxPixels: 20_000_000,
+    });
+  } catch {
+    throw new Error("仅支持 1.9MB 以内、尺寸合理的 JPG、PNG 或 WebP 插图。");
+  }
 }
 
 export async function POST(request: Request) {

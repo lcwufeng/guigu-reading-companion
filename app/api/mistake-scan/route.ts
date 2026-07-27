@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import { getActiveStudent } from "../../auth-user";
-import { analyzeMistakeImage, mistakeModelSource, validateMistakeImageData } from "../../../lib/mistake-ai";
+import { analyzeMistakeImage, decodeMistakeImageData, mistakeModelSource, validateMistakeImageData } from "../../../lib/mistake-ai";
 import { getResolvedModelConfig } from "../../../db/model-config";
 import { recordServiceHealthEvent } from "../../../db/service-health";
+import { consumeRateLimit } from "../../../db/rate-limit";
+import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 
 type ScanRequest = { imageData?: string };
 
 export async function POST(request: Request) {
-  if (!await getActiveStudent()) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  if (!validMutationOrigin(request)) return mutationOriginError();
+  const student = await getActiveStudent();
+  if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  const rateLimit = await consumeRateLimit({ scope: "mistake-scan", identity: student.id, limit: 15, windowMs: 10 * 60_000 });
+  if (rateLimit.limited) return NextResponse.json(
+    { error: "错题识别使用得有点频繁，请稍后再试" },
+    { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+  );
   let body: ScanRequest;
   try {
     body = (await request.json()) as ScanRequest;
@@ -18,6 +27,11 @@ export async function POST(request: Request) {
   const imageData = body.imageData || "";
   if (!validateMistakeImageData(imageData)) {
     return NextResponse.json({ error: "请上传清晰的 JPG、PNG 或 WebP 题目照片" }, { status: 400 });
+  }
+  try {
+    decodeMistakeImageData(imageData);
+  } catch {
+    return NextResponse.json({ error: "图片内容或尺寸无效，请重新选择照片" }, { status: 400 });
   }
 
   if (!(await getResolvedModelConfig("multimodal")).configured) {

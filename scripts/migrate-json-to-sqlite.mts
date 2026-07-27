@@ -88,7 +88,7 @@ function userData(store: JsonObject, userId: string) {
 }
 
 process.env.APP_DATABASE_FILE = databasePath;
-const [{ readyRuntimeDatabase }, { saveUserState, getUserState }, { getStudentMemory }] = await Promise.all([
+const [{ readyRuntimeDatabase }, { importLegacyUserState, getUserState }, { getStudentMemory }] = await Promise.all([
   import("../db/runtime-database"),
   import("../db/user-state"),
   import("../db/student-memory"),
@@ -136,7 +136,7 @@ await database.batch(authStatements);
 
 for (const userId of validUserIds) {
   const row = object(userData(stateStore, userId));
-  if (row.state) await saveUserState(userId, row.state, number(row.updatedAt, now));
+  if (row.state) await importLegacyUserState(userId, row.state, number(row.updatedAt, now));
 }
 
 const progressStatements = [];

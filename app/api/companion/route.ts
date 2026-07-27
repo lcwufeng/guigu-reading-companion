@@ -4,6 +4,10 @@ import { rememberStudentEvent, type StudentMemory } from "../../../db/student-me
 import { recordChapterAnswer } from "../../../db/learning-records";
 import { recordServiceHealthEvent } from "../../../db/service-health";
 import { getResolvedModelConfig, type ResolvedModelConfig } from "../../../db/model-config";
+import { claimReadingReward } from "../../../db/reward-wallet";
+import { consumeRateLimit } from "../../../db/rate-limit";
+import { verifyReadingContext } from "../../../lib/reading-context";
+import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 
 type CompanionMessage = {
   role?: "user" | "assistant";
@@ -220,7 +224,31 @@ async function saveReadingAttempt(
   }
 }
 
+async function readingEvaluationResponse(
+  userId: string,
+  body: CompanionRequest,
+  evaluation: ReadingEvaluation,
+  source: "mimo" | "deepseek",
+) {
+  await saveReadingAttempt(userId, body, evaluation, source);
+  if (!evaluation.correct || !clean(body.questionKey, 240)) {
+    return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source });
+  }
+  try {
+    const reward = await claimReadingReward(userId, clean(body.questionKey, 240));
+    return NextResponse.json({ reply: evaluation.feedback, correct: true, source, reward });
+  } catch {
+    return NextResponse.json({
+      reply: `${evaluation.feedback} 奖励暂时没有存好，请稍后再发给龟龟看看。`,
+      correct: true,
+      source,
+      rewardPending: true,
+    });
+  }
+}
+
 export async function POST(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   let body: CompanionRequest;
@@ -237,6 +265,18 @@ export async function POST(request: Request) {
   if (urgentSafetyPattern.test(input) || personalInfoPattern.test(input)) {
     return NextResponse.json({ reply: localReply(body), correct: false, source: "local" });
   }
+  const rateLimit = await consumeRateLimit({
+    scope: body.mode === "reading" ? "reading-ai" : "chat-ai",
+    identity: student.id,
+    limit: body.mode === "reading" ? 20 : 40,
+    windowMs: 10 * 60_000,
+  });
+  if (rateLimit.limited) {
+    return NextResponse.json(
+      { reply: "龟龟需要休息一小会儿，请过几分钟再来。", source: "local" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
 
   const name = cleanPetName(body.name);
   let studentMemory: StudentMemory | null = null;
@@ -248,11 +288,28 @@ export async function POST(request: Request) {
     }
   }
   if (body.mode === "reading") {
+    const verifiedContext = await verifyReadingContext(request, body).catch(() => null);
+    if (!verifiedContext) {
+      return NextResponse.json({
+        reply: "龟龟没有在书里找到这道章节问题，请刷新书房后再试。",
+        source: "unavailable",
+        retryable: true,
+      }, { status: 400 });
+    }
+    const verifiedBody: CompanionRequest = {
+      ...body,
+      bookId: verifiedContext.bookId,
+      chapterTitle: verifiedContext.chapterTitle,
+      questionKey: verifiedContext.questionKey,
+      excerpt: verifiedContext.excerpt,
+      question: verifiedContext.question,
+      referenceAnswer: verifiedContext.referenceAnswer,
+    };
     const userContext = [
       `书名与章节：${clean(body.title, 80)}`,
-      `本章完整原文：${clean(body.excerpt, 16_000)}`,
-      `龟龟的问题：${clean(body.question, 240)}`,
-      `参考判断要点：${clean(body.referenceAnswer, 1_000)}`,
+      `本章完整原文：${verifiedContext.excerpt}`,
+      `龟龟的问题：${verifiedContext.question}`,
+      `参考判断要点：${verifiedContext.referenceAnswer}`,
       `孩子的回答：${input}`,
     ].join("\n");
 
@@ -265,8 +322,7 @@ export async function POST(request: Request) {
       try {
         const evaluation = await evaluateReadingWithMiMo(mimoConfig, name, userContext);
         await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "mimo", status: "success", durationMs: Date.now() - startedAt });
-        await saveReadingAttempt(student.id, body, evaluation, "mimo");
-        return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "mimo" });
+        return readingEvaluationResponse(student.id, verifiedBody, evaluation, "mimo");
       } catch {
         await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "mimo", status: "failed", durationMs: Date.now() - startedAt, detail: "provider-error-or-timeout" });
         // MiMo is the preferred judge. Any timeout, upstream error, empty reply or invalid JSON falls through to DeepSeek.
@@ -278,8 +334,7 @@ export async function POST(request: Request) {
       try {
         const evaluation = await evaluateReadingWithDeepSeek(deepSeekConfig, name, userContext);
         await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "deepseek", status: "fallback", durationMs: Date.now() - startedAt });
-        await saveReadingAttempt(student.id, body, evaluation, "deepseek");
-        return NextResponse.json({ reply: evaluation.feedback, correct: evaluation.correct, source: "deepseek" });
+        return readingEvaluationResponse(student.id, verifiedBody, evaluation, "deepseek");
       } catch {
         await recordServiceHealthEvent({ service: "reading-ai", operation: "chapter-evaluation", provider: "deepseek", status: "failed", durationMs: Date.now() - startedAt, detail: "provider-error-or-timeout" });
         // The client receives a retryable response below instead of waiting for the hosting layer to return a 504.

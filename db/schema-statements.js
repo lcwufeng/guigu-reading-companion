@@ -1,4 +1,9 @@
 export const SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS app_schema_meta (
+    schema_key TEXT PRIMARY KEY NOT NULL,
+    schema_version INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS app_users (
     id TEXT PRIMARY KEY NOT NULL,
     username TEXT NOT NULL UNIQUE,
@@ -103,6 +108,13 @@ export const SCHEMA_STATEMENTS = [
   )`,
   "CREATE INDEX IF NOT EXISTS account_login_events_account_date_idx ON account_login_events(account_type, account_id, created_at)",
   "CREATE INDEX IF NOT EXISTS account_login_events_date_idx ON account_login_events(created_at)",
+  `CREATE TABLE IF NOT EXISTS app_rate_limits (
+    limit_key TEXT PRIMARY KEY NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    reset_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS app_rate_limits_expiry_idx ON app_rate_limits(reset_at)",
   `CREATE TABLE IF NOT EXISTS parent_student_links (
     parent_id TEXT NOT NULL,
     student_id TEXT NOT NULL,
@@ -330,6 +342,16 @@ export const SCHEMA_STATEMENTS = [
     PRIMARY KEY (user_id, game_id)
   )`,
   "CREATE INDEX IF NOT EXISTS user_minigame_progress_user_date_idx ON user_minigame_progress(user_id, completed_at)",
+  `CREATE TABLE IF NOT EXISTS user_minigame_runs (
+    run_id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    game_id TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    completed_at INTEGER
+  )`,
+  "CREATE INDEX IF NOT EXISTS user_minigame_runs_user_date_idx ON user_minigame_runs(user_id, started_at DESC)",
+  "CREATE INDEX IF NOT EXISTS user_minigame_runs_expiry_idx ON user_minigame_runs(expires_at)",
   `CREATE TABLE IF NOT EXISTS user_chat_messages (
     user_id TEXT NOT NULL,
     message_id TEXT NOT NULL,

@@ -4,7 +4,7 @@ export const extraExplorationLessons = {
   "science-moon-phases": {
     hook: "月亮有时圆、有时弯，是谁在悄悄把它切成了不同形状？",
     objective: "理解月相不是月亮形状改变，而是我们看到的受光部分不同。",
-    illustration: "/assets/exploration/science/moon-phases.png",
+    illustration: "/assets/optimized/exploration/science/moon-phases.webp",
     illustrationAlt: "龟龟用太阳灯、地球和月球模型观察不同月相",
     learnCards: [
       { title: "月亮不会自己发光", body: "我们看到的月光，是月亮把太阳光反射到地球。无论何时，总有半个月球被太阳照亮。" },
@@ -35,7 +35,7 @@ export const extraExplorationLessons = {
   "science-bioluminescence": {
     hook: "深海里没有路灯，为什么有些鱼和水母却像带着小灯泡？",
     objective: "认识生物发光来自化学反应，并比较它在不同环境中的作用。",
-    illustration: "/assets/exploration/science/bioluminescence.png",
+    illustration: "/assets/optimized/exploration/science/bioluminescence.webp",
     illustrationAlt: "黑暗海洋里发光的水母、深海鱼和岸边萤火虫",
     learnCards: [
       { title: "冷光来自化学反应", body: "一些生物体内的物质发生反应，把化学能转成光，产生的热很少，所以常被称为冷光。" },
@@ -66,7 +66,7 @@ export const extraExplorationLessons = {
   "science-renewable-energy": {
     hook: "太阳落山、风停下来时，太阳能板和风车还能一直发电吗？",
     objective: "理解风能和太阳能的转化过程、优点以及不稳定性。",
-    illustration: "/assets/exploration/science/renewable-energy.png",
+    illustration: "/assets/optimized/exploration/science/renewable-energy.webp",
     illustrationAlt: "龟龟观察太阳能板、风力发电机和储能电池协同工作",
     learnCards: [
       { title: "能量会转换", body: "太阳能电池把光能转成电能；风推动叶片旋转，再由发电机把运动能转成电能。" },
@@ -97,7 +97,7 @@ export const extraExplorationLessons = {
   "science-future-base": {
     hook: "如果明天搬去月球，只有一间漂亮房子够不够？空气和水从哪里来？",
     objective: "认识太空基地的生命保障系统，并理解各系统需要互相配合。",
-    illustration: "/assets/exploration/science/future-base.png",
+    illustration: "/assets/optimized/exploration/science/future-base.webp",
     illustrationAlt: "月球未来基地剖面展示空气、水、食物、能源和通信系统",
     learnCards: [
       { title: "先维持生命", body: "密闭舱要提供氧气、合适气压和温度，还要回收水，处理二氧化碳和废物。" },
@@ -129,7 +129,7 @@ export const extraExplorationLessons = {
   "history-ruins-speak": {
     hook: "一块不会说话的旧陶片，怎样告诉我们古人吃什么、住在哪里？",
     objective: "学会从材料、形状、位置和年代等多条线索研究遗迹。",
-    illustration: "/assets/exploration/history/ruins-speak.png",
+    illustration: "/assets/optimized/exploration/history/ruins-speak.webp",
     illustrationAlt: "龟龟考古员记录陶片、钱币、城墙和发现位置",
     learnCards: [
       { title: "先保护发现现场", body: "遗物的位置、深度和周围物品都是证据。只拿走物品却不记录现场，会丢失很多信息。" },
@@ -160,7 +160,7 @@ export const extraExplorationLessons = {
   "history-day-in-city": {
     hook: "没有照片和视频，我们怎样知道古城里的孩子一天会经过哪些地方？",
     objective: "从城门、街道、市场和水井的布局推测古人的日常生活。",
-    illustration: "/assets/exploration/history/ancient-city-day.png",
+    illustration: "/assets/optimized/exploration/history/ancient-city-day.webp",
     illustrationAlt: "古城俯瞰图展示城门、街道、市场、水井和居民活动",
     learnCards: [
       { title: "城门连接内外", body: "城门控制人员和货物进出，也常与主要道路相连。城墙和守卫能反映城市的安全需要。" },
@@ -191,7 +191,7 @@ export const extraExplorationLessons = {
   "history-inventions": {
     hook: "如果世界上从来没有纸和印刷术，今天的课堂会变成什么样？",
     objective: "理解发明如何从解决一个问题，扩展成教育、交通和交流的连锁变化。",
-    illustration: "/assets/exploration/history/inventions-change-life.png",
+    illustration: "/assets/optimized/exploration/history/inventions-change-life.webp",
     illustrationAlt: "纸、印刷术和指南针连接古今学习、航海与信息传播",
     learnCards: [
       { title: "发明先解决具体问题", body: "纸让书写材料更轻便，印刷术让同样内容可以大量复制，指南针帮助人们辨认方向。" },
@@ -222,7 +222,7 @@ export const extraExplorationLessons = {
   "history-letter-future": {
     hook: "一百年后的人捡到今天的一只书包，能准确猜出我们的生活吗？",
     objective: "学会选择有代表性的日常物品，并用具体记录为未来保存历史。",
-    illustration: "/assets/exploration/history/letter-to-future.png",
+    illustration: "/assets/optimized/exploration/history/letter-to-future.webp",
     illustrationAlt: "龟龟把校服、交通卡、课本和游戏记录装进时间胶囊",
     learnCards: [
       { title: "平常物品也会成历史", body: "课本、车票、菜单和玩具能反映今天怎样学习、出行、饮食和娱乐。" },
@@ -254,7 +254,7 @@ export const extraExplorationLessons = {
   "literature-character-choice": {
     hook: "故事人物做了一个看起来很奇怪的决定，也许不是因为他“笨”，而是我们少看了一条线索。",
     objective: "从愿望、担心和处境三方面理解人物的重要选择。",
-    illustration: "/assets/exploration/literature/character-choice.png",
+    illustration: "/assets/optimized/exploration/literature/character-choice.webp",
     illustrationAlt: "龟龟阅读故事并把人物的愿望、担心、处境和选择连成线索",
     learnCards: [
       { title: "人物想得到什么", body: "愿望推动人物行动，可能是保护朋友、得到认可、回到家，或完成一件重要的事。" },
@@ -285,7 +285,7 @@ export const extraExplorationLessons = {
   "literature-repetition": {
     hook: "为什么童话里常常要试三次，而不是一次就成功？",
     objective: "发现重复情节怎样形成节奏、加深记忆并增加期待。",
-    illustration: "/assets/exploration/literature/fairy-tale-repetition.png",
+    illustration: "/assets/optimized/exploration/literature/fairy-tale-repetition.webp",
     illustrationAlt: "童话中三次敲门、三次考验逐步升级的连续场景",
     learnCards: [
       { title: "重复让结构清楚", body: "相似事件再次出现时，读者会认出规律，更容易记住人物面对的任务。" },
@@ -316,7 +316,7 @@ export const extraExplorationLessons = {
   "literature-new-ending": {
     hook: "如果《丑小鸭》最后没有变成天鹅，我们还会用同样的眼光理解前面的故事吗？",
     objective: "理解结尾如何改变故事意义，并让新结尾与人物之前的选择保持联系。",
-    illustration: "/assets/exploration/literature/different-ending.png",
+    illustration: "/assets/optimized/exploration/literature/different-ending.webp",
     illustrationAlt: "同一故事分成快乐、开放和意外三种不同结尾",
     learnCards: [
       { title: "结尾回答核心问题", body: "人物是否实现愿望、解决困难，常在结尾得到回答，也决定故事留给读者的主要感受。" },
@@ -347,7 +347,7 @@ export const extraExplorationLessons = {
   "literature-science-story": {
     hook: "一滴水能不能成为旅行家？它的故事怎样既有趣又不把科学写错？",
     objective: "把科学过程转化成有角色、有困难的故事，同时保持关键知识准确。",
-    illustration: "/assets/exploration/literature/science-story.png",
+    illustration: "/assets/optimized/exploration/literature/science-story.webp",
     illustrationAlt: "小水滴角色经历蒸发、凝结、降水和汇流的故事旅程",
     learnCards: [
       { title: "先确定科学骨架", body: "先列出不能写错的步骤和条件，再给过程添加角色和情节，故事才不会只剩想象。" },
@@ -379,7 +379,7 @@ export const extraExplorationLessons = {
   "geography-directions": {
     hook: "地图把真实世界缩得很小，我们怎样知道学校在公园的哪一边？",
     objective: "学会使用方向、图例和比例关系读图，并清楚描述地点位置。",
-    illustration: "/assets/exploration/geography/map-directions.png",
+    illustration: "/assets/optimized/exploration/geography/map-directions.webp",
     illustrationAlt: "龟龟查看带有指北针、图例和路线的社区地图",
     learnCards: [
       { title: "先确定方向", body: "地图通常用指北针或方向标确定北方，之后才能判断东、南、西以及东北等方向。" },
@@ -410,7 +410,7 @@ export const extraExplorationLessons = {
   "geography-landforms": {
     hook: "坚硬的高山为什么会出现深深峡谷，河流真的能“切开”岩石吗？",
     objective: "理解地壳抬升与流水、风等外力怎样长期共同塑造地貌。",
-    illustration: "/assets/exploration/geography/landform-forces.png",
+    illustration: "/assets/optimized/exploration/geography/landform-forces.webp",
     illustrationAlt: "山脉、峡谷、曲流和三角洲展示抬升、侵蚀、搬运与堆积",
     learnCards: [
       { title: "内部力量抬高土地", body: "地壳板块缓慢运动，可以挤压并抬升岩层，形成山地和高原。过程很慢，却能持续很久。" },
@@ -441,7 +441,7 @@ export const extraExplorationLessons = {
   "geography-climate-life": {
     hook: "为什么有些房子的屋顶很陡，有些房子却用厚厚的墙和小窗户？",
     objective: "从温度、降水和季节理解不同地区的住房、衣食与出行。",
-    illustration: "/assets/exploration/geography/climate-and-life.png",
+    illustration: "/assets/optimized/exploration/geography/climate-and-life.webp",
     illustrationAlt: "寒冷多雪、炎热干燥和多雨地区的房屋与生活方式对比",
     learnCards: [
       { title: "温度影响保暖与散热", body: "寒冷地区重视保温，炎热地区需要遮阳、通风。墙体、窗户和屋顶会作出不同选择。" },
@@ -472,7 +472,7 @@ export const extraExplorationLessons = {
   "geography-route-plan": {
     hook: "地图上最近的三处景点，按照直线顺序去就一定是最好路线吗？",
     objective: "综合地点、交通、天气、时间和兴趣安排合理旅行路线。",
-    illustration: "/assets/exploration/geography/travel-route.png",
+    illustration: "/assets/optimized/exploration/geography/travel-route.webp",
     illustrationAlt: "龟龟在地图上规划三站旅行路线并查看天气、交通和休息时间",
     learnCards: [
       { title: "先确定目标和限制", body: "旅行天数、预算、同行者和最想看的内容不同，合适路线也不同。" },
@@ -504,7 +504,7 @@ export const extraExplorationLessons = {
   "art-color-emotion": {
     hook: "同样是红色，为什么生日画面里很热闹，危险画面里却让人紧张？",
     objective: "从冷暖、明暗和搭配理解颜色怎样参与表达情绪。",
-    illustration: "/assets/exploration/art/color-emotion.png",
+    illustration: "/assets/optimized/exploration/art/color-emotion.webp",
     illustrationAlt: "同一场景用安静冷色和兴奋暖色形成两种情绪对比",
     learnCards: [
       { title: "冷暖带来不同感受", body: "红、橙、黄常让人想到阳光和热量；蓝、青、紫常让人想到天空、夜晚和清凉，但不是固定答案。" },
@@ -535,7 +535,7 @@ export const extraExplorationLessons = {
   "art-rhythm": {
     hook: "雨滴、脚步和拍手都不是歌曲，为什么我们还是能听见节奏？",
     objective: "从长短、强弱、停顿和重复认识声音中的节奏模式。",
-    illustration: "/assets/exploration/art/sound-rhythm.png",
+    illustration: "/assets/optimized/exploration/art/sound-rhythm.webp",
     illustrationAlt: "龟龟用拍手、脚步和雨滴组合八拍节奏",
     learnCards: [
       { title: "节奏发生在时间里", body: "声音出现的先后、持续长短和中间停顿，组成了可以感觉和重复的时间结构。" },
@@ -566,7 +566,7 @@ export const extraExplorationLessons = {
   "art-pattern-math": {
     hook: "一朵小花怎样不用重新画很多次，就变成一整圈花纹？",
     objective: "识别并运用对称、平移和旋转创造有规律的艺术图案。",
-    illustration: "/assets/exploration/art/pattern-math.png",
+    illustration: "/assets/optimized/exploration/art/pattern-math.webp",
     illustrationAlt: "花朵基本图形通过对称、平移和旋转形成连续图案",
     learnCards: [
       { title: "平移：方向相同地搬家", body: "图形保持大小和方向不变，沿一条线移动相同距离，可以形成连续花边。" },
@@ -597,7 +597,7 @@ export const extraExplorationLessons = {
   "art-card-cover": {
     hook: "一张封面塞满十幅小图和很多字，真的会比一幅清楚的主画面更吸引人吗？",
     objective: "用主题、主画面、标题和视觉层次设计清楚的知识卡封面。",
-    illustration: "/assets/exploration/art/knowledge-card-cover.png",
+    illustration: "/assets/optimized/exploration/art/knowledge-card-cover.webp",
     illustrationAlt: "龟龟比较杂乱封面与主题突出、层次清楚的知识卡封面",
     learnCards: [
       { title: "先决定最重要的信息", body: "封面首先要让人知道主题。标题和主画面应该围绕同一个知识点，而不是把全部内容都搬上来。" },
@@ -628,7 +628,7 @@ export const extraExplorationLessons = {
   "math-pattern-detective": {
     hook: "彩旗不说话，为什么我们看几面以后，就能猜到下一面是什么？",
     objective: "学会从重复单位、变化间隔和验证结果三步寻找规律。",
-    illustration: "/assets/exploration/math/pattern-detective.png",
+    illustration: "/assets/optimized/exploration/math/pattern-detective.webp",
     illustrationAlt: "龟龟在图形、颜色和脚步组成的线索中寻找重复与变化规律",
     learnCards: [
       { title: "先找最小重复单位", body: "红蓝蓝、红蓝蓝不断出现时，最小重复单位是“红蓝蓝”，不是整条长序列。找到它就能继续排列。" },
@@ -659,7 +659,7 @@ export const extraExplorationLessons = {
   "math-scale-world": {
     hook: "一间教室装不进作业本，为什么一张平面图却能把桌椅都放进去？",
     objective: "理解比例尺，并能按同一倍数缩放长度和宽度。",
-    illustration: "/assets/exploration/math/scale-world.png",
+    illustration: "/assets/optimized/exploration/math/scale-world.webp",
     illustrationAlt: "龟龟比较真实桌子、缩小模型和保持比例的房间平面图",
     learnCards: [
       { title: "比例尺连接图上与真实", body: "如果图上1厘米代表真实50厘米，那么图上2厘米就代表真实100厘米。先看单位，再做换算。" },
@@ -690,7 +690,7 @@ export const extraExplorationLessons = {
   "math-data-story": {
     hook: "一周有七个天气符号，把它们排一排，能不能发现肉眼没注意到的变化？",
     objective: "学会收集、整理和比较数据，并区分观察到的结果与过度推断。",
-    illustration: "/assets/exploration/math/data-story.png",
+    illustration: "/assets/optimized/exploration/math/data-story.webp",
     illustrationAlt: "龟龟把一周天气观察整理成图表并比较趋势和例外",
     learnCards: [
       { title: "先说明数据从哪里来", body: "记录对象、时间和方法不同，结果可能不同。写清“什么时候、观察什么、怎样记录”，数据才容易被理解。" },
@@ -721,7 +721,7 @@ export const extraExplorationLessons = {
   "math-fair-game": {
     hook: "规则写着“轮流玩”就一定公平吗？如果一个人总能抽到更多好结果呢？",
     objective: "学会列出可能结果，用获胜机会判断游戏是否公平。",
-    illustration: "/assets/exploration/math/fair-game.png",
+    illustration: "/assets/optimized/exploration/math/fair-game.webp",
     illustrationAlt: "龟龟和朋友用等分转盘、彩球和结果树检查游戏机会是否相同",
     learnCards: [
       { title: "先列出所有可能结果", body: "抛一枚硬币有正、反两种结果；普通骰子有六种结果。漏掉可能结果，就无法准确判断机会。" },
@@ -752,7 +752,7 @@ export const extraExplorationLessons = {
   "life-emotion-weather": {
     hook: "生气时心跳加快、难过时肩膀发沉，身体是不是在悄悄告诉我们情绪来了？",
     objective: "学会命名情绪、观察身体信号，并选择安全合适的调节办法。",
-    illustration: "/assets/exploration/life/emotion-weather.png",
+    illustration: "/assets/optimized/exploration/life/emotion-weather.webp",
     illustrationAlt: "龟龟用晴雨风云观察不同情绪、身体信号和调节办法",
     learnCards: [
       { title: "情绪没有好坏之分", body: "开心、紧张、生气和失望都在传递信息。重要的不是把情绪赶走，而是认识它，并决定怎样安全地行动。" },
@@ -783,7 +783,7 @@ export const extraExplorationLessons = {
   "life-listening": {
     hook: "安静坐着却在想别的事，算不算真的听见了对方？",
     objective: "练习抓住重点、复述确认和提出澄清问题，让合作更顺利。",
-    illustration: "/assets/exploration/life/listening-together.png",
+    illustration: "/assets/optimized/exploration/life/listening-together.webp",
     illustrationAlt: "龟龟和朋友轮流表达、复述重点并一起完成合作任务",
     learnCards: [
       { title: "用适合双方的方式表示在听", body: "可以面向对方、暂时放下手里的事，或用点头回应；不必强求一直盯着眼睛，关键是注意对方的信息。" },
@@ -814,7 +814,7 @@ export const extraExplorationLessons = {
   "life-food-journey": {
     hook: "超市货架上的一盒牛奶，在来到我们手里以前，已经经过了多少人的工作？",
     objective: "理解食物从生产到餐桌的环节，以及每一步使用的劳动和资源。",
-    illustration: "/assets/exploration/life/food-journey.png",
+    illustration: "/assets/optimized/exploration/life/food-journey.webp",
     illustrationAlt: "龟龟沿着果园、采收、运输、商店和家庭餐桌追踪食物旅程",
     learnCards: [
       { title: "食物从生产开始", body: "水果需要土地、水和阳光，牛奶来自牧场，面包从种植小麦开始。不同食物的起点和生产方式不同。" },
@@ -845,7 +845,7 @@ export const extraExplorationLessons = {
   "life-friendly-community": {
     hook: "一条只有台阶的漂亮小路，对推婴儿车的人和坐轮椅的人也友好吗？",
     objective: "学会从不同使用者的需要出发，设计安全、可达又愿意停留的公共空间。",
-    illustration: "/assets/exploration/life/friendly-community.png",
+    illustration: "/assets/optimized/exploration/life/friendly-community.webp",
     illustrationAlt: "龟龟观察有缓坡、清晰过街、休息座椅和儿童自然空间的友好社区",
     learnCards: [
       { title: "可达：大家都能使用", body: "缓坡、平整路面、清楚指引和足够宽的通道，能帮助轮椅使用者、老人、儿童和推车的人顺利到达。" },

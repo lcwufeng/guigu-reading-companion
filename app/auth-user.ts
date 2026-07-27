@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import { getSessionUser } from "../db/auth";
+import { requestUsesHttps } from "../lib/request-security";
 
 export const SESSION_COOKIE = "guigu_session";
-export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+export const SESSION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
 
 export type AuthenticatedStudent = {
   id: string;
@@ -31,7 +32,7 @@ export function sessionCookieOptions(request: Request) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: new URL(request.url).protocol === "https:",
+    secure: requestUsesHttps(request),
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
   };

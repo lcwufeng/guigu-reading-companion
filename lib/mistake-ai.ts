@@ -1,4 +1,5 @@
 import { getResolvedModelConfig } from "../db/model-config";
+import { decodeImageDataUrl, validateImageDataUrl } from "./image-data";
 
 export const MISTAKE_SUBJECTS = ["数学", "语文", "英语", "科学", "其他"] as const;
 export const MISTAKE_CAUSES = ["知识点没记牢", "题目没读懂", "计算或书写失误", "方法没有想到", "还不确定"] as const;
@@ -23,9 +24,8 @@ export type MistakeReviewAnalysis = {
 
 type MiMoResponse = { choices?: Array<{ message?: { content?: string } }> };
 
-const IMAGE_DATA_PATTERN = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
-const MAX_IMAGE_DATA_LENGTH = 4_000_000;
-const MAX_IMAGE_BYTES = 2_500_000;
+const MAX_IMAGE_DATA_LENGTH = 2_700_000;
+const MAX_IMAGE_BYTES = 1_900_000;
 const DEFAULT_MIMO_TIMEOUT_MS = 30_000;
 
 function clean(value: unknown, limit: number) {
@@ -46,18 +46,15 @@ function parseJson(content: string) {
 }
 
 export function validateMistakeImageData(imageData: unknown): imageData is string {
-  return typeof imageData === "string" && imageData.length <= MAX_IMAGE_DATA_LENGTH && IMAGE_DATA_PATTERN.test(imageData);
+  return validateImageDataUrl(imageData, MAX_IMAGE_DATA_LENGTH);
 }
 
 export function decodeMistakeImageData(imageData: unknown) {
-  if (!validateMistakeImageData(imageData)) throw new Error("invalid image");
-  const [header, encoded] = imageData.split(",", 2);
-  const contentType = header.slice(5, header.indexOf(";"));
-  const binary = atob(encoded);
-  if (!binary.length || binary.length > MAX_IMAGE_BYTES) throw new Error("invalid image");
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return { bytes, contentType };
+  return decodeImageDataUrl(imageData, {
+    maxDataLength: MAX_IMAGE_DATA_LENGTH,
+    maxBytes: MAX_IMAGE_BYTES,
+    maxPixels: 12_000_000,
+  });
 }
 
 export function normalizeConfirmedMistake(value: unknown): MistakeAnalysis {

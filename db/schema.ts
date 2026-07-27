@@ -1,5 +1,11 @@
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
+export const appSchemaMeta = sqliteTable("app_schema_meta", {
+  schemaKey: text("schema_key").primaryKey(),
+  schemaVersion: integer("schema_version").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export const readingProgress = sqliteTable("reading_progress", {
   deviceId: text("device_id").notNull(),
   bookId: text("book_id").notNull(),
@@ -156,6 +162,15 @@ export const accountLoginEvents = sqliteTable("account_login_events", {
 }, (table) => [
   index("account_login_events_account_date_idx").on(table.accountType, table.accountId, table.createdAt),
   index("account_login_events_date_idx").on(table.createdAt),
+]);
+
+export const appRateLimits = sqliteTable("app_rate_limits", {
+  limitKey: text("limit_key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  resetAt: integer("reset_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  index("app_rate_limits_expiry_idx").on(table.resetAt),
 ]);
 
 export const parentStudentLinks = sqliteTable("parent_student_links", {
@@ -399,6 +414,18 @@ export const userMinigameProgress = sqliteTable("user_minigame_progress", {
 }, (table) => [
   primaryKey({ columns: [table.userId, table.gameId] }),
   index("user_minigame_progress_user_date_idx").on(table.userId, table.completedAt),
+]);
+
+export const userMinigameRuns = sqliteTable("user_minigame_runs", {
+  runId: text("run_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  gameId: text("game_id").notNull(),
+  startedAt: integer("started_at").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  completedAt: integer("completed_at"),
+}, (table) => [
+  index("user_minigame_runs_user_date_idx").on(table.userId, table.startedAt),
+  index("user_minigame_runs_expiry_idx").on(table.expiresAt),
 ]);
 
 export const userChatMessages = sqliteTable("user_chat_messages", {

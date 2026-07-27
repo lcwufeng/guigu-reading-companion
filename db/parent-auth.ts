@@ -38,11 +38,16 @@ export const initialParentAccounts: readonly ParentAccountSeed[] = [
 ] as const;
 
 const initialPassword = "123456";
-const sessionLifetime = 30 * 24 * 60 * 60 * 1000;
+const sessionLifetime = 14 * 24 * 60 * 60 * 1000;
 let databaseReadyPromise: Promise<RuntimeDatabase | null> | null = null;
 let localStoreQueue = Promise.resolve();
 
+function shouldSeedInitialAccounts() {
+  return process.env.NODE_ENV !== "production" || process.env.SEED_INITIAL_STUDENT_ACCOUNTS === "1";
+}
+
 export async function ensureInitialParentAccounts(database: RuntimeDatabase) {
+  if (!shouldSeedInitialAccounts()) return;
   await ensureInitialStudentAccounts(database);
   for (const account of initialParentAccounts) {
     const exists = await database.first("SELECT id FROM app_parent_users WHERE id = ? OR username = ?", [account.id, account.username]);
@@ -90,19 +95,21 @@ async function withLocalStore<T>(
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     let seeded = false;
-    for (const account of initialParentAccounts) {
-      if (!store.users[account.id] && !Object.values(store.users).some((user) => user.username === account.username)) {
-        store.users[account.id] = {
-          id: account.id,
-          username: account.username,
-          passwordHash: await passwordHash(initialPassword),
-          mustResetPassword: true,
-        };
-        seeded = true;
-      }
-      if (!store.links.some((link) => link.parentId === account.id && link.studentId === account.studentId)) {
-        store.links.push({ parentId: account.id, studentId: account.studentId, relationship: "家长" });
-        seeded = true;
+    if (shouldSeedInitialAccounts()) {
+      for (const account of initialParentAccounts) {
+        if (!store.users[account.id] && !Object.values(store.users).some((user) => user.username === account.username)) {
+          store.users[account.id] = {
+            id: account.id,
+            username: account.username,
+            passwordHash: await passwordHash(initialPassword),
+            mustResetPassword: true,
+          };
+          seeded = true;
+        }
+        if (!store.links.some((link) => link.parentId === account.id && link.studentId === account.studentId)) {
+          store.links.push({ parentId: account.id, studentId: account.studentId, relationship: "家长" });
+          seeded = true;
+        }
       }
     }
     const { result, changed } = await update(store);

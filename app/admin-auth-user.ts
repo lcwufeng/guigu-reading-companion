@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { getAdminSessionUser, type AdminRole } from "../db/admin-auth";
+import { requestUsesHttps, validMutationOrigin } from "../lib/request-security";
 
 export const ADMIN_SESSION_COOKIE = "guigu_admin_session";
 export const ADMIN_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
@@ -22,21 +23,12 @@ export function adminSessionCookieOptions(request: Request) {
   return {
     httpOnly: true,
     sameSite: "strict" as const,
-    secure: new URL(request.url).protocol === "https:",
+    secure: requestUsesHttps(request),
     path: "/",
     maxAge: ADMIN_SESSION_MAX_AGE_SECONDS,
   };
 }
 
 export function validAdminMutationOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    const expectedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim()
-      || request.headers.get("host")?.trim()
-      || new URL(request.url).host;
-    return new URL(origin).host === expectedHost;
-  } catch {
-    return false;
-  }
+  return validMutationOrigin(request);
 }

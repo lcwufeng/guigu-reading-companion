@@ -6,6 +6,7 @@ import {
   submitExplorationReview,
 } from "../../../db/exploration";
 import { getActiveStudent } from "../../auth-user";
+import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const body = await request.json().catch(() => null) as {

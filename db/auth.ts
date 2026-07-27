@@ -20,10 +20,14 @@ export const initialStudentAccounts = [
   { id: "student-demo-7", username: "同学七" },
 ] as const;
 const initialPassword = "123456";
-const sessionLifetime = 30 * 24 * 60 * 60 * 1000;
+const sessionLifetime = 14 * 24 * 60 * 60 * 1000;
 const passwordIterations = 210_000;
 let databaseReadyPromise: Promise<RuntimeDatabase | null> | null = null;
 let localStoreQueue = Promise.resolve();
+
+function shouldSeedInitialAccounts() {
+  return process.env.NODE_ENV !== "production" || process.env.SEED_INITIAL_STUDENT_ACCOUNTS === "1";
+}
 
 function toBase64(bytes: Uint8Array) {
   let binary = "";
@@ -71,6 +75,7 @@ export function createToken() {
 }
 
 export async function ensureInitialStudentAccounts(database: RuntimeDatabase) {
+  if (!shouldSeedInitialAccounts()) return;
   for (const account of initialStudentAccounts) {
     const exists = await database.first("SELECT id FROM app_users WHERE id = ? OR username = ?", [account.id, account.username]);
     if (!exists) {
@@ -110,10 +115,12 @@ async function withLocalStore<T>(update: (store: LocalAuthStore) => Promise<{ re
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     let seeded = false;
-    for (const account of initialStudentAccounts) {
-      if (!store.users[account.id] && !Object.values(store.users).some((user) => user.username === account.username)) {
-        store.users[account.id] = { id: account.id, username: account.username, passwordHash: await passwordHash(initialPassword), mustResetPassword: true };
-        seeded = true;
+    if (shouldSeedInitialAccounts()) {
+      for (const account of initialStudentAccounts) {
+        if (!store.users[account.id] && !Object.values(store.users).some((user) => user.username === account.username)) {
+          store.users[account.id] = { id: account.id, username: account.username, passwordHash: await passwordHash(initialPassword), mustResetPassword: true };
+          seeded = true;
+        }
       }
     }
     const { result, changed } = await update(store);

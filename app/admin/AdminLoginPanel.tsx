@@ -35,7 +35,7 @@ export default function AdminLoginPanel({ mode, displayName = "" }: { mode: "log
     }
   }
 
-  return <main className={styles.loginPage} style={{ backgroundImage: `linear-gradient(rgba(235,248,243,.83), rgba(250,245,226,.88)), url("${BASE_PATH}/assets/ui/login/background.png")` }}>
+  return <main className={styles.loginPage} style={{ backgroundImage: `linear-gradient(rgba(235,248,243,.83), rgba(250,245,226,.88)), url("${BASE_PATH}/assets/optimized/ui/login/background.webp")` }}>
     <Link href="/" className={styles.backLink}>返回学习屋</Link>
     <section className={styles.loginCard}>
       <img src={`${BASE_PATH}/assets/ui/supplied/brand/logo-20260715.png`} alt="龟龟伴读" />

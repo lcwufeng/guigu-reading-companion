@@ -44,7 +44,7 @@ export default function LoginPanel({ mode, displayName = "" }: { mode: "login" |
   };
 
   return (
-    <main className="login-screen" style={{ backgroundImage: `url("${BASE_PATH}/assets/ui/login/background.png")` }}>
+    <main className="login-screen" style={{ backgroundImage: `url("${BASE_PATH}/assets/optimized/ui/login/background.webp")` }}>
       <section className="login-card" aria-labelledby="login-title">
         <img className="login-logo" src={`${BASE_PATH}/assets/ui/supplied/brand/logo-20260715.png`} alt="龟龟伴读" />
         <img className="login-turtle" src={`${BASE_PATH}/assets/characters/turtle/${mode === "reset" ? "turtle_thinking.png" : "turtle_waving.png"}`} alt="欢迎你的龟龟" />
@@ -70,11 +70,11 @@ export default function LoginPanel({ mode, displayName = "" }: { mode: "login" |
             <>
               <label>
                 <span>新密码</span>
-                <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" minLength={6} maxLength={64} placeholder="至少 6 位，不能再用 123456" required />
+                <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" minLength={8} maxLength={64} placeholder="至少 8 位，混合字母、数字或符号" required />
               </label>
               <label>
                 <span>再次输入新密码</span>
-                <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={6} maxLength={64} required />
+                <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={8} maxLength={64} required />
               </label>
             </>
           )}

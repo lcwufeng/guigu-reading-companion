@@ -3,6 +3,7 @@ import { getActiveStudent } from "../../auth-user";
 import { createMistakeForUser, deleteMistakeForUser } from "../../../db/mistakes";
 import { deleteMistakeImage, saveMistakeImage } from "../../../db/mistake-images";
 import { decodeMistakeImageData, mistakeModelSource, normalizeConfirmedMistake } from "../../../lib/mistake-ai";
+import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 
 const mistakeIdPattern = /^\d{10,20}$/;
 
@@ -20,6 +21,7 @@ function imageIdFromUrl(value: string) {
 }
 
 export async function POST(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const body = await request.json().catch(() => null) as null | {
@@ -51,6 +53,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const id = new URL(request.url).searchParams.get("id") || "";

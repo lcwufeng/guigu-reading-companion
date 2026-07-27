@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActiveStudent } from "../../auth-user";
 import { getUserState, saveUserState } from "../../../db/user-state";
+import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 
 export async function GET() {
   const student = await getActiveStudent();
@@ -13,6 +14,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const body = await request.json().catch(() => null) as null | { state?: unknown; updatedAt?: number };

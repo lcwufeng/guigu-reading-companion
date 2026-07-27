@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import { getParentSessionUser } from "../db/parent-auth";
+import { requestUsesHttps } from "../lib/request-security";
 
 export const PARENT_SESSION_COOKIE = "guigu_parent_session";
-export const PARENT_SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+export const PARENT_SESSION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
 
 export type AuthenticatedParent = {
   id: string;
@@ -27,7 +28,7 @@ export function parentSessionCookieOptions(request: Request) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: new URL(request.url).protocol === "https:",
+    secure: requestUsesHttps(request),
     path: "/",
     maxAge: PARENT_SESSION_MAX_AGE_SECONDS,
   };

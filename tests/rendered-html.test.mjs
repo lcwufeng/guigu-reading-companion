@@ -14,6 +14,7 @@ process.env.MISTAKE_IMAGE_DIR = join(testRoot, "mistake-images");
 process.env.BOOK_AUDIO_DIR = join(testRoot, "book-audio");
 process.env.ADMIN_INITIAL_USERNAME = "admin";
 process.env.ADMIN_INITIAL_PASSWORD = "AdminTest1234";
+process.env.SEED_INITIAL_STUDENT_ACCOUNTS = "1";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 let workerPromise;
@@ -51,7 +52,7 @@ test("server-renders the internal beta login before the reading companion", asyn
   assert.match(html, /<title>龟龟伴读/);
   assert.match(html, /内测学习屋/);
   assert.match(html, /请输入账号/);
-  assert.match(html, /assets\/ui\/login\/background\.png/);
+  assert.match(html, /assets\/optimized\/ui\/login\/background\.webp/);
   assert.match(html, /assets\/ui\/supplied\/brand\/logo-20260715\.png/);
   assert.doesNotMatch(html, /选择内测账号/);
   assert.doesNotMatch(html, /同学一|同学二|同学三|同学四|同学五|同学六|同学七/);
@@ -154,7 +155,7 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
       }
     }
 
-    await access(new URL(`../public/assets/ui/journal/books/classics/${book.slug}.png`, import.meta.url));
+    await access(new URL(`../public/assets/optimized/ui/journal/books/classics/${book.slug}.webp`, import.meta.url));
   }
 
   const readingApp = await readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8");
@@ -191,9 +192,9 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   }
   assert.equal((catalog.match(/type: "(?:发现|观察|连接|创造)"/g) || []).length, 32);
   assert.equal((catalog.match(/lesson: \{/g) || []).length, 4);
-  assert.equal((catalog.match(/illustration: "\/assets\/exploration\/nature\//g) || []).length, 4);
+  assert.equal((catalog.match(/illustration: "\/assets\/optimized\/exploration\/nature\//g) || []).length, 4);
   assert.equal((catalog.match(/lesson: extraExplorationLessons\[/g) || []).length, 28);
-  assert.equal((extraLessons.match(/illustration: "\/assets\/exploration\//g) || []).length, 28);
+  assert.equal((extraLessons.match(/illustration: "\/assets\/optimized\/exploration\//g) || []).length, 28);
   assert.match(readingApp, /exploration-lesson-illustration/);
   assert.match(readingApp, /我学完了，试试互动检查/);
   assert.match(readingApp, /实践表达 · 把知识用起来/);
@@ -217,7 +218,7 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   assert.match(styles, /\.app\.view-explore/);
   assert.match(styles, /\.explore-scene \{[\s\S]*overflow-y: scroll/);
   for (const asset of ["animal-survival.png", "forest-layers.png", "fossil-evidence.png", "animal-habitat.png"]) {
-    await access(new URL(`../public/assets/exploration/nature/${asset}`, import.meta.url));
+    await access(new URL(`../public/assets/optimized/exploration/nature/${asset.replace(/\.png$/, ".webp")}`, import.meta.url));
   }
   const newRouteAssets = {
     science: ["moon-phases.png", "bioluminescence.png", "renewable-energy.png", "future-base.png"],
@@ -230,7 +231,7 @@ test("provides a separate eight-domain knowledge expedition with evidence gates 
   };
   for (const [domain, assets] of Object.entries(newRouteAssets)) {
     for (const asset of assets) {
-      await access(new URL(`../public/assets/exploration/${domain}/${asset}`, import.meta.url));
+      await access(new URL(`../public/assets/optimized/exploration/${domain}/${asset.replace(/\.png$/, ".webp")}`, import.meta.url));
     }
   }
   assert.doesNotMatch(explorationDb, /localStorage|sessionStorage/);
@@ -254,7 +255,8 @@ test("provides eight responsive turtle games with progressive learning challenge
   await access(new URL("../public/assets/ui/icons/play-ticket-pixel.png", import.meta.url));
   assert.match(readingApp, /进入龟龟乐园玩小游戏/);
   assert.match(readingApp, /fruitCatchDaily/);
-  assert.match(readingApp, /stars: current\.stars \+ \(shouldReward \? 1 : 0\)/);
+  assert.match(readingApp, /api\/minigames/);
+  assert.match(readingApp, /data\.balances/);
   assert.match(gamePark, /龟龟接果子/);
   assert.match(gamePark, /乌龟快递员/);
   assert.match(gamePark, /天气穿搭/);
@@ -462,7 +464,7 @@ test("forces first-login password reset and isolates every student's data", asyn
   const secondReset = await fetchApp("/api/auth/reset-password", {
     method: "POST",
     headers: { "content-type": "application/json", cookie: secondCookie },
-    body: JSON.stringify({ newPassword: "demo2789", confirmPassword: "demo2789" }),
+    body: JSON.stringify({ newPassword: "demo27890", confirmPassword: "demo27890" }),
   });
   assert.equal(secondReset.status, 200);
   const secondActiveCookie = cookieFrom(secondReset);
@@ -483,7 +485,7 @@ test("forces first-login password reset and isolates every student's data", asyn
 });
 
 test("keeps the product loops, account safeguards, and required art assets", async () => {
-  const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, mistakesRoute, mistakeReviewRoute, mistakesDb, mistakeAi, studentMemoryRoute, studentMemoryDb, bookKnowledge, bookPrompts, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, schemaStatements, hosting] = await Promise.all([
+  const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, mistakesRoute, mistakeReviewRoute, mistakesDb, mistakeAi, studentMemoryRoute, studentMemoryDb, bookKnowledge, bookPrompts, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, schemaStatements, hosting, studentActionsRoute, studentActionsDb, rewardWallet, minigamesRoute, bundledBookRoute] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -510,6 +512,11 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/student-actions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/student-actions.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/reward-wallet.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/minigames/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/library/bundled-book/route.ts", import.meta.url), "utf8"),
   ]);
   const [bookAudioRoute, bookAudioFileRoute, bookAudioStore, bookAudioGenerator] = await Promise.all([
     readFile(new URL("../app/api/book-audio/route.ts", import.meta.url), "utf8"),
@@ -577,11 +584,13 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /mistakes: \[\]/);
   assert.match(page, /dailyPlan:/);
   assert.match(page, /createDailyPlan/);
-  assert.match(page, /advanceDailyTask/);
+  assert.match(page, /runStudentAction/);
   assert.match(page, /const completesDailyReadingTask = dailyPlan\.progress\.reading < dailyPlan\.targets\.reading/);
-  assert.match(page, /setGame\(\(current\) => advanceDailyTask\(current, "reading"\)\)/);
+  assert.match(page, /action: "daily-task", task: "reading"/);
+  assert.match(studentActionsRoute, /completeDailyTask/);
+  assert.match(studentActionsDb, /completeDailyTask/);
   assert.match(page, /这一章读完啦，今日伴读任务已完成/);
-  assert.match(page, /earnedReward \? 3 : 0/);
+  assert.match(studentActionsDb, /daily-plan/);
   assert.match(page, /全部完成可得 3 颗星星/);
   assert.match(page, /ui\/daily-tasks\/title\.png/);
   assert.doesNotMatch(page, /ui\/daily-tasks\/task-row\.png/);
@@ -645,10 +654,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.message p \{[\s\S]*?font-size: 17px;/);
   assert.match(page, /回答正确随机奖励/);
   assert.match(page, /1 颗星星、1 张旅行票或 1 张游玩票/);
-  assert.match(page, /rewardRoll < 0\.34 \? "star" : rewardRoll < 0\.67 \? "ticket" : "play-ticket"/);
-  assert.match(page, /stars: current\.stars \+ \(rewardKind === "star" \? 1 : 0\)/);
-  assert.match(page, /tickets: current\.tickets \+ \(rewardKind === "ticket" \? 1 : 0\)/);
-  assert.match(page, /playTickets: current\.playTickets \+ \(rewardKind === "play-ticket" \? 1 : 0\)/);
+  assert.match(rewardWallet, /deterministicReward/);
+  assert.match(rewardWallet, /claimReadingReward/);
+  assert.match(companionRoute, /claimReadingReward/);
+  assert.match(page, /result\.reward!\.balances/);
   assert.match(page, /这道题的奖励已经领取过啦/);
   assert.match(page, /龟龟的问题/);
   assert.match(page, /这次先跳过/);
@@ -667,9 +676,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /已回答 · 查看阅读小结/);
   assert.match(styles, /\.next-button\.completed/);
   assert.doesNotMatch(page, /readingRewards[^\n]*slice\(-500\)/);
-  assert.match(page, /scarecrow-zh\.md/);
-  assert.match(page, /grimms-fairy-tales-zh\.md/);
-  assert.match(page, /andersens-fairy-tales-zh\.md/);
+  assert.match(page, /api\/library\/bundled-book/);
+  assert.match(page, /chunked: true/);
+  assert.match(bundledBookRoute, /pageCount/);
+  assert.match(bundledBookRoute, /chapterIndex/);
   assert.match(page, /parseMarkdownBook/);
   assert.doesNotMatch(page, /grimms-fairy-tales-en\.txt|andersens-fairy-tales-en\.txt/);
   assert.match(styles, /text-indent: 2em/);
@@ -709,7 +719,8 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.doesNotMatch(page, /className={`world-hotspot/);
   assert.match(page, /连续找到 5 次奖励 1 颗星/);
   assert.match(page, /今天已经完成 5 局捉迷藏啦/);
-  assert.match(page, /stars: current\.stars \+ 1/);
+  assert.match(page, /action: "hide-and-seek"/);
+  assert.match(studentActionsDb, /hide-and-seek/);
   assert.doesNotMatch(page, /完成三轮奖励 3～6 颗星|stars: current\.stars \+ starReward/);
   assert.match(styles, /\.hide-game-hud \{/);
   assert.match(styles, /\.hide-countdown \{/);
@@ -740,9 +751,9 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.chapter-question-heading img \{[\s\S]*?height: 132px;/);
   assert.match(page, /journal-scene-background/);
   assert.match(page, /growth-journal-emblem\.png/);
-  assert.match(page, /scarecrow-reading-book\.png/);
-  assert.match(page, /grimm-reading-book\.png/);
-  assert.match(page, /andersen-reading-book\.png/);
+  assert.match(page, /scarecrow-reading-book\.webp/);
+  assert.match(page, /grimm-reading-book\.webp/);
+  assert.match(page, /andersen-reading-book\.webp/);
   assert.match(page, /journal-travel-card/);
   assert.match(page, /journal-reading-card/);
   assert.match(page, /journal-inventory-grid/);
@@ -756,11 +767,11 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /等待新发现/);
   assert.match(styles, /Growth journal uses the generated wood-and-vine parchment frame as its main board/);
   assert.match(styles, /border-image-source: var\(--journal-frame-image\)/);
-  assert.match(page, /--journal-frame-image": `url\("\$\{ASSET\}\/ui\/journal\/knowledge-card-background\.png"\)/);
+  assert.match(page, /--journal-frame-image": `url\("\$\{ASSET\}\/optimized\/ui\/journal\/knowledge-card-background\.webp"\)/);
   assert.match(styles, /font-family: "Microsoft YaHei", "PingFang SC", "Heiti SC", Arial, sans-serif;/);
   assert.match(styles, /\.journal-reading-copy p \{[\s\S]*?font-size: 18px;/);
   assert.match(styles, /\.journal-card-copy p \{[\s\S]*?font-size: 17px;/);
-  assert.match(page, /knowledge-card-background\.png/);
+  assert.match(page, /knowledge-card-background\.webp/);
   assert.match(styles, /border-image-source: var\(--knowledge-card-background\)/);
   assert.match(styles, /\.knowledge-copy > p \{[\s\S]*?font-size: 19px;/);
   assert.match(styles, /\.knowledge-copy h2 \{[\s\S]*?font-size: 32px;/);
@@ -899,12 +910,15 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(authUser, /httpOnly: true/);
   assert.match(authUser, /sameSite: "lax"/);
   assert.match(loginRoute, /mustResetPassword/);
-  assert.match(loginRoute, /current\.count >= 8/);
-  assert.match(loginRoute, /recordFailedAttempt/);
-  assert.match(resetRoute, /newPassword === "123456"/);
+  assert.match(loginRoute, /consumeRateLimit/);
+  assert.match(loginRoute, /mutationOriginError/);
+  assert.match(resetRoute, /studentPasswordError/);
   assert.match(resetRoute, /resetPassword/);
   assert.match(userStateRoute, /getActiveStudent/);
   assert.match(userStateDb, /readyRuntimeDatabase/);
+  assert.match(userStateDb, /trustedImport/);
+  assert.match(minigamesRoute, /startMiniGame/);
+  assert.match(minigamesRoute, /completeMiniGame/);
   assert.match(schemaStatements, /user_id TEXT PRIMARY KEY/);
   assert.match(hosting, /"d1": "DB"/);
   assert.match(hosting, /"r2": "UPLOADS"/);
@@ -973,7 +987,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/ui/supplied/nav/reading-20260714.png",
     "../public/assets/ui/supplied/nav/mistakes-20260714.png",
     "../public/assets/ui/supplied/nav/journal-20260714.png",
-    "../public/assets/ui/login/background.png",
+    "../public/assets/optimized/ui/login/background.webp",
     "../public/assets/ui/mistakes/background.webp",
     "../public/assets/ui/mistakes/title.png",
     "../public/assets/ui/mistakes/stats-panel.png",
@@ -989,7 +1003,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/ui/daily-tasks/mistake.png",
     "../public/assets/ui/daily-tasks/reading.png",
     "../public/assets/ui/daily-tasks/reward-star.png",
-    "../public/assets/ui/journal/background.png",
+    "../public/assets/optimized/ui/journal/background.webp",
     "../public/assets/ui/journal/parchment-panel.png",
     "../public/assets/ui/journal/traveler-turtle.png",
     "../public/assets/ui/journal/travel-path-scene.png",
@@ -1010,10 +1024,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/ui/journal/dotted-travel-path.png",
     "../public/assets/ui/journal/reading-record-book.png",
     "../public/assets/ui/journal/growth-journal-emblem.png",
-    "../public/assets/ui/journal/knowledge-card-background.png",
-    "../public/assets/ui/journal/books/scarecrow-reading-book.png",
-    "../public/assets/ui/journal/books/grimm-reading-book.png",
-    "../public/assets/ui/journal/books/andersen-reading-book.png",
+    "../public/assets/optimized/ui/journal/knowledge-card-background.webp",
+    "../public/assets/optimized/ui/journal/books/scarecrow-reading-book.webp",
+    "../public/assets/optimized/ui/journal/books/grimm-reading-book.webp",
+    "../public/assets/optimized/ui/journal/books/andersen-reading-book.webp",
     "../public/assets/characters/turtle/hide-generated/turtle-hide-cave-20260716.png",
     "../public/assets/characters/turtle/hide-generated/turtle-hide-bush-20260716.png",
     "../public/assets/characters/turtle/hide-generated/turtle-hide-flowers-20260716.png",

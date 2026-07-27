@@ -2,26 +2,26 @@ import { NextResponse } from "next/server";
 import { getActiveStudent } from "../../auth-user";
 import { recognizeVolcSpeech } from "../../../lib/volc-speech";
 import { recordServiceHealthEvent } from "../../../db/service-health";
+import { consumeRateLimit } from "../../../db/rate-limit";
+import { mutationOriginError, requestIpAddress, validMutationOrigin } from "../../../lib/request-security";
 
 const MAX_AUDIO_BYTES = 2_500_000;
-const speechRateLimits = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimited(request: Request) {
-  const key = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  const now = Date.now();
-  const current = speechRateLimits.get(key);
-  if (!current || current.resetAt <= now) {
-    speechRateLimits.set(key, { count: 1, resetAt: now + 5 * 60_000 });
-    return false;
-  }
-  current.count += 1;
-  return current.count > 12;
-}
 
 export async function POST(request: Request) {
-  if (!await getActiveStudent()) return NextResponse.json({ error: "请先登录" }, { status: 401 });
-  if (rateLimited(request)) {
-    return NextResponse.json({ error: "语音使用得有点频繁，请休息一会再试" }, { status: 429 });
+  if (!validMutationOrigin(request)) return mutationOriginError();
+  const student = await getActiveStudent();
+  if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  const rateLimit = await consumeRateLimit({
+    scope: "speech",
+    identity: `${student.id}:${requestIpAddress(request)}`,
+    limit: 12,
+    windowMs: 5 * 60_000,
+  });
+  if (rateLimit.limited) {
+    return NextResponse.json(
+      { error: "语音使用得有点频繁，请休息一会再试" },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
   if (!request.headers.get("content-type")?.startsWith("audio/wav")) {
     return NextResponse.json({ error: "只支持 WAV 录音" }, { status: 415 });

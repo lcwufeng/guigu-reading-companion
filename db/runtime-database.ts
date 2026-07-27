@@ -26,6 +26,7 @@ type D1DatabaseLike = {
 
 let databasePromise: Promise<RuntimeDatabase | null> | null = null;
 let schemaPromise: Promise<void> | null = null;
+const APP_SCHEMA_VERSION = 2;
 
 async function d1Database(): Promise<RuntimeDatabase | null> {
   try {
@@ -118,7 +119,22 @@ export async function getRuntimeDatabase() {
 }
 
 export async function ensureAppSchema(database: RuntimeDatabase) {
-  if (!schemaPromise) schemaPromise = database.batch(SCHEMA_STATEMENTS.map((sql) => ({ sql })));
+  if (!schemaPromise) schemaPromise = (async () => {
+    try {
+      const current = await database.first<{ schema_version: number }>(
+        "SELECT schema_version FROM app_schema_meta WHERE schema_key = 'app'",
+      );
+      if ((current?.schema_version || 0) >= APP_SCHEMA_VERSION) return;
+    } catch {
+      // A fresh or pre-versioned database needs the full idempotent schema once.
+    }
+    await database.batch(SCHEMA_STATEMENTS.map((sql) => ({ sql })));
+    await database.run(
+      `INSERT INTO app_schema_meta (schema_key, schema_version, updated_at) VALUES ('app', ?, ?)
+        ON CONFLICT(schema_key) DO UPDATE SET schema_version = excluded.schema_version, updated_at = excluded.updated_at`,
+      [APP_SCHEMA_VERSION, Date.now()],
+    );
+  })();
   await schemaPromise;
 }
 

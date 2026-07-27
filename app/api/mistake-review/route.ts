@@ -5,17 +5,30 @@ import { deleteMistakeImage, saveMistakeImage } from "../../../db/mistake-images
 import { decodeMistakeImageData, evaluateMistakeAnswer, mistakeModelSource, validateMistakeImageData } from "../../../lib/mistake-ai";
 import { recordServiceHealthEvent } from "../../../db/service-health";
 import { getResolvedModelConfig } from "../../../db/model-config";
+import { consumeRateLimit } from "../../../db/rate-limit";
+import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 
 const mistakeIdPattern = /^\d{10,20}$/;
 
 export async function POST(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  const rateLimit = await consumeRateLimit({ scope: "mistake-review", identity: student.id, limit: 15, windowMs: 10 * 60_000 });
+  if (rateLimit.limited) return NextResponse.json(
+    { error: "错题复习使用得有点频繁，请稍后再试" },
+    { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+  );
   const body = await request.json().catch(() => null) as null | { mistakeId?: string | number; imageData?: string };
   const mistakeId = String(body?.mistakeId || "");
   if (!mistakeIdPattern.test(mistakeId)) return NextResponse.json({ error: "错题编号无效" }, { status: 400 });
   if (!validateMistakeImageData(body?.imageData)) {
     return NextResponse.json({ error: "请上传清晰的答案和步骤照片" }, { status: 400 });
+  }
+  try {
+    decodeMistakeImageData(body.imageData);
+  } catch {
+    return NextResponse.json({ error: "图片内容或尺寸无效，请重新拍照" }, { status: 400 });
   }
   const mistake = await getMistakeForUser(student.id, mistakeId);
   if (!mistake) return NextResponse.json({ error: "这道错题不存在" }, { status: 404 });

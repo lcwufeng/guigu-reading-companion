@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server";
 import { getActiveStudent } from "../../auth-user";
 import { deleteMistakeImage, getMistakeImage, saveMistakeImage } from "../../../db/mistake-images";
+import { decodeImageDataUrl } from "../../../lib/image-data";
+import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 
-const imagePattern = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/;
 const idPattern = /^[0-9a-f-]{36}$/;
-const maxBytes = 2_500_000;
 
 function decodeImageData(imageData: string) {
-  const match = imageData.match(imagePattern);
-  if (!match) throw new Error("invalid image");
-  const binary = atob(match[2]);
-  if (!binary.length || binary.length > maxBytes) throw new Error("invalid image");
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return { bytes, contentType: `image/${match[1]}` };
+  return decodeImageDataUrl(imageData, {
+    maxDataLength: 2_700_000,
+    maxBytes: 1_900_000,
+    maxPixels: 12_000_000,
+  });
 }
 
 export async function POST(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const body = await request.json().catch(() => null) as null | { imageData?: string };
@@ -50,6 +49,7 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const id = new URL(request.url).searchParams.get("id") || "";

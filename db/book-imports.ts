@@ -235,6 +235,71 @@ export async function getPublishedBookContent(bookId: string) {
   return chapters.length ? { id: bookId, title: book.title, author: book.author, chapters } : null;
 }
 
+export async function getPublishedBookManifest(bookId: string) {
+  if (!bookIdPattern.test(bookId)) return null;
+  const database = await databaseOrThrow();
+  const book = await database.first<{ title: string; author: string }>(
+    "SELECT title, author FROM imported_books WHERE book_id = ? AND status = 'published'",
+    [bookId],
+  );
+  if (!book) return null;
+  const chapters = await database.all<{ chapter_id: string; title: string; page_count: number }>(`
+    SELECT c.chapter_id, c.title, json_array_length(c.pages_json) AS page_count
+    FROM imported_book_chapters c
+    JOIN imported_books b ON b.book_id = c.book_id
+    WHERE c.book_id = ? AND b.status = 'published'
+    ORDER BY c.chapter_index
+  `, [bookId]);
+  return {
+    id: bookId,
+    title: book.title,
+    author: book.author,
+    chapters: chapters.map((chapter) => ({
+      id: chapter.chapter_id,
+      title: chapter.title,
+      pageCount: Math.max(0, chapter.page_count || 0),
+    })),
+  };
+}
+
+export async function getPublishedBookChapterAt(bookId: string, chapterIndex: number) {
+  if (!bookIdPattern.test(bookId) || !Number.isInteger(chapterIndex) || chapterIndex < 0 || chapterIndex > 499) return null;
+  const database = await databaseOrThrow();
+  const row = await database.first<{ chapter_id: string; title: string; pages_json: string }>(`
+    SELECT c.chapter_id, c.title, c.pages_json
+    FROM imported_book_chapters c
+    JOIN imported_books b ON b.book_id = c.book_id
+    WHERE c.book_id = ? AND c.chapter_index = ? AND b.status = 'published'
+    LIMIT 1
+  `, [bookId, chapterIndex]);
+  if (!row) return null;
+  try {
+    const pages = JSON.parse(row.pages_json) as ImportedBookPage[];
+    return pages.length ? { id: row.chapter_id, title: row.title, pages } : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getPublishedBookChapter(bookId: string, chapterTitle: string) {
+  if (!bookIdPattern.test(bookId) || !chapterTitle.trim()) return null;
+  const database = await databaseOrThrow();
+  const row = await database.first<{ chapter_id: string; title: string; pages_json: string }>(`
+    SELECT c.chapter_id, c.title, c.pages_json
+    FROM imported_book_chapters c
+    JOIN imported_books b ON b.book_id = c.book_id
+    WHERE c.book_id = ? AND c.title = ? AND b.status = 'published'
+    LIMIT 1
+  `, [bookId, chapterTitle.trim().slice(0, 140)]);
+  if (!row) return null;
+  try {
+    const pages = JSON.parse(row.pages_json) as ImportedBookPage[];
+    return pages.length ? { id: row.chapter_id, title: row.title, pages } : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getImportedBookTitleMap() {
   const database = await databaseOrThrow();
   const rows = await database.all<{ book_id: string; title: string }>("SELECT book_id, title FROM imported_books");

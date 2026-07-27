@@ -12,6 +12,7 @@ import {
   updateParentControls,
 } from "../../../../db/parent-center";
 import { getActiveParent } from "../../../parent-auth-user";
+import { mutationOriginError, validMutationOrigin } from "../../../../lib/request-security";
 
 type ActionBody = {
   action?: string;
@@ -27,6 +28,7 @@ type ActionBody = {
 };
 
 export async function POST(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const parent = await getActiveParent();
   if (!parent) return NextResponse.json({ error: "请先登录家长中心。" }, { status: 401 });
   const body = await request.json().catch(() => null) as ActionBody | null;

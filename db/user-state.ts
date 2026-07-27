@@ -217,6 +217,7 @@ async function saveNormalizedState(
   sourceType = "game-state-sync",
 ) {
   const state = object(rawState);
+  const trustedImport = sourceType === "legacy-d1-import";
   const currentMeta = await database.first<{ updated_at: number }>("SELECT updated_at FROM user_state_meta WHERE user_id = ?", [userId]);
   if (currentMeta && currentMeta.updated_at > updatedAt) return;
   const currentPet = await database.first<{ fruits: number; stars: number; tickets: number }>(
@@ -227,17 +228,21 @@ async function saveNormalizedState(
     "SELECT balance FROM user_play_ticket_wallet WHERE user_id = ?",
     [userId],
   );
-  const previousMistakes = await database.all<{ mistake_id: string; review_count: number }>(
-    "SELECT mistake_id, review_count FROM user_mistakes WHERE user_id = ?",
-    [userId],
-  );
+  const previousMistakes = trustedImport
+    ? await database.all<{ mistake_id: string; review_count: number }>(
+      "SELECT mistake_id, review_count FROM user_mistakes WHERE user_id = ?",
+      [userId],
+    )
+    : [];
   const previousReviewCounts = new Map(previousMistakes.map((mistake) => [mistake.mistake_id, mistake.review_count]));
   const nextBalances = {
-    fruits: Math.max(0, integer(state.fruits)),
-    stars: Math.max(0, integer(state.stars)),
-    tickets: Math.max(0, integer(state.tickets)),
+    fruits: trustedImport ? Math.max(0, integer(state.fruits, 5)) : Math.max(0, currentPet?.fruits ?? 5),
+    stars: trustedImport ? Math.max(0, integer(state.stars, 12)) : Math.max(0, currentPet?.stars ?? 12),
+    tickets: trustedImport ? Math.max(0, integer(state.tickets, 3)) : Math.max(0, currentPet?.tickets ?? 3),
   };
-  const nextPlayTickets = Math.max(0, integer(state.playTickets));
+  const nextPlayTickets = trustedImport
+    ? Math.max(0, integer(state.playTickets))
+    : Math.max(0, currentPlayTicketWallet?.balance || 0);
   const statements: SqlStatement[] = [{
     sql: `INSERT INTO user_state_meta (user_id, updated_at) VALUES (?, ?)
       ON CONFLICT(user_id) DO UPDATE SET updated_at = excluded.updated_at WHERE excluded.updated_at >= user_state_meta.updated_at`,
@@ -296,15 +301,18 @@ async function saveNormalizedState(
     "turtle-sky",
     "tortoise-race",
   ]);
-  for (const rawGameId of list(state.completedMiniGames).slice(0, validMinigames.size)) {
-    const gameId = text(rawGameId, 80);
-    if (!validMinigames.has(gameId)) continue;
-    statements.push({
-      sql: "INSERT OR IGNORE INTO user_minigame_progress (user_id, game_id, completed_at) VALUES (?, ?, ?)",
-      params: [userId, gameId, updatedAt],
-    });
+  if (trustedImport) {
+    for (const rawGameId of list(state.completedMiniGames).slice(0, validMinigames.size)) {
+      const gameId = text(rawGameId, 80);
+      if (!validMinigames.has(gameId)) continue;
+      statements.push({
+        sql: "INSERT OR IGNORE INTO user_minigame_progress (user_id, game_id, completed_at) VALUES (?, ?, ?)",
+        params: [userId, gameId, updatedAt],
+      });
+    }
   }
 
+  if (trustedImport) {
   for (const rawRecord of list(state.readingRecords).slice(0, 500)) {
     const record = object(rawRecord);
     const id = String(integer(record.id, updatedAt));
@@ -417,6 +425,7 @@ async function saveNormalizedState(
       updatedAt,
     ],
   });
+  }
 
   statements.push({ sql: "DELETE FROM user_chat_messages WHERE expires_at <= ?", params: [updatedAt] });
   const parentControls = await database.first<{ chat_cleared_at: number }>(
@@ -471,9 +480,25 @@ export async function saveUserState(userId: string, state: unknown, updatedAt: n
   }
   await withLocalStore((store) => {
     if ((store[userId]?.updatedAt || 0) <= safeUpdatedAt) {
-      store[userId] = { state: JSON.parse(stateJson), updatedAt: safeUpdatedAt };
+      const existingState = object(store[userId]?.state);
+      store[userId] = { state: { ...existingState, ...JSON.parse(stateJson) }, updatedAt: safeUpdatedAt };
       return { result: undefined, changed: true };
     }
     return { result: undefined, changed: false };
   });
+}
+
+/**
+ * One-way import entry point for the offline JSON-to-SQLite migration tool.
+ * Runtime API routes must use saveUserState so clients cannot overwrite
+ * server-authoritative balances, rewards, progress, or learning records.
+ */
+export async function importLegacyUserState(userId: string, state: unknown, updatedAt: number) {
+  const stateJson = serializeUserState(state);
+  const safeUpdatedAt = Math.max(1, Math.floor(updatedAt));
+  const database = await readyRuntimeDatabase();
+  if (!database) throw new Error("legacy import requires database storage");
+  await withDatabaseSaveQueue(userId, () => (
+    saveNormalizedState(database, userId, JSON.parse(stateJson), safeUpdatedAt, "legacy-d1-import")
+  ));
 }

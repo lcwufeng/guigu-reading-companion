@@ -2,14 +2,21 @@
 "use client";
 
 import { BookOpen, ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Heart, Lock, Map, Plane, Search, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import CourierGame from "./CourierGame";
-import LotusJumpGame from "./LotusJumpGame";
-import SpotDifferenceGame from "./SpotDifferenceGame";
-import StoryPuzzleGame from "./StoryPuzzleGame";
-import TortoiseRaceGame from "./TortoiseRaceGame";
-import TurtleSkyGame from "./TurtleSkyGame";
-import WeatherOutfitGame from "./WeatherOutfitGame";
+import { lazy, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import {
+  GAME_PARK_ORDER,
+  type FruitCatchDailyState,
+  type FruitCatchResult,
+  type GameParkGameId,
+  type LearningMiniGameResult,
+} from "./game-park-types";
+const CourierGame = lazy(() => import("./CourierGame"));
+const LotusJumpGame = lazy(() => import("./LotusJumpGame"));
+const SpotDifferenceGame = lazy(() => import("./SpotDifferenceGame"));
+const StoryPuzzleGame = lazy(() => import("./StoryPuzzleGame"));
+const TortoiseRaceGame = lazy(() => import("./TortoiseRaceGame"));
+const TurtleSkyGame = lazy(() => import("./TurtleSkyGame"));
+const WeatherOutfitGame = lazy(() => import("./WeatherOutfitGame"));
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const ASSET = `${BASE_PATH}/assets`;
@@ -17,40 +24,6 @@ const ROUND_DURATION_MS = 30_000;
 const TICK_MS = 50;
 const SPAWN_INTERVAL_MS = 620;
 export const FRUIT_CATCH_TARGET_SCORE = 12;
-
-export type FruitCatchDailyState = {
-  dateKey: string;
-  plays: number;
-  rewarded: boolean;
-  bestScore: number;
-  totalCaught: number;
-};
-
-export type FruitCatchResult = {
-  score: number;
-  caught: number;
-  missed: number;
-  bestCombo: number;
-  success: boolean;
-};
-
-export type LearningMiniGameResult = {
-  game: "turtle-courier" | "weather-outfit" | "lotus-jump" | "spot-difference" | "story-puzzle" | "turtle-sky" | "tortoise-race";
-  detail: string;
-};
-
-export type GameParkGameId = "fruit-catch" | LearningMiniGameResult["game"];
-
-export const GAME_PARK_ORDER: GameParkGameId[] = [
-  "fruit-catch",
-  "turtle-courier",
-  "weather-outfit",
-  "lotus-jump",
-  "spot-difference",
-  "story-puzzle",
-  "turtle-sky",
-  "tortoise-race",
-];
 
 const GAME_NAMES: Record<GameParkGameId, string> = {
   "fruit-catch": "龟龟接果子",
@@ -141,9 +114,9 @@ export default function GamePark({
   playTickets: number;
   completedGames: GameParkGameId[];
   onBackHome: () => void;
-  onRoundComplete: (result: FruitCatchResult) => void;
-  onLearningGameComplete: (result: LearningMiniGameResult) => void;
-  onSpendPlayTicket: (game: GameParkGameId) => void;
+  onRoundComplete: (result: FruitCatchResult, runId: string) => void;
+  onLearningGameComplete: (result: LearningMiniGameResult, runId: string) => void;
+  onSpendPlayTicket: (game: GameParkGameId) => Promise<string | null>;
   onPlayingChange: (playing: boolean) => void;
 }) {
   const [activeGame, setActiveGame] = useState<GameParkGameId | null>(null);
@@ -153,10 +126,13 @@ export default function GamePark({
   const [challengeHearts, setChallengeHearts] = useState(3);
   const [challengeFailed, setChallengeFailed] = useState(false);
   const [challengeRunKey, setChallengeRunKey] = useState(0);
+  const [activeRunId, setActiveRunId] = useState("");
   const [heartNotice, setHeartNotice] = useState("");
+  const [ticketStarting, setTicketStarting] = useState(false);
   const fieldRef = useRef<HTMLDivElement | null>(null);
   const reportedResultRef = useRef(false);
   const challengeHeartsRef = useRef(3);
+  const ticketStartingRef = useRef(false);
 
   const completedSet = useMemo(() => new Set(completedGames), [completedGames]);
   const unlockedCount = GAME_PARK_ORDER.filter((gameId, index) => index === 0 || completedSet.has(GAME_PARK_ORDER[index - 1])).length;
@@ -171,7 +147,20 @@ export default function GamePark({
   const gameButtonLabel = (gameId: GameParkGameId) => {
     if (!isGameUnlocked(gameId)) return `先通关${previousGameName(gameId)}`;
     if (playTickets < 1) return "需要 1 张游玩票";
+    if (ticketStarting) return "正在准备游戏…";
     return completedSet.has(gameId) ? "使用 1 张票再玩" : "使用 1 张游玩票开始";
+  };
+
+  const spendTicketForRun = async (game: GameParkGameId) => {
+    if (ticketStartingRef.current) return null;
+    ticketStartingRef.current = true;
+    setTicketStarting(true);
+    try {
+      return await onSpendPlayTicket(game);
+    } finally {
+      ticketStartingRef.current = false;
+      setTicketStarting(false);
+    }
   };
 
   const resetChallenge = () => {
@@ -274,8 +263,8 @@ export default function GamePark({
     if (run.phase !== "finished" || reportedResultRef.current) return;
     reportedResultRef.current = true;
     setEarnedRewardThisRound(result.success && !daily.rewarded);
-    onRoundComplete(result);
-  }, [daily.rewarded, onRoundComplete, result, run.phase]);
+    if (activeRunId) onRoundComplete(result, activeRunId);
+  }, [activeRunId, daily.rewarded, onRoundComplete, result, run.phase]);
 
   const startRound = () => {
     reportedResultRef.current = false;
@@ -299,10 +288,11 @@ export default function GamePark({
 
   const leaveRound = () => {
     setRun(initialRun());
+    setActiveRunId("");
     setActiveGame(null);
   };
 
-  const openTicketedGame = (game: GameParkGameId) => {
+  const openTicketedGame = async (game: GameParkGameId) => {
     if (!isGameUnlocked(game)) {
       setTicketNotice(`先通关“${previousGameName(game)}”，就能解锁“${GAME_NAMES[game]}”。`);
       return;
@@ -311,7 +301,9 @@ export default function GamePark({
       setTicketNotice("游玩票用完啦。完成阅读、旅行或错题复习，就能获得新的游玩票。");
       return;
     }
-    onSpendPlayTicket(game);
+    const runId = await spendTicketForRun(game);
+    if (!runId) return;
+    setActiveRunId(runId);
     setTicketNotice("");
     resetChallenge();
     setChallengeRunKey((current) => current + 1);
@@ -319,25 +311,30 @@ export default function GamePark({
     setActiveGame(game);
   };
 
-  const replayFruitCatch = () => {
-    if (playTickets < 1) return;
-    onSpendPlayTicket("fruit-catch");
+  const replayFruitCatch = async () => {
+    if (playTickets < 1 || ticketStartingRef.current) return;
+    const runId = await spendTicketForRun("fruit-catch");
+    if (!runId) return;
+    setActiveRunId(runId);
     resetChallenge();
     startRound();
   };
 
-  const retryFailedChallenge = () => {
+  const retryFailedChallenge = async () => {
     if (!activeGame || playTickets < 1) {
       setTicketNotice("游玩票用完啦。返回乐园完成阅读、旅行或错题复习，就能获得新的游玩票。");
       return;
     }
-    onSpendPlayTicket(activeGame);
+    const runId = await spendTicketForRun(activeGame);
+    if (!runId) return;
+    setActiveRunId(runId);
     resetChallenge();
     setChallengeRunKey((current) => current + 1);
   };
 
   const leaveChallenge = () => {
     resetChallenge();
+    setActiveRunId("");
     setActiveGame(null);
   };
 
@@ -564,7 +561,7 @@ export default function GamePark({
         turtleName={turtleName}
         onBack={leaveChallenge}
         onMistake={registerMistake}
-        onComplete={(detail) => onLearningGameComplete({ game: "turtle-courier", detail })}
+        onComplete={(detail) => onLearningGameComplete({ game: "turtle-courier", detail }, activeRunId)}
       />
     );
   }
@@ -576,7 +573,7 @@ export default function GamePark({
         turtleName={turtleName}
         onBack={leaveChallenge}
         onMistake={registerMistake}
-        onComplete={(detail) => onLearningGameComplete({ game: "weather-outfit", detail })}
+        onComplete={(detail) => onLearningGameComplete({ game: "weather-outfit", detail }, activeRunId)}
       />
     );
   }
@@ -588,7 +585,7 @@ export default function GamePark({
         turtleName={turtleName}
         onBack={leaveChallenge}
         onMistake={registerMistake}
-        onComplete={(detail) => onLearningGameComplete({ game: "lotus-jump", detail })}
+        onComplete={(detail) => onLearningGameComplete({ game: "lotus-jump", detail }, activeRunId)}
       />
     );
   }
@@ -600,7 +597,7 @@ export default function GamePark({
         turtleName={turtleName}
         onBack={leaveChallenge}
         onMistake={registerMistake}
-        onComplete={(detail) => onLearningGameComplete({ game: "spot-difference", detail })}
+        onComplete={(detail) => onLearningGameComplete({ game: "spot-difference", detail }, activeRunId)}
       />
     );
   }
@@ -612,7 +609,7 @@ export default function GamePark({
         turtleName={turtleName}
         onBack={leaveChallenge}
         onMistake={registerMistake}
-        onComplete={(detail) => onLearningGameComplete({ game: "story-puzzle", detail })}
+        onComplete={(detail) => onLearningGameComplete({ game: "story-puzzle", detail }, activeRunId)}
       />
     );
   }
@@ -625,7 +622,7 @@ export default function GamePark({
         hearts={challengeHearts}
         onBack={leaveChallenge}
         onMistake={registerMistake}
-        onComplete={(detail) => onLearningGameComplete({ game: "turtle-sky", detail })}
+        onComplete={(detail) => onLearningGameComplete({ game: "turtle-sky", detail }, activeRunId)}
       />
     );
   }
@@ -636,7 +633,7 @@ export default function GamePark({
         key={challengeRunKey}
         turtleName={turtleName}
         onBack={leaveChallenge}
-        onComplete={(detail) => onLearningGameComplete({ game: "tortoise-race", detail })}
+        onComplete={(detail) => onLearningGameComplete({ game: "tortoise-race", detail }, activeRunId)}
       />
     );
   }

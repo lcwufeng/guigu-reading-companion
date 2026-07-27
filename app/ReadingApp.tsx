@@ -29,25 +29,26 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { chapterKnowledge } from "./book-knowledge";
 import { chapterPrompts, type ChapterPrompt } from "./book-prompts";
 import classicBookManifest from "./classic-books-manifest.json";
-import GamePark, {
+import {
   GAME_PARK_ORDER,
   type FruitCatchDailyState,
   type FruitCatchResult,
   type GameParkGameId,
   type LearningMiniGameResult,
-} from "./GamePark";
-import {
-  interestDomains,
-  type ExplorationNode,
-  type InterestDomain,
-  type InterestDomainId,
+} from "./game-park-types";
+import type {
+  ExplorationNode,
+  InterestDomain,
+  InterestDomainId,
 } from "../lib/exploration-catalog";
 
 type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "explore" | "games";
+
+const GamePark = lazy(() => import("./GamePark"));
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
 type RecordTab = "travel" | "reading" | "items";
 type ChatMessage = { id: number; role: "turtle" | "user"; text: string };
@@ -175,6 +176,7 @@ type Book = {
   source?: {
     url: string;
     format: "markdown" | "gutenberg" | "json";
+    chunked?: boolean;
     startHeading?: string;
     label: string;
     language: string;
@@ -199,7 +201,13 @@ type BookPage = {
   body: string;
   images?: Array<{ src: string; alt: string }>;
 };
-type BookChapter = { id: string; title: string; pages: BookPage[] };
+type BookChapter = {
+  id: string;
+  title: string;
+  pages: BookPage[];
+  pageCount?: number;
+  loaded?: boolean;
+};
 type SavedReadingProgress = { chapter: number; page: number; completed: boolean };
 type BookAudioInfo = {
   ready: true;
@@ -257,6 +265,23 @@ type CompanionResponse = {
   reply: string;
   correct?: boolean;
   source?: "deepseek" | "mimo" | "local" | "unavailable";
+  reward?: {
+    alreadyClaimed: boolean;
+    resource: "stars" | "tickets" | "play_tickets";
+    balances: { fruits: number; stars: number; tickets: number; playTickets: number };
+  };
+  rewardPending?: boolean;
+};
+
+type StudentActionResponse = {
+  error?: string;
+  balances?: { fruits: number; stars: number; tickets: number; playTickets: number };
+  dailyPlan?: DailyPlan;
+  fruitPicking?: DailyFruitPicking;
+  hideAndSeekDaily?: DailyHideAndSeek;
+  activeTravel?: ActiveTravel;
+  picked?: boolean;
+  rewarded?: boolean;
 };
 
 type LeaderboardCategoryKey = "interaction" | "reading" | "travel" | "mistake";
@@ -394,10 +419,10 @@ function gradeLevelFromLabel(label: string): GradeLevel {
 }
 
 const journalReadingArtByTitle: Record<string, string> = {
-  "稻草人": "ui/journal/books/scarecrow-reading-book.png",
-  "格林童话": "ui/journal/books/grimm-reading-book.png",
-  "安徒生童话": "ui/journal/books/andersen-reading-book.png",
-  ...Object.fromEntries(classicBookManifest.map((book) => [book.title, `ui/journal/books/classics/${book.slug}.png`])),
+  "稻草人": "optimized/ui/journal/books/scarecrow-reading-book.webp",
+  "格林童话": "optimized/ui/journal/books/grimm-reading-book.webp",
+  "安徒生童话": "optimized/ui/journal/books/andersen-reading-book.webp",
+  ...Object.fromEntries(classicBookManifest.map((book) => [book.title, `optimized/ui/journal/books/classics/${book.slug}.webp`])),
 };
 
 function journalReadingArtFor(title: string, imported: Book[]) {
@@ -424,8 +449,9 @@ const classicBooks: Book[] = classicBookManifest.map((book) => ({
   knowledge: book.knowledge,
   memoryCategory: book.memoryCategory,
   source: {
-    url: `${BASE_PATH}/books/classics/${book.slug}.json`,
+    url: `${BASE_PATH}/api/library/bundled-book?id=${encodeURIComponent(book.slug)}`,
     format: "json",
+    chunked: true,
     label: "用户提供电子版；扫描页经本地 OCR 整理并保留原书插图",
     language: "中文原文",
   },
@@ -445,7 +471,7 @@ const books: Book[] = [
     knowledge: "叶圣陶是中国现代童话创作的重要作家。《稻草人》通过童话人物的所见所感，引导读者观察生活并体会他人的处境。",
     memoryCategory: "中国儿童文学·童话",
     source: {
-      url: `${BASE_PATH}/books/scarecrow-zh.md`,
+      url: `${BASE_PATH}/api/library/bundled-book?id=scarecrow-zh`,
       format: "markdown",
       label: "用户提供《稻草人》中文电子版",
       language: "中文原文",
@@ -464,7 +490,7 @@ const books: Book[] = [
     knowledge: "格林兄弟整理的童话常以森林、城堡、考验与魔法展开。阅读时可以留意人物如何在选择中展现勇气、智慧与责任。",
     memoryCategory: "欧洲民间童话",
     source: {
-      url: `${BASE_PATH}/books/grimms-fairy-tales-zh.md`,
+      url: `${BASE_PATH}/api/library/bundled-book?id=grimm-zh`,
       format: "markdown",
       label: "用户提供三年级《格林童话》中文电子版（扫描版 OCR 整理）",
       language: "中文原文",
@@ -483,7 +509,7 @@ const books: Book[] = [
     knowledge: "安徒生童话常把温柔、幻想和现实感受放在一起。阅读时可以从人物的选择、愿望和变化中理解勇气、诚实与自我认同。",
     memoryCategory: "丹麦文学·童话",
     source: {
-      url: `${BASE_PATH}/books/andersens-fairy-tales-zh.md`,
+      url: `${BASE_PATH}/api/library/bundled-book?id=andersen-zh`,
       format: "markdown",
       label: "用户提供《安徒生童话》中文电子版",
       language: "中文原文",
@@ -509,6 +535,7 @@ function importedCatalogBook(book: ImportedBookCatalogItem): Book {
     source: {
       url: `${BASE_PATH}/api/library/books?id=${encodeURIComponent(book.id)}`,
       format: "json",
+      chunked: true,
       label: book.sourceLabel,
       language: "中文原文",
     },
@@ -965,29 +992,6 @@ function ensureDailyPlan(state: GameState): DailyPlan {
   };
 }
 
-function advanceDailyTask(state: GameState, task: DailyTaskKey, mistakeMode?: DailyMistakeMode): GameState {
-  const dailyPlan = ensureDailyPlan(state);
-  if (task === "mistake" && dailyPlan.mistakeMode !== mistakeMode) return { ...state, dailyPlan };
-  const target = dailyPlan.targets[task];
-  if (dailyPlan.progress[task] >= target) return { ...state, dailyPlan };
-
-  const progress = {
-    ...dailyPlan.progress,
-    [task]: Math.min(target, dailyPlan.progress[task] + 1),
-  };
-  const allComplete = (Object.keys(progress) as DailyTaskKey[]).every((key) => progress[key] >= dailyPlan.targets[key]);
-  const earnedReward = allComplete && !dailyPlan.rewardClaimed;
-  return {
-    ...state,
-    stars: state.stars + (earnedReward ? 3 : 0),
-    dailyPlan: {
-      ...dailyPlan,
-      progress,
-      rewardClaimed: dailyPlan.rewardClaimed || allComplete,
-    },
-  };
-}
-
 async function prepareMistakePhoto(file: File) {
   if (!file.type.startsWith("image/")) throw new Error("请选择图片文件");
   if (file.size > 8 * 1024 * 1024) throw new Error("图片不能超过 8MB");
@@ -1038,6 +1042,17 @@ async function askCompanion(payload: CompanionPayload) {
   return data as CompanionResponse;
 }
 
+async function runStudentAction(payload: Record<string, unknown>) {
+  const response = await fetch(`${BASE_PATH}/api/student-actions`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({})) as StudentActionResponse;
+  if (!response.ok) throw new Error(data.error || "这次操作暂时没有保存，请稍后再试。");
+  return data;
+}
+
 function destinationForRecord(record: TravelRecord) {
   return destinations.find(
     (destination) =>
@@ -1076,13 +1091,13 @@ function pickTravelKnowledgeCard(destination: Destination, records: TravelRecord
 }
 
 function KnowledgeArt({ card }: { card: KnowledgeCard }) {
-  return <img src={card.image} alt={card.title} />;
+  return <img src={card.image} alt={card.title} loading="lazy" decoding="async" />;
 }
 
 function KnowledgeCardPreview({ card, className = "" }: { card: KnowledgeCard; className?: string }) {
   return (
     <div className={`knowledge-card-preview ${className}`.trim()}>
-      <img src={card.image} alt={`${card.title}里的龟龟主画面`} />
+      <img src={card.image} alt={`${card.title}里的龟龟主画面`} loading="lazy" decoding="async" />
     </div>
   );
 }
@@ -1171,6 +1186,7 @@ export default function ReadingApp({
   const [view, setView] = useState<View>("home");
   const [libraryMode, setLibraryMode] = useState<LibraryMode>("shelf");
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(3);
+  const [explorationDomains, setExplorationDomains] = useState<InterestDomain[]>([]);
   const [game, setGame] = useState<GameState>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
@@ -1268,6 +1284,7 @@ export default function ReadingApp({
   const bookAudioPageEndRef = useRef(0);
   const submitChatRef = useRef<(message: string) => void>(() => undefined);
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const travelCompletingRef = useRef(false);
 
   const mood = useMemo(
     () => clamp(0.35 * (100 - game.hunger) + 0.3 * game.cleanliness + 0.35 * (100 - game.boredom)),
@@ -1380,38 +1397,42 @@ export default function ReadingApp({
     }).then(() => undefined).catch(() => undefined);
   }, []);
 
-  const completeFruitCatchRound = useCallback((result: FruitCatchResult) => {
-    const earnedStar = result.success && !ensureDailyFruitCatch(game).rewarded;
-    setGame((current) => {
-      const daily = ensureDailyFruitCatch(current);
-      const shouldReward = result.success && !daily.rewarded;
-      return {
-        ...current,
-        stars: current.stars + (shouldReward ? 1 : 0),
-        boredom: clamp(current.boredom - Math.min(8, Math.max(3, Math.floor(result.score / 3)))),
-        fruitCatchDaily: {
-          dateKey: daily.dateKey,
-          plays: daily.plays + 1,
-          rewarded: daily.rewarded || result.success,
-          bestScore: Math.max(daily.bestScore, result.score),
-          totalCaught: daily.totalCaught + result.caught,
-        },
-        completedMiniGames: result.success
-          ? [...new Set([...current.completedMiniGames, "fruit-catch" as const])]
-          : current.completedMiniGames,
+  const completeFruitCatchRound = useCallback(async (result: FruitCatchResult, runId: string) => {
+    const wasRewarded = ensureDailyFruitCatch(game).rewarded;
+    try {
+      const response = await fetch(`${BASE_PATH}/api/minigames`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "complete", gameId: "fruit-catch", runId, score: result.score, caught: result.caught }),
+      });
+      const data = await response.json() as {
+        error?: string;
+        balances?: { fruits: number; stars: number; tickets: number; playTickets: number };
+        completedGames?: GameParkGameId[];
+        fruitCatchDaily?: FruitCatchDailyState;
       };
-    });
-    showToast(result.success
-      ? earnedStar ? "接果子过关，获得 1 颗星星！" : "接果子过关啦，今天的星星已经领过了"
-      : `本局得到 ${result.score} 分，再试一次就更接近啦`);
-    void remember({
-      type: "activity",
-      activity: "龟龟接果子",
-      detail: `完成一局接果子，得到${result.score}分，接到${result.caught}个果子`,
-    });
+      if (!response.ok || !data.balances) throw new Error(data.error || "本局成绩暂时没有保存");
+      setGame((current) => ({
+        ...current,
+        ...data.balances!,
+        boredom: clamp(current.boredom - Math.min(8, Math.max(3, Math.floor(result.score / 3)))),
+        fruitCatchDaily: data.fruitCatchDaily || current.fruitCatchDaily,
+        completedMiniGames: data.completedGames || current.completedMiniGames,
+      }));
+      showToast(result.success
+        ? !wasRewarded ? "接果子过关，获得 1 颗星星！" : "接果子过关啦，今天的星星已经领过了"
+        : `本局得到 ${result.score} 分，再试一次就更接近啦`);
+      void remember({
+        type: "activity",
+        activity: "龟龟接果子",
+        detail: `完成一局接果子，得到${result.score}分，接到${result.caught}个果子`,
+      });
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "本局成绩暂时没有保存");
+    }
   }, [game, remember, showToast]);
 
-  const completeLearningMiniGame = useCallback((result: LearningMiniGameResult) => {
+  const completeLearningMiniGame = useCallback(async (result: LearningMiniGameResult, runId: string) => {
     const activity = {
       "turtle-courier": "乌龟快递员",
       "weather-outfit": "天气穿搭",
@@ -1421,16 +1442,32 @@ export default function ReadingApp({
       "turtle-sky": "龟龟飞机大战",
       "tortoise-race": "龟兔赛跑",
     }[result.game];
-    setGame((current) => ({
-      ...current,
-      boredom: clamp(current.boredom - 6),
-      completedMiniGames: [...new Set([...current.completedMiniGames, result.game])],
-    }));
-    showToast(`${activity}挑战完成，龟龟又学会了一项新本领！`);
-    void remember({ type: "activity", activity, detail: result.detail });
+    try {
+      const response = await fetch(`${BASE_PATH}/api/minigames`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "complete", gameId: result.game, runId }),
+      });
+      const data = await response.json() as {
+        error?: string;
+        balances?: { fruits: number; stars: number; tickets: number; playTickets: number };
+        completedGames?: GameParkGameId[];
+      };
+      if (!response.ok || !data.balances) throw new Error(data.error || "通关记录暂时没有保存");
+      setGame((current) => ({
+        ...current,
+        ...data.balances!,
+        boredom: clamp(current.boredom - 6),
+        completedMiniGames: data.completedGames || current.completedMiniGames,
+      }));
+      showToast(`${activity}挑战完成，龟龟又学会了一项新本领！`);
+      void remember({ type: "activity", activity, detail: result.detail });
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "通关记录暂时没有保存");
+    }
   }, [remember, showToast]);
 
-  const spendPlayTicket = useCallback((gameId: GameParkGameId) => {
+  const spendPlayTicket = useCallback(async (gameId: GameParkGameId) => {
     const activity = {
       "fruit-catch": "龟龟接果子",
       "turtle-courier": "乌龟快递员",
@@ -1441,9 +1478,26 @@ export default function ReadingApp({
       "turtle-sky": "龟龟飞机大战",
       "tortoise-race": "龟兔赛跑",
     }[gameId];
-    setGame((current) => current.playTickets < 1 ? current : ({ ...current, playTickets: current.playTickets - 1 }));
-    showToast(`使用 1 张游玩票，开始${activity}`);
-    void remember({ type: "activity", activity: "进入龟龟乐园", detail: `使用1张游玩票开始${activity}` });
+    try {
+      const response = await fetch(`${BASE_PATH}/api/minigames`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "start", gameId }),
+      });
+      const data = await response.json() as {
+        error?: string;
+        runId?: string;
+        balances?: { fruits: number; stars: number; tickets: number; playTickets: number };
+      };
+      if (!response.ok || !data.runId || !data.balances) throw new Error(data.error || "小游戏暂时不能开始");
+      setGame((current) => ({ ...current, ...data.balances! }));
+      showToast(`使用 1 张游玩票，开始${activity}`);
+      void remember({ type: "activity", activity: "进入龟龟乐园", detail: `使用1张游玩票开始${activity}` });
+      return data.runId;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "小游戏暂时不能开始");
+      return null;
+    }
   }, [remember, showToast]);
 
   const openExplorationNode = useCallback((node: ExplorationNode) => {
@@ -1558,6 +1612,19 @@ export default function ReadingApp({
   }, []);
 
   useEffect(() => {
+    if (view !== "explore" || explorationDomains.length) return;
+    let active = true;
+    void import("../lib/exploration-catalog")
+      .then((module) => {
+        if (active) setExplorationDomains(module.interestDomains);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [explorationDomains.length, view]);
+
+  useEffect(() => {
     const controller = new AbortController();
     void fetch(`${BASE_PATH}/api/library/books`, { cache: "no-store", signal: controller.signal })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("catalog unavailable")))
@@ -1569,12 +1636,21 @@ export default function ReadingApp({
   useEffect(() => {
     if (!hydrated || !accountStateLoadedRef.current) return;
     const timer = window.setTimeout(() => {
+      const stateForSync = {
+        name: game.name,
+        hunger: game.hunger,
+        cleanliness: game.cleanliness,
+        boredom: game.boredom,
+        lastSeen: Date.now(),
+        readingFontSize: game.readingFontSize,
+        chatMessages: game.chatMessages.slice(-16),
+      };
       void fetch(`${BASE_PATH}/api/user-state`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ state: { ...game, lastSeen: Date.now() }, updatedAt: Date.now() }),
+        body: JSON.stringify({ state: stateForSync, updatedAt: Date.now() }),
       }).catch(() => undefined);
-    }, 650);
+    }, 1_500);
     return () => window.clearTimeout(timer);
   }, [game, hydrated]);
 
@@ -1590,15 +1666,27 @@ export default function ReadingApp({
   }, [hydrated]);
 
   useEffect(() => {
-    if (!selectedBook.source || loadedBooks[selectedBook.id]) return;
+    if (bookLoadError || !selectedBook.source || loadedBooks[selectedBook.id]) return;
     const controller = new AbortController();
-    void fetch(selectedBook.source.url, { signal: controller.signal })
+    const sourceUrl = selectedBook.source.chunked
+      ? `${selectedBook.source.url}&manifest=1`
+      : selectedBook.source.url;
+    void fetch(sourceUrl, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("book download failed");
         const source = selectedBook.source!;
         if (source.format === "json") {
-          const payload = await response.json() as { chapters?: BookChapter[] };
-          return payload.chapters || [];
+          const payload = await response.json() as {
+            chapters?: Array<BookChapter | { id: string; title: string; pageCount: number }>;
+          };
+          return (payload.chapters || []).map((chapter) => ({
+            ...chapter,
+            pages: "pages" in chapter && Array.isArray(chapter.pages) ? chapter.pages : [],
+            pageCount: "pageCount" in chapter
+              ? Math.max(0, Number(chapter.pageCount) || 0)
+              : ("pages" in chapter && Array.isArray(chapter.pages) ? chapter.pages.length : 0),
+            loaded: !source.chunked,
+          }));
         }
         const text = await response.text();
         const chapters = source.format === "markdown"
@@ -1615,14 +1703,56 @@ export default function ReadingApp({
       })
       .finally(() => setBookLoading(false));
     return () => controller.abort();
-  }, [loadedBooks, selectedBook]);
+  }, [bookLoadError, loadedBooks, selectedBook]);
+
+  useEffect(() => {
+    const source = selectedBook.source;
+    const chapter = loadedBooks[selectedBook.id]?.[selectedChapter];
+    if (bookLoadError || !source?.chunked || !chapter || chapter.loaded) return;
+    const controller = new AbortController();
+    let active = true;
+    void fetch(`${source.url}&chapter=${selectedChapter}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("chapter download failed");
+        const payload = await response.json() as { chapter?: BookChapter };
+        if (!payload.chapter?.pages?.length) throw new Error("chapter pages missing");
+        return payload.chapter;
+      })
+      .then((loadedChapter) => {
+        if (!active) return;
+        setLoadedBooks((current) => {
+          const chapters = current[selectedBook.id];
+          if (!chapters?.[selectedChapter]) return current;
+          const nextChapters = [...chapters];
+          nextChapters[selectedChapter] = {
+            ...loadedChapter,
+            pageCount: loadedChapter.pages.length,
+            loaded: true,
+          };
+          return { ...current, [selectedBook.id]: nextChapters };
+        });
+      })
+      .catch((error: Error) => {
+        if (active && error.name !== "AbortError") {
+          setBookLoadError("这一章暂时没有加载成功，请稍后重试。");
+        }
+      })
+      .finally(() => {
+        if (active) setBookLoading(false);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [bookLoadError, loadedBooks, selectedBook.id, selectedBook.source, selectedChapter]);
 
   useEffect(() => {
     const chapters = loadedBooks[selectedBook.id];
     if (!readingProgressLoaded || !chapters?.length || restoredBookRef.current[selectedBook.id]) return;
     const saved = readingProgressByBook[selectedBook.id];
     const chapter = Math.min(Math.max(0, saved?.chapter || 0), chapters.length - 1);
-    const page = Math.min(Math.max(0, saved?.page || 0), chapters[chapter].pages.length - 1);
+    const pageCount = chapters[chapter].pageCount ?? chapters[chapter].pages.length;
+    const page = Math.min(Math.max(0, saved?.page || 0), Math.max(0, pageCount - 1));
     setSelectedChapter(chapter);
     setBookPage(page);
     restoredBookRef.current[selectedBook.id] = true;
@@ -1630,9 +1760,16 @@ export default function ReadingApp({
 
   useEffect(() => {
     const chapters = loadedBooks[selectedBook.id];
-    if (!chapters?.length || !restoredBookRef.current[selectedBook.id]) return;
+    const currentChapter = chapters?.[selectedChapter];
+    if (
+      !chapters?.length
+      || !currentChapter
+      || (selectedBook.source?.chunked && !currentChapter.loaded)
+      || !restoredBookRef.current[selectedBook.id]
+    ) return;
     const timer = window.setTimeout(() => {
-      const completed = selectedChapter === chapters.length - 1 && bookPage === chapters[selectedChapter].pages.length - 1;
+      const pageCount = currentChapter.pageCount ?? currentChapter.pages.length;
+      const completed = selectedChapter === chapters.length - 1 && bookPage === pageCount - 1;
       const progress = { chapter: selectedChapter, page: bookPage, completed };
       setReadingProgressByBook((current) => ({ ...current, [selectedBook.id]: progress }));
       void fetch(`${BASE_PATH}/api/reading-progress`, {
@@ -1642,7 +1779,7 @@ export default function ReadingApp({
       }).catch(() => undefined);
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [bookPage, loadedBooks, selectedBook.id, selectedChapter]);
+  }, [bookPage, loadedBooks, selectedBook.id, selectedBook.source?.chunked, selectedChapter]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -1713,6 +1850,17 @@ export default function ReadingApp({
     setGame((current) => ({ ...current, ...patch }));
   }, []);
 
+  const applyServerProgress = useCallback((data: StudentActionResponse) => {
+    setGame((current) => ({
+      ...current,
+      ...(data.balances || {}),
+      ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
+      ...(data.fruitPicking ? { fruitPicking: data.fruitPicking } : {}),
+      ...(data.hideAndSeekDaily ? { hideAndSeekDaily: data.hideAndSeekDaily } : {}),
+      ...(data.activeTravel ? { activeTravel: data.activeTravel } : {}),
+    }));
+  }, []);
+
   useEffect(() => {
     const active = game.activeTravel;
     if (!hydrated || !active || !traveling) return;
@@ -1724,9 +1872,11 @@ export default function ReadingApp({
       if (progress < 100) return;
 
       window.clearInterval(interval);
+      if (travelCompletingRef.current) return;
+      travelCompletingRef.current = true;
       const knowledgeCard = pickTravelKnowledgeCard(traveling, game.travelRecords);
       const record: TravelRecord = {
-        id: now,
+        id: active.startedAt,
         destinationId: traveling.id,
         destination: traveling.name,
         date: formatDate(),
@@ -1737,23 +1887,43 @@ export default function ReadingApp({
         knowledgeTitle: knowledgeCard.title,
         knowledgeFacts: knowledgeCard.facts,
       };
-      setGame((current) => {
-        if (current.activeTravel?.startedAt !== active.startedAt) return current;
-        return {
-          ...current,
-          activeTravel: null,
-          boredom: clamp(current.boredom - 18),
-          hunger: clamp(current.hunger + 6),
-          stars: current.stars + 4,
-          fruits: current.fruits + 1,
-          playTickets: current.playTickets + 1,
-          travelRecords: [record, ...current.travelRecords],
-        };
+      void runStudentAction({
+        action: "finish-travel",
+        destinationId: traveling.id,
+        destination: traveling.name,
+        reward: knowledgeCard.title,
+        photo: traveling.photo,
+        knowledge: knowledgeCard.image,
+        knowledgeCardId: knowledgeCard.id,
+        knowledgeTitle: knowledgeCard.title,
+        knowledgeFacts: knowledgeCard.facts,
+      }).then((data) => {
+        setGame((current) => {
+          if (current.activeTravel?.startedAt !== active.startedAt) return current;
+          return {
+            ...current,
+            ...(data.balances || {}),
+            activeTravel: null,
+            boredom: clamp(current.boredom - 18),
+            hunger: clamp(current.hunger + 6),
+            travelRecords: [record, ...current.travelRecords.filter((item) => item.id !== record.id)],
+          };
+        });
+        setTravelProgress(0);
+        setTravelReward({ destination: traveling, card: knowledgeCard });
+        showToast(`${game.name}带着新发现回来啦！`);
+        void remember({ type: "activity", activity: "旅行", detail: `一起去了${traveling.name}，随机带回${knowledgeCard.title}` });
+      }).catch((error) => {
+        showToast(error instanceof Error ? error.message : "旅行记录暂时没有保存");
+        window.setTimeout(() => {
+          travelCompletingRef.current = false;
+          setGame((current) => current.activeTravel
+            ? { ...current, activeTravel: { ...current.activeTravel } }
+            : current);
+        }, 2_000);
+      }).finally(() => {
+        travelCompletingRef.current = false;
       });
-      setTravelProgress(0);
-      setTravelReward({ destination: traveling, card: knowledgeCard });
-      showToast(`${game.name}带着新发现回来啦！`);
-      void remember({ type: "activity", activity: "旅行", detail: `一起去了${traveling.name}，随机带回${knowledgeCard.title}` });
     }, 100);
     return () => window.clearInterval(interval);
   }, [game.activeTravel, game.name, game.travelRecords, hydrated, remember, showToast, traveling]);
@@ -1792,19 +1962,20 @@ export default function ReadingApp({
   const hideGamesRemaining = Math.max(0, DAILY_HIDE_AND_SEEK_LIMIT - dailyHideAndSeek.completed);
   const fruitCatchDaily = ensureDailyFruitCatch(game);
 
-  const pickFruitAndOpen = () => {
+  const pickFruitAndOpen = async () => {
     if (fruitPickingRemaining > 0) {
-      setGame((current) => {
-        const picking = ensureDailyFruitPicking(current);
-        if (picking.picked >= 5) return { ...current, fruitPicking: picking };
-        return {
-          ...current,
-          fruits: current.fruits + 1,
-          fruitPicking: { dateKey: currentDayKey(), picked: picking.picked + 1 },
-        };
-      });
-      showToast(`从树上摘下 1 个果子，今天还可以摘 ${fruitPickingRemaining - 1} 个`);
-      void remember({ type: "activity", activity: "摘果喂食", detail: "从果树上摘下一个新鲜果子" });
+      try {
+        const data = await runStudentAction({ action: "pick-fruit" });
+        applyServerProgress(data);
+        if (data.picked) {
+          showToast(`从树上摘下 1 个果子，今天还可以摘 ${Math.max(0, 5 - (data.fruitPicking?.picked || 0))} 个`);
+          void remember({ type: "activity", activity: "摘果喂食", detail: "从果树上摘下一个新鲜果子" });
+        } else {
+          showToast("今天已经摘满 5 个果子啦，明天树上会重新长好");
+        }
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : "果树暂时还没准备好");
+      }
     } else {
       showToast("今天已经摘满 5 个果子啦，明天树上会重新长好");
     }
@@ -1822,16 +1993,22 @@ export default function ReadingApp({
       1800,
       "turtle_eating_fruit.png",
       () => {
-        setGame((current) => advanceDailyTask({
-          ...current,
-          hunger: clamp(current.hunger - 22),
-          boredom: clamp(current.boredom - 3),
-          fruits: current.fruits - 1,
-        }, "feed"));
-        setTurtleSprite("turtle_satisfied.png");
-        showToast(`${game.name}吃下${fruit}，肚子满足啦`);
-        void remember({ type: "activity", activity: "摘果喂食", detail: `给龟龟喂了${fruit}` });
-        window.setTimeout(() => setTurtleSprite(null), 1800);
+        void runStudentAction({ action: "feed" }).then((data) => {
+          setGame((current) => ({
+            ...current,
+            ...(data.balances || {}),
+            ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
+            hunger: clamp(current.hunger - 22),
+            boredom: clamp(current.boredom - 3),
+          }));
+          setTurtleSprite("turtle_satisfied.png");
+          showToast(`${game.name}吃下${fruit}，肚子满足啦`);
+          void remember({ type: "activity", activity: "摘果喂食", detail: `给龟龟喂了${fruit}` });
+          window.setTimeout(() => setTurtleSprite(null), 1800);
+        }).catch((error) => {
+          setTurtleSprite(null);
+          showToast(error instanceof Error ? error.message : "喂食记录暂时没有保存");
+        });
       },
       `${game.name}正在大口吃果子…`,
     );
@@ -1843,11 +2020,21 @@ export default function ReadingApp({
       5200,
       "turtle_swimming.png",
       () => {
-        setGame((current) => advanceDailyTask({ ...current, cleanliness: 100 }, "swim"));
-        setTurtleSprite("turtle_clean_sparkle.png");
-        showToast("游泳完成，龟壳亮晶晶！");
-        void remember({ type: "activity", activity: "游泳", detail: "一起在池塘里游泳清洁" });
-        window.setTimeout(() => setTurtleSprite(null), 2000);
+        void runStudentAction({ action: "daily-task", task: "swim" }).then((data) => {
+          setGame((current) => ({
+            ...current,
+            ...(data.balances || {}),
+            ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
+            cleanliness: 100,
+          }));
+          setTurtleSprite("turtle_clean_sparkle.png");
+          showToast("游泳完成，龟壳亮晶晶！");
+          void remember({ type: "activity", activity: "游泳", detail: "一起在池塘里游泳清洁" });
+          window.setTimeout(() => setTurtleSprite(null), 2000);
+        }).catch((error) => {
+          setTurtleSprite(null);
+          showToast(error instanceof Error ? error.message : "游泳记录暂时没有保存");
+        });
       },
       `${game.name}扑通一声跳进池塘`,
     );
@@ -1919,17 +2106,20 @@ export default function ReadingApp({
       setHideSeconds(HIDE_ROUND_SECONDS);
       setHideFound(null);
       setTurtleSprite("turtle_excited.png");
-      setGame((current) => ({
-        ...current,
-        boredom: clamp(current.boredom - 30),
-        stars: current.stars + 1,
-        hideAndSeekDaily: {
-          dateKey: currentDayKey(),
-          completed: Math.min(DAILY_HIDE_AND_SEEK_LIMIT, ensureDailyHideAndSeek(current).completed + 1),
-        },
-      }));
-      showToast(`五次全找到！奖励 1 颗星星，今天已完成 ${nextCompletedToday}/5 局`);
-      void remember({ type: "activity", activity: "捉迷藏", detail: `完成一局捉迷藏，连续找到5次，获得1颗星星；其中${nextFastRounds}次在5秒内找到` });
+      void runStudentAction({ action: "hide-and-seek" }).then((data) => {
+        setGame((current) => ({
+          ...current,
+          ...(data.balances || {}),
+          ...(data.hideAndSeekDaily ? { hideAndSeekDaily: data.hideAndSeekDaily } : {}),
+          boredom: clamp(current.boredom - 30),
+        }));
+        showToast(data.rewarded
+          ? `五次全找到！奖励 1 颗星星，今天已完成 ${data.hideAndSeekDaily?.completed || nextCompletedToday}/5 局`
+          : "今天的捉迷藏奖励已经领满啦");
+        void remember({ type: "activity", activity: "捉迷藏", detail: `完成一局捉迷藏，连续找到5次，获得1颗星星；其中${nextFastRounds}次在5秒内找到` });
+      }).catch((error) => {
+        showToast(error instanceof Error ? error.message : "捉迷藏记录暂时没有保存");
+      });
       window.setTimeout(() => setTurtleSprite(null), 2400);
     }, 1200);
   };
@@ -1938,11 +2128,14 @@ export default function ReadingApp({
   const activeChapter = selectedChapters[selectedChapter];
   const activePages = activeChapter?.pages || [];
   const activePage = activePages[bookPage];
-  const totalBookPages = selectedChapters.reduce((total, chapter) => total + chapter.pages.length, 0);
-  const pagesBeforeChapter = selectedChapters.slice(0, selectedChapter).reduce((total, chapter) => total + chapter.pages.length, 0);
+  const activeChapterLoading = Boolean(
+    !bookLoadError && selectedBook.source?.chunked && activeChapter && !activeChapter.loaded,
+  );
+  const totalBookPages = selectedChapters.reduce((total, chapter) => total + (chapter.pageCount ?? chapter.pages.length), 0);
+  const pagesBeforeChapter = selectedChapters.slice(0, selectedChapter)
+    .reduce((total, chapter) => total + (chapter.pageCount ?? chapter.pages.length), 0);
   const overallPageNumber = totalBookPages ? pagesBeforeChapter + bookPage + 1 : 0;
   const overallProgress = totalBookPages ? (overallPageNumber / totalBookPages) * 100 : 0;
-  const activeChapterText = activePages.map((page) => page.body).join("\n\n");
   const activeChapterPrompt = activeChapter
     ? chapterPrompts[selectedBook.id]?.[activeChapter.title] || buildChapterPrompt(activeChapter.title)
     : null;
@@ -2076,7 +2269,7 @@ export default function ReadingApp({
     } else if (selectedChapter > 0) {
       const previousChapter = selectedChapters[selectedChapter - 1];
       setSelectedChapter((chapter) => chapter - 1);
-      setBookPage(previousChapter.pages.length - 1);
+      setBookPage(Math.max(0, (previousChapter.pageCount ?? previousChapter.pages.length) - 1));
     }
     setReadingAnswer("");
     setReadingFeedback("");
@@ -2086,6 +2279,7 @@ export default function ReadingApp({
 
   const chooseChapter = (index: number) => {
     stopBookAudio();
+    setBookLoadError("");
     setSelectedChapter(index);
     setBookPage(0);
     setReadingAnswer("");
@@ -2151,35 +2345,44 @@ export default function ReadingApp({
         bookId: selectedBook.id,
         chapterTitle: activeChapter?.title || "",
         questionKey: currentChapterQuestionKey,
-        excerpt: activeChapterText,
-        question: activeChapterPrompt.question,
-        referenceAnswer: activeChapterPrompt.referenceAnswer,
         answer: readingAnswer.trim().slice(0, 500),
       });
       if (typeof result.correct !== "boolean") throw new Error("reading evaluation missing");
       if (result.correct) {
         setReadingEvaluation("correct");
         setAnsweredChapterQuestions((questions) => questions.includes(currentChapterQuestionKey) ? questions : [...questions, currentChapterQuestionKey]);
-        const alreadyRewarded = game.readingRewards.includes(currentChapterQuestionKey);
-        const rewardRoll = Math.random();
-        const rewardKind = rewardRoll < 0.34 ? "star" : rewardRoll < 0.67 ? "ticket" : "play-ticket";
-        const rewardLabel = rewardKind === "star"
+        const alreadyRewarded = result.reward?.alreadyClaimed ?? game.readingRewards.includes(currentChapterQuestionKey);
+        const rewardKind = result.reward?.resource;
+        const rewardLabel = rewardKind === "stars"
           ? "1 颗成长星星"
-          : rewardKind === "ticket"
+          : rewardKind === "tickets"
             ? "1 张旅行票"
             : "1 张游玩票";
-        if (!alreadyRewarded) {
-          setGame((current) => current.readingRewards.includes(currentChapterQuestionKey) ? current : ({
+        if (result.reward) {
+          setGame((current) => ({
             ...current,
             boredom: clamp(current.boredom - 8),
-            stars: current.stars + (rewardKind === "star" ? 1 : 0),
-            tickets: current.tickets + (rewardKind === "ticket" ? 1 : 0),
-            playTickets: current.playTickets + (rewardKind === "play-ticket" ? 1 : 0),
-            readingRewards: [...current.readingRewards, currentChapterQuestionKey],
+            ...result.reward!.balances,
+            readingRewards: current.readingRewards.includes(currentChapterQuestionKey)
+              ? current.readingRewards
+              : [...current.readingRewards, currentChapterQuestionKey],
           }));
         }
-        setReadingFeedback(`${result.reply}${alreadyRewarded ? " 这道题的奖励已经领取过啦。" : ` 这次随机获得了${rewardLabel}！`}`);
-        showToast(alreadyRewarded ? "回答正确，这道题的奖励已经领取过啦" : `回答正确，随机获得${rewardLabel}！`);
+        const rewardMessage = result.rewardPending
+          ? ""
+          : alreadyRewarded
+            ? " 这道题的奖励已经领取过啦。"
+            : result.reward
+              ? ` 这次随机获得了${rewardLabel}！`
+              : "";
+        setReadingFeedback(`${result.reply}${rewardMessage}`);
+        showToast(result.rewardPending
+          ? "回答正确，奖励稍后再领取"
+          : alreadyRewarded
+            ? "回答正确，这道题的奖励已经领取过啦"
+            : result.reward
+              ? `回答正确，随机获得${rewardLabel}！`
+              : "回答正确！");
         void remember({
           type: "learning",
           detail: `在《${selectedBook.title}·${activeChapter?.title || "本章"}》中依据原文回答了伴读问题`,
@@ -2198,7 +2401,7 @@ export default function ReadingApp({
     setCompanionLoading(false);
   };
 
-  const finishReading = () => {
+  const finishReading = async () => {
     const record: ReadingRecord = {
       id: Date.now(),
       title: selectedBook.title,
@@ -2206,31 +2409,44 @@ export default function ReadingApp({
       answer: readingAnswer || "今天认真读完了整篇故事。",
       summary: selectedBook.summary,
     };
-    setGame((current) => advanceDailyTask({
-      ...current,
-      boredom: clamp(current.boredom - 12),
-      stars: current.stars + 3,
-      tickets: current.tickets + 1,
-      playTickets: current.playTickets + 1,
-      fruits: current.fruits + 1,
-      readingRecords: [record, ...current.readingRecords.filter((item) => item.title !== record.title)],
-    }, "reading"));
-    void remember({
-      type: "learning",
-      detail: `完成《${selectedBook.title}》全书阅读`,
-    });
-    setSummaryOpen(true);
+    try {
+      const data = await runStudentAction({
+        action: "finish-book",
+        bookId: selectedBook.id,
+        title: selectedBook.title,
+        answer: record.answer,
+        summary: record.summary,
+      });
+      setGame((current) => ({
+        ...current,
+        ...(data.balances || {}),
+        ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
+        boredom: clamp(current.boredom - 12),
+        readingRecords: [record, ...current.readingRecords.filter((item) => item.title !== record.title)],
+      }));
+      void remember({
+        type: "learning",
+        detail: `完成《${selectedBook.title}》全书阅读`,
+      });
+      setSummaryOpen(true);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "阅读完成记录暂时没有保存");
+    }
   };
 
-  const continueAfterChapterQuestion = () => {
+  const continueAfterChapterQuestion = async () => {
     const hasNextChapter = selectedChapter < selectedChapters.length - 1;
     const completesDailyReadingTask = dailyPlan.progress.reading < dailyPlan.targets.reading;
-    setGame((current) => advanceDailyTask(current, "reading"));
     setChapterQuestionOpen(false);
     setReadingAnswer("");
     setReadingFeedback("");
     setReadingEvaluation(null);
     if (hasNextChapter) {
+      try {
+        applyServerProgress(await runStudentAction({ action: "daily-task", task: "reading" }));
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : "阅读任务进度暂时没有保存");
+      }
       setSelectedChapter((chapter) => chapter + 1);
       setBookPage(0);
       showToast(completesDailyReadingTask
@@ -2238,13 +2454,13 @@ export default function ReadingApp({
         : "已经进入下一章，进度自动保存啦");
     } else {
       if (completesDailyReadingTask) showToast("这一章读完啦，今日伴读任务已完成！");
-      finishReading();
+      await finishReading();
     }
   };
 
   const skipChapterQuestion = () => {
     showToast("这次先跳过，之后回来还可以再想一想");
-    continueAfterChapterQuestion();
+    void continueAfterChapterQuestion();
   };
 
   const retryChapterQuestion = () => {
@@ -2503,7 +2719,12 @@ export default function ReadingApp({
       const data = (await response.json()) as { record?: MistakeRecord; error?: string };
       if (!response.ok || !data.record) throw new Error(data.error || "错题保存失败");
       const record = data.record;
-      setGame((current) => advanceDailyTask({ ...current, mistakes: [record, ...current.mistakes] }, "mistake", "add"));
+      setGame((current) => ({ ...current, mistakes: [record, ...current.mistakes] }));
+      try {
+        applyServerProgress(await runStudentAction({ action: "daily-task", task: "mistake" }));
+      } catch {
+        showToast("错题已保存，今日任务进度稍后会再同步");
+      }
       void remember({ type: "activity", activity: "整理错题", detail: `收录了一道${record.subject}错题：${record.question.slice(0, 45)}` });
       setMistakeFormOpen(false);
       setMistakeDraft(null);
@@ -2562,7 +2783,7 @@ export default function ReadingApp({
       }
       const review = data.review;
       setReviewMistake((current) => current ? { ...current, status: review.status, reviewCount: review.reviewNumber } : current);
-      setGame((current) => advanceDailyTask({
+      setGame((current) => ({
         ...current,
         stars: review.stars,
         playTickets: review.playTickets,
@@ -2572,7 +2793,12 @@ export default function ReadingApp({
           status: review.status,
           reviewCount: review.reviewNumber,
         } : item),
-      }, "mistake", "review"));
+      }));
+      try {
+        applyServerProgress(await runStudentAction({ action: "daily-task", task: "mistake" }));
+      } catch {
+        showToast("错题复习已保存，今日任务进度稍后会再同步");
+      }
       void remember({
         type: data.result.correct ? "learning" : "activity",
         ...(data.result.correct
@@ -2606,7 +2832,7 @@ export default function ReadingApp({
     }
   };
 
-  const startTravel = () => {
+  const startTravel = async () => {
     if (traveling || busy) return;
     if (game.stars < selectedDestination.requiredStars) {
       showToast(`还差 ${selectedDestination.requiredStars - game.stars} 颗星才能解锁${selectedDestination.name}`);
@@ -2616,20 +2842,14 @@ export default function ReadingApp({
       showToast("旅行票不足，读完一本书可以获得 1 张");
       return;
     }
-    showToast(`${game.name}背好行囊，出发去${selectedDestination.name}`);
-    const startedAt = Date.now();
-    setGame((current) => {
-      if (current.activeTravel || current.tickets < 1 || current.stars < selectedDestination.requiredStars) return current;
-      return {
-        ...current,
-        tickets: current.tickets - 1,
-        activeTravel: {
-          destinationId: selectedDestination.id,
-          startedAt,
-          endsAt: startedAt + 8_000,
-        },
-      };
-    });
+    try {
+      const data = await runStudentAction({ action: "start-travel", destinationId: selectedDestination.id });
+      if (!data.activeTravel || !data.balances) throw new Error("旅行暂时不能开始");
+      setGame((current) => ({ ...current, ...data.balances!, activeTravel: data.activeTravel! }));
+      showToast(`${game.name}背好行囊，出发去${selectedDestination.name}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "旅行暂时不能开始");
+    }
   };
 
   const resetReading = () => {
@@ -2678,7 +2898,7 @@ export default function ReadingApp({
   const dueExplorationNodes = new Set(explorationOverview?.dueReviewNodeIds || []);
   const masteredExplorationCount = Object.values(explorationOverview?.nodeProgress || {}).filter((progress) => progress.state === "mastered").length;
   const selectedInterestDomainData: InterestDomain | null = selectedInterestDomain
-    ? interestDomains.find((domain) => domain.id === selectedInterestDomain) || null
+    ? explorationDomains.find((domain) => domain.id === selectedInterestDomain) || null
     : null;
   const activeExplorationProgress = activeExplorationNode ? explorationOverview?.nodeProgress[activeExplorationNode.id] : undefined;
   const selectedDestinationUnlocked = game.stars >= selectedDestination.requiredStars;
@@ -2938,17 +3158,19 @@ export default function ReadingApp({
 
         {view === "games" && (
           <section className="scene game-park-scene">
-            <GamePark
-              turtleName={game.name}
-              daily={fruitCatchDaily}
-              playTickets={game.playTickets}
-              completedGames={game.completedMiniGames}
-              onBackHome={() => navigateTo("home")}
-              onRoundComplete={completeFruitCatchRound}
-              onLearningGameComplete={completeLearningMiniGame}
-              onSpendPlayTicket={spendPlayTicket}
-              onPlayingChange={setMiniGamePlaying}
-            />
+            <Suspense fallback={<div className="game-park-loading" role="status">龟龟正在打开乐园…</div>}>
+              <GamePark
+                turtleName={game.name}
+                daily={fruitCatchDaily}
+                playTickets={game.playTickets}
+                completedGames={game.completedMiniGames}
+                onBackHome={() => navigateTo("home")}
+                onRoundComplete={completeFruitCatchRound}
+                onLearningGameComplete={completeLearningMiniGame}
+                onSpendPlayTicket={spendPlayTicket}
+                onPlayingChange={setMiniGamePlaying}
+              />
+            </Suspense>
           </section>
         )}
 
@@ -2983,6 +3205,10 @@ export default function ReadingApp({
                 </div>
               )}
 
+              {explorationOverview && !explorationDomains.length && (
+                <div className="explore-status" role="status"><Sparkles aria-hidden="true" /> 龟龟正在展开八条学习路线…</div>
+              )}
+
               {!selectedInterestDomainData && explorationOverview && (
                 <>
                   <section className="explore-summary" aria-label="知识探险进度">
@@ -3011,7 +3237,7 @@ export default function ReadingApp({
                     </header>
                     <div>
                       {explorationOverview.recommended.map((recommendation) => {
-                        const domain = interestDomains.find((item) => item.id === recommendation.domainId);
+                        const domain = explorationDomains.find((item) => item.id === recommendation.domainId);
                         if (!domain) return null;
                         const available = domain.nodes.some((node) => Boolean(node.lesson));
                         return (
@@ -3036,7 +3262,7 @@ export default function ReadingApp({
                       <small>没有标准路线，从任何喜欢的地方开始都可以。</small>
                     </header>
                     <div className="interest-domain-grid">
-                      {interestDomains.map((domain) => {
+                      {explorationDomains.map((domain) => {
                         const completedCount = domain.nodes.filter((node) => completedExplorationNodes.has(node.id)).length;
                         const recommendation = explorationOverview.recommended.find((item) => item.domainId === domain.id);
                         const available = domain.nodes.some((node) => Boolean(node.lesson));
@@ -3142,7 +3368,7 @@ export default function ReadingApp({
               <div className="exploration-modal-backdrop" role="presentation" onMouseDown={(event) => {
                 if (event.target === event.currentTarget && !explorationSaving) setActiveExplorationNode(null);
               }}>
-                <section className={`exploration-modal ${interestDomains.find((domain) => domain.id === activeExplorationNode.domainId)?.colorClass || ""}`} role="dialog" aria-modal="true" aria-labelledby="exploration-modal-title">
+                <section className={`exploration-modal ${explorationDomains.find((domain) => domain.id === activeExplorationNode.domainId)?.colorClass || ""}`} role="dialog" aria-modal="true" aria-labelledby="exploration-modal-title">
                   <button className="exploration-modal-close" type="button" aria-label="关闭知识点" onClick={() => setActiveExplorationNode(null)} disabled={explorationSaving}><X /></button>
                   <header>
                     <span><InterestDomainIcon domainId={activeExplorationNode.domainId} /></span>
@@ -3162,6 +3388,7 @@ export default function ReadingApp({
                         <img
                           src={`${BASE_PATH}${activeExplorationNode.lesson.illustration}`}
                           alt={activeExplorationNode.lesson.illustrationAlt}
+                          decoding="async"
                         />
                         <figcaption><Sparkles aria-hidden="true" /> 先看图找线索，再听龟龟讲一讲</figcaption>
                       </figure>
@@ -3477,10 +3704,10 @@ export default function ReadingApp({
                 </header>
 
                 <div className="reading-workspace complete-reader">
-              {bookLoading ? (
+              {bookLoading || activeChapterLoading ? (
                 <div className="book-loading-panel" role="status"><BookOpen /><strong>正在装订完整原文…</strong><span>龟龟正在识别章节和分页</span></div>
               ) : bookLoadError ? (
-                <div className="book-loading-panel error"><BookOpen /><strong>原文加载失败</strong><span>{bookLoadError}</span></div>
+                <div className="book-loading-panel error"><BookOpen /><strong>原文加载失败</strong><span>{bookLoadError}</span><button type="button" onClick={() => setBookLoadError("")}>重新加载</button></div>
               ) : selectedBook.unavailableReason ? (
                 <div className="licensed-content-panel">
                   <div className="original-status"><Lock /><span><small>原文区 · 尚未接入</small><h2>《{selectedBook.title}》需要授权原文</h2><p>{selectedBook.unavailableReason}</p></span></div>
@@ -3496,7 +3723,7 @@ export default function ReadingApp({
                     <div className="chapter-list-scroll">
                       {selectedChapters.map((chapter, index) => (
                         <button key={chapter.id} type="button" className={index === selectedChapter ? "active" : ""} onClick={() => chooseChapter(index)}>
-                          <span>{String(index + 1).padStart(2, "0")}</span><strong>{chapter.title}</strong><small>{chapter.pages.length}页</small>
+                          <span>{String(index + 1).padStart(2, "0")}</span><strong>{chapter.title}</strong><small>{chapter.pageCount ?? chapter.pages.length}页</small>
                         </button>
                       ))}
                     </div>
@@ -3529,7 +3756,7 @@ export default function ReadingApp({
                         <div className="book-inline-illustrations" aria-label="原书插图">
                           {activePage.images.map((illustration, index) => (
                             <figure key={`${illustration.src}-${index}`}>
-                              <img src={`${BASE_PATH}${illustration.src}`} alt={illustration.alt} loading="lazy" />
+                              <img src={`${BASE_PATH}${illustration.src}`} alt={illustration.alt} loading="lazy" decoding="async" />
                               <figcaption>原书插图</figcaption>
                             </figure>
                           ))}
@@ -3818,10 +4045,10 @@ export default function ReadingApp({
 
         {view === "journal" && (
           <section className="scene journal-scene">
-            <img className="journal-scene-background" src={`${ASSET}/ui/journal/background.png`} alt="" />
+            <img className="journal-scene-background" src={`${ASSET}/optimized/ui/journal/background.webp`} alt="" decoding="async" />
             <div
               className="journal-board"
-              style={{ "--journal-frame-image": `url("${ASSET}/ui/journal/knowledge-card-background.png")` } as React.CSSProperties}
+              style={{ "--journal-frame-image": `url("${ASSET}/optimized/ui/journal/knowledge-card-background.webp")` } as React.CSSProperties}
             >
               <header className="journal-header">
                 <div className="journal-title">
@@ -3856,7 +4083,7 @@ export default function ReadingApp({
                               {discovery ? (
                                 <KnowledgeCardPreview card={discovery.card} className="journal-card-photo" />
                               ) : (
-                                <img className="journal-card-photo" src={record.photo} alt={`${record.destination}旅行照片`} />
+                                <img className="journal-card-photo" src={record.photo} alt={`${record.destination}旅行照片`} loading="lazy" decoding="async" />
                               )}
                               <div className="journal-card-copy">
                                 <small>{record.date}</small>
@@ -3896,7 +4123,7 @@ export default function ReadingApp({
                     {game.readingRecords.length ? game.readingRecords.slice(0, 5).map((record) => (
                       <article className="journal-reading-card" key={record.id}>
                         <div className="journal-reading-visual">
-                          <img src={journalReadingArtFor(record.title, importedBooks)} alt={`《${record.title}》主题阅读记录书本`} />
+                          <img src={journalReadingArtFor(record.title, importedBooks)} alt={`《${record.title}》主题阅读记录书本`} loading="lazy" decoding="async" />
                           <span><Star fill="currentColor" /></span>
                         </div>
                         <div className="journal-reading-copy">
@@ -4199,7 +4426,7 @@ export default function ReadingApp({
             <div className="travel-reward-showcase">
               <figure className="travel-reward-card-frame">
                 <span><Sparkles aria-hidden="true" /> 本次获得的知识卡</span>
-                <img className="travel-reward-card-image" src={travelReward.card.image} alt={`本次获得的${travelReward.card.title}`} />
+                <img className="travel-reward-card-image" src={travelReward.card.image} alt={`本次获得的${travelReward.card.title}`} decoding="async" />
                 <figcaption>{travelReward.card.title}</figcaption>
               </figure>
               <div className="travel-reward-details">
@@ -4227,7 +4454,7 @@ export default function ReadingApp({
             role="dialog"
             aria-modal="true"
             aria-labelledby="knowledge-title"
-            style={{ "--knowledge-card-background": `url("${ASSET}/ui/journal/knowledge-card-background.png")` } as React.CSSProperties}
+            style={{ "--knowledge-card-background": `url("${ASSET}/optimized/ui/journal/knowledge-card-background.webp")` } as React.CSSProperties}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <button className="modal-close" type="button" onClick={() => setKnowledgeOpen(null)} aria-label="关闭"><X /></button>

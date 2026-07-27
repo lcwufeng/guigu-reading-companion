@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getActiveStudent } from "../../auth-user";
 import { listReadingProgress, saveReadingProgress } from "../../../db/reading-progress";
+import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 
-const bookPattern = /^[a-z0-9-]{2,40}$/;
+const bookPattern = /^[a-z0-9-]{2,80}$/;
 
 export async function GET() {
   const student = await getActiveStudent();
@@ -21,6 +22,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  if (!validMutationOrigin(request)) return mutationOriginError();
   const student = await getActiveStudent();
   if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const body = await request.json().catch(() => null) as null | {

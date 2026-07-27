@@ -40,7 +40,7 @@ export default function ParentLoginPanel({ mode, displayName = "" }: { mode: "lo
   }
 
   return (
-    <main className={styles.loginPage} style={{ backgroundImage: `linear-gradient(rgba(225, 248, 246, .78), rgba(255, 247, 218, .86)), url("${BASE_PATH}/assets/ui/login/background.png")` }}>
+    <main className={styles.loginPage} style={{ backgroundImage: `linear-gradient(rgba(225, 248, 246,.78), rgba(255, 247, 218, .86)), url("${BASE_PATH}/assets/optimized/ui/login/background.webp")` }}>
       <a className={styles.backToStudent} href={`${BASE_PATH}/`}><ArrowLeft /> 返回学生入口</a>
       <section className={styles.loginCard}>
         <img src={`${BASE_PATH}/assets/ui/supplied/brand/logo-20260715.png`} alt="龟龟伴读" className={styles.loginLogo} />
@@ -52,8 +52,8 @@ export default function ParentLoginPanel({ mode, displayName = "" }: { mode: "lo
             <label><span>家长账号</span><input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" maxLength={20} autoFocus required /></label>
             <label><span>密码</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" minLength={6} maxLength={64} required /></label>
           </> : <>
-            <label><span>新密码</span><input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" minLength={6} maxLength={64} placeholder="至少 6 位，不能再用 123456" required /></label>
-            <label><span>再输入一次</span><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={6} maxLength={64} required /></label>
+            <label><span>新密码</span><input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" minLength={8} maxLength={64} placeholder="至少 8 位，混合字母、数字或符号" required /></label>
+            <label><span>再输入一次</span><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={8} maxLength={64} required /></label>
           </>}
           {error && <p className={styles.error} role="alert">{error}</p>}
           <button type="submit" className={styles.primaryButton} disabled={submitting}>
