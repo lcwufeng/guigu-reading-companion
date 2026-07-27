@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
+import { getMiniGameLeaderboards } from "../../../db/minigame-leaderboard";
 import { completeMiniGame, startMiniGame } from "../../../db/minigame-progress";
 import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 import { getActiveStudent } from "../../auth-user";
+
+export async function GET() {
+  const student = await getActiveStudent();
+  if (!student) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  const leaderboards = await getMiniGameLeaderboards(student.id);
+  if (!leaderboards) return NextResponse.json({ error: "游戏排行榜暂时不可用" }, { status: 503 });
+  return NextResponse.json({ leaderboards }, { headers: { "Cache-Control": "no-store" } });
+}
 
 export async function POST(request: Request) {
   if (!validMutationOrigin(request)) return mutationOriginError();
@@ -13,6 +22,7 @@ export async function POST(request: Request) {
     runId?: unknown;
     score?: unknown;
     caught?: unknown;
+    secondaryScore?: unknown;
   };
   try {
     if (body?.action === "start") return NextResponse.json(await startMiniGame(student.id, body.gameId));
@@ -23,6 +33,7 @@ export async function POST(request: Request) {
         runId: body.runId,
         score: body.score,
         caught: body.caught,
+        secondaryScore: body.secondaryScore,
       }));
     }
     return NextResponse.json({ error: "小游戏操作无效" }, { status: 400 });

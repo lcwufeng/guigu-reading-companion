@@ -428,6 +428,20 @@ export const userMinigameRuns = sqliteTable("user_minigame_runs", {
   index("user_minigame_runs_expiry_idx").on(table.expiresAt),
 ]);
 
+export const userMinigameScores = sqliteTable("user_minigame_scores", {
+  userId: text("user_id").notNull(),
+  gameId: text("game_id").notNull(),
+  primaryValue: integer("primary_value").notNull(),
+  secondaryValue: integer("secondary_value").notNull().default(0),
+  durationMs: integer("duration_ms").notNull(),
+  achievedAt: integer("achieved_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.gameId] }),
+  index("user_minigame_scores_game_rank_idx").on(table.gameId, table.primaryValue, table.secondaryValue),
+  index("user_minigame_scores_user_idx").on(table.userId),
+]);
+
 export const userChatMessages = sqliteTable("user_chat_messages", {
   userId: text("user_id").notNull(),
   messageId: text("message_id").notNull(),

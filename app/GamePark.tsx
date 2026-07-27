@@ -1,14 +1,16 @@
 /* eslint-disable @next/next/no-img-element -- The game reuses the project's local pixel-art assets. */
 "use client";
 
-import { BookOpen, ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Heart, Lock, Map, Plane, Search, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
-import { lazy, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { BookOpen, ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Heart, ListOrdered, Lock, Map, Medal, Plane, Search, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
+import { lazy, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import {
   GAME_PARK_ORDER,
   type FruitCatchDailyState,
   type FruitCatchResult,
   type GameParkGameId,
   type LearningMiniGameResult,
+  type MiniGameLeaderboard,
+  type MiniGameLeaderboards,
 } from "./game-park-types";
 const CourierGame = lazy(() => import("./CourierGame"));
 const LotusJumpGame = lazy(() => import("./LotusJumpGame"));
@@ -35,6 +37,134 @@ const GAME_NAMES: Record<GameParkGameId, string> = {
   "turtle-sky": "龟龟飞机大战",
   "tortoise-race": "龟兔赛跑",
 };
+
+function GameLeaderboardPreview({
+  board,
+  loading,
+  onOpen,
+}: {
+  board: MiniGameLeaderboard | null;
+  loading: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <section className="game-rank-preview" aria-label={`${board?.rule.gameName || "本游戏"}排行榜`}>
+      <header>
+        <span><Medal aria-hidden="true" /> 游戏排行榜</span>
+        <button type="button" className="game-rank-open" onClick={onOpen}>
+          查看全部 <ChevronRight aria-hidden="true" />
+        </button>
+      </header>
+      {loading && !board ? (
+        <p className="game-rank-empty">正在整理成绩…</p>
+      ) : board?.entries.length ? (
+        <ol>
+          {board.entries.slice(0, 3).map((entry) => (
+            <li key={`${entry.rank}-${entry.name}`}>
+              <b>{entry.rank}</b>
+              <span>{entry.name}</span>
+              <strong>{entry.displayValue}</strong>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="game-rank-empty">还没有通关成绩，等你来拿第一名！</p>
+      )}
+      <p className={`game-rank-me ${board?.me ? "" : "unranked"}`}>
+        <Trophy aria-hidden="true" />
+        {board?.me
+          ? <>我的名次：<strong>第 {board.me.rank} 名</strong><span>{board.me.displayValue}</span></>
+          : "我还没有通关成绩"}
+      </p>
+    </section>
+  );
+}
+
+function GameLeaderboardDialog({
+  board,
+  gameId,
+  loading,
+  error,
+  onRetry,
+  onClose,
+}: {
+  board: MiniGameLeaderboard | null;
+  gameId: GameParkGameId;
+  loading: boolean;
+  error: string;
+  onRetry: () => void;
+  onClose: () => void;
+}) {
+  const gameName = board?.rule.gameName || GAME_NAMES[gameId];
+  return (
+    <div
+      className="game-rank-dialog-backdrop"
+      role="presentation"
+      onPointerDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section className="game-rank-dialog" role="dialog" aria-modal="true" aria-labelledby="game-rank-title">
+        <header>
+          <div>
+            <span><ListOrdered aria-hidden="true" /> 龟龟乐园排行榜</span>
+            <h2 id="game-rank-title">{gameName}</h2>
+            <p>{board?.rule.ruleText || "通关以后，龟龟会把成绩放进排行榜。"}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="关闭排行榜"><X aria-hidden="true" /></button>
+        </header>
+
+        {loading && !board && <div className="game-rank-dialog-status"><Sparkles aria-hidden="true" /> 正在整理大家的成绩…</div>}
+        {error && !loading && !board && (
+          <div className="game-rank-dialog-status error" role="alert">
+            <span>{error}</span>
+            <button type="button" onClick={onRetry}>重新加载</button>
+          </div>
+        )}
+        {board && (
+          <>
+            <div className={`game-rank-my-card ${board.me ? "" : "unranked"}`}>
+              <div>
+                <small>我的成绩</small>
+                <strong>{board.me ? `第 ${board.me.rank} 名` : "等待第一次通关"}</strong>
+              </div>
+              <div>
+                <b>{board.me?.displayValue || "—"}</b>
+                <span>{board.me?.secondaryDisplay || board.rule.metricLabel}</span>
+              </div>
+            </div>
+            <div className="game-rank-list-heading">
+              <strong>全部成绩</strong>
+              <span>{board.participantCount} 位小朋友已上榜</span>
+            </div>
+            {board.entries.length ? (
+              <ol className="game-rank-list">
+                {board.entries.map((entry) => {
+                  const isMe = board.me?.rank === entry.rank
+                    && board.me.name === entry.name
+                    && board.me.primaryValue === entry.primaryValue;
+                  return (
+                    <li className={isMe ? "is-me" : ""} key={`${entry.rank}-${entry.name}-${entry.primaryValue}`}>
+                      <b className={`rank-${entry.rank}`}>{entry.rank <= 3 ? <Medal aria-hidden="true" /> : entry.rank}</b>
+                      <span>{entry.name}{isMe && <em>我</em>}</span>
+                      <div><strong>{entry.displayValue}</strong>{entry.secondaryDisplay && <small>{entry.secondaryDisplay}</small>}</div>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : (
+              <div className="game-rank-dialog-empty">
+                <img src={`${ASSET}/characters/turtle/turtle_excited.png`} alt="" />
+                <strong>第一名正在等你</strong>
+                <span>完成一次挑战，成绩就会自动出现在这里。</span>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
 
 type FruitKind = "orange" | "red" | "blue";
 type FruitDrop = {
@@ -108,6 +238,7 @@ export default function GamePark({
   onLearningGameComplete,
   onSpendPlayTicket,
   onPlayingChange,
+  leaderboardVersion,
 }: {
   turtleName: string;
   daily: FruitCatchDailyState;
@@ -118,6 +249,7 @@ export default function GamePark({
   onLearningGameComplete: (result: LearningMiniGameResult, runId: string) => void;
   onSpendPlayTicket: (game: GameParkGameId) => Promise<string | null>;
   onPlayingChange: (playing: boolean) => void;
+  leaderboardVersion: number;
 }) {
   const [activeGame, setActiveGame] = useState<GameParkGameId | null>(null);
   const [run, setRun] = useState<FruitCatchRun>(() => initialRun());
@@ -129,10 +261,47 @@ export default function GamePark({
   const [activeRunId, setActiveRunId] = useState("");
   const [heartNotice, setHeartNotice] = useState("");
   const [ticketStarting, setTicketStarting] = useState(false);
+  const [leaderboards, setLeaderboards] = useState<MiniGameLeaderboards | null>(null);
+  const [leaderboardsLoading, setLeaderboardsLoading] = useState(true);
+  const [leaderboardsError, setLeaderboardsError] = useState("");
+  const [leaderboardGame, setLeaderboardGame] = useState<GameParkGameId | null>(null);
   const fieldRef = useRef<HTMLDivElement | null>(null);
   const reportedResultRef = useRef(false);
   const challengeHeartsRef = useRef(3);
   const ticketStartingRef = useRef(false);
+
+  const requestGameLeaderboards = useCallback(async () => {
+    const response = await fetch(`${BASE_PATH}/api/minigames`, { cache: "no-store" });
+    const data = await response.json() as { error?: string; leaderboards?: MiniGameLeaderboards };
+    if (!response.ok || !data.leaderboards) throw new Error(data.error || "游戏排行榜暂时不可用");
+    return data.leaderboards;
+  }, []);
+
+  const loadGameLeaderboards = useCallback(() => {
+    setLeaderboardsLoading(true);
+    setLeaderboardsError("");
+    void requestGameLeaderboards()
+      .then(setLeaderboards)
+      .catch((error) => setLeaderboardsError(error instanceof Error ? error.message : "游戏排行榜暂时不可用"))
+      .finally(() => setLeaderboardsLoading(false));
+  }, [requestGameLeaderboards]);
+
+  useEffect(() => {
+    let active = true;
+    void requestGameLeaderboards()
+      .then((next) => {
+        if (active) setLeaderboards(next);
+      })
+      .catch((error) => {
+        if (active) setLeaderboardsError(error instanceof Error ? error.message : "游戏排行榜暂时不可用");
+      })
+      .finally(() => {
+        if (active) setLeaderboardsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [leaderboardVersion, requestGameLeaderboards]);
 
   const completedSet = useMemo(() => new Set(completedGames), [completedGames]);
   const unlockedCount = GAME_PARK_ORDER.filter((gameId, index) => index === 0 || completedSet.has(GAME_PARK_ORDER[index - 1])).length;
@@ -371,6 +540,7 @@ export default function GamePark({
 
   if (!activeGame) {
     return (
+      <>
       <section className="game-park-panel">
         <header className="game-park-heading">
           <div>
@@ -414,6 +584,11 @@ export default function GamePark({
               <span>最好成绩<strong>{daily.bestScore}</strong></span>
               <span>累计接到<strong>{daily.totalCaught}</strong></span>
             </div>
+            <GameLeaderboardPreview
+              board={leaderboards?.["fruit-catch"] || null}
+              loading={leaderboardsLoading}
+              onOpen={() => setLeaderboardGame("fruit-catch")}
+            />
             <button
               className="game-park-start"
               type="button"
@@ -439,6 +614,7 @@ export default function GamePark({
                 <h3>乌龟快递员</h3>
                 <p>看清道路和距离，安排送件顺序，帮助龟龟找到真正的最短路线。</p>
                 <ul><li>点击相邻地点前进</li><li>送完所有包裹</li><li>和最短距离比一比</li></ul>
+                <GameLeaderboardPreview board={leaderboards?.["turtle-courier"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("turtle-courier")} />
                 <button type="button" disabled={playTickets < 1 || !isGameUnlocked("turtle-courier")} onClick={() => openTicketedGame("turtle-courier")}>
                   {gameButtonLabel("turtle-courier")} {isGameUnlocked("turtle-courier") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
@@ -455,6 +631,7 @@ export default function GamePark({
                 <h3>天气穿搭</h3>
                 <p>根据温度、降雨、风力和行程，为龟龟选择衣服与旅行用品。</p>
                 <ul><li>先读天气任务</li><li>衣服用品都要选</li><li>合适就好，不是越多越好</li></ul>
+                <GameLeaderboardPreview board={leaderboards?.["weather-outfit"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("weather-outfit")} />
                 <button type="button" disabled={playTickets < 1 || !isGameUnlocked("weather-outfit")} onClick={() => openTicketedGame("weather-outfit")}>
                   {gameButtonLabel("weather-outfit")} {isGameUnlocked("weather-outfit") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
@@ -471,6 +648,7 @@ export default function GamePark({
                 <h3>荷叶跳跳</h3>
                 <p>观察数字和算式的规律，带龟龟按正确顺序跳过六片池塘。</p>
                 <ul><li>数字顺序与奇偶</li><li>倍数和算式</li><li>递推规律挑战</li></ul>
+                <GameLeaderboardPreview board={leaderboards?.["lotus-jump"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("lotus-jump")} />
                 <button type="button" disabled={playTickets < 1 || !isGameUnlocked("lotus-jump")} onClick={() => openTicketedGame("lotus-jump")}>
                   {gameButtonLabel("lotus-jump")} {isGameUnlocked("lotus-jump") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
@@ -487,6 +665,7 @@ export default function GamePark({
                 <h3>龟龟找不同</h3>
                 <p>比较两幅龟龟场景，找出颜色、数量、形状和位置的变化。</p>
                 <ul><li>四幅不同场景</li><li>每关逐步加难</li><li>找不到可请龟龟提示</li></ul>
+                <GameLeaderboardPreview board={leaderboards?.["spot-difference"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("spot-difference")} />
                 <button type="button" disabled={playTickets < 1 || !isGameUnlocked("spot-difference")} onClick={() => openTicketedGame("spot-difference")}>
                   {gameButtonLabel("spot-difference")} {isGameUnlocked("spot-difference") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
@@ -503,6 +682,7 @@ export default function GamePark({
                 <h3>拼故事</h3>
                 <p>读懂每张情节卡，按前因后果把故事拼完整，成为小小故事导演。</p>
                 <ul><li>五个原创小故事</li><li>由三步增加到六步</li><li>理解起因、经过和结果</li></ul>
+                <GameLeaderboardPreview board={leaderboards?.["story-puzzle"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("story-puzzle")} />
                 <button type="button" disabled={playTickets < 1 || !isGameUnlocked("story-puzzle")} onClick={() => openTicketedGame("story-puzzle")}>
                   {gameButtonLabel("story-puzzle")} {isGameUnlocked("story-puzzle") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
@@ -519,6 +699,7 @@ export default function GamePark({
                 <h3>龟龟飞机大战</h3>
                 <p>移动鼠标或拖动手指驾驶龟龟飞行器，收集星星、轻松避开乌云。</p>
                 <ul><li>鼠标跟随控制</li><li>三关缓慢加速</li><li>儿童友好的星光挑战</li></ul>
+                <GameLeaderboardPreview board={leaderboards?.["turtle-sky"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("turtle-sky")} />
                 <button type="button" disabled={playTickets < 1 || !isGameUnlocked("turtle-sky")} onClick={() => openTicketedGame("turtle-sky")}>
                   {gameButtonLabel("turtle-sky")} {isGameUnlocked("turtle-sky") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
@@ -535,6 +716,7 @@ export default function GamePark({
                 <h3>龟兔赛跑</h3>
                 <p>灰兔会慢慢向前跑，直接连续点击龟龟；点得越快，龟龟爬得越快。</p>
                 <ul><li>双方同时从起点出发</li><li>连点形成加速</li><li>本局重赛不重复扣票</li></ul>
+                <GameLeaderboardPreview board={leaderboards?.["tortoise-race"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("tortoise-race")} />
                 <button type="button" disabled={playTickets < 1 || !isGameUnlocked("tortoise-race")} onClick={() => openTicketedGame("tortoise-race")}>
                   {gameButtonLabel("tortoise-race")} {isGameUnlocked("tortoise-race") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
                 </button>
@@ -551,6 +733,17 @@ export default function GamePark({
           </div>
         </section>
       </section>
+      {leaderboardGame && (
+        <GameLeaderboardDialog
+          board={leaderboards?.[leaderboardGame] || null}
+          gameId={leaderboardGame}
+          loading={leaderboardsLoading}
+          error={leaderboardsError}
+          onRetry={loadGameLeaderboards}
+          onClose={() => setLeaderboardGame(null)}
+        />
+      )}
+      </>
     );
   }
 
@@ -622,7 +815,12 @@ export default function GamePark({
         hearts={challengeHearts}
         onBack={leaveChallenge}
         onMistake={registerMistake}
-        onComplete={(detail) => onLearningGameComplete({ game: "turtle-sky", detail }, activeRunId)}
+        onComplete={(detail, performance) => onLearningGameComplete({
+          game: "turtle-sky",
+          detail,
+          score: performance.score,
+          secondaryScore: performance.cloudHits,
+        }, activeRunId)}
       />
     );
   }

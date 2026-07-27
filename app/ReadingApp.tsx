@@ -1281,6 +1281,7 @@ export default function ReadingApp({
   const [explorationAnswer, setExplorationAnswer] = useState("");
   const [explorationFeedback, setExplorationFeedback] = useState<ExplorationFeedback | null>(null);
   const [miniGamePlaying, setMiniGamePlaying] = useState(false);
+  const [miniGameLeaderboardVersion, setMiniGameLeaderboardVersion] = useState(0);
   const mobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, getServerMobileLayoutSnapshot);
   const availableBooks = useMemo(() => [...books, ...importedBooks], [importedBooks]);
   const selectedGradeBooks = useMemo(
@@ -1471,13 +1472,21 @@ export default function ReadingApp({
       const response = await fetch(`${BASE_PATH}/api/minigames`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "complete", gameId: "fruit-catch", runId, score: result.score, caught: result.caught }),
+        body: JSON.stringify({
+          action: "complete",
+          gameId: "fruit-catch",
+          runId,
+          score: result.score,
+          caught: result.caught,
+          secondaryScore: result.bestCombo,
+        }),
       });
       const data = await response.json() as {
         error?: string;
         balances?: { fruits: number; stars: number; tickets: number; playTickets: number };
         completedGames?: GameParkGameId[];
         fruitCatchDaily?: FruitCatchDailyState;
+        success?: boolean;
       };
       if (!response.ok || !data.balances) throw new Error(data.error || "本局成绩暂时没有保存");
       setGame((current) => ({
@@ -1487,6 +1496,7 @@ export default function ReadingApp({
         fruitCatchDaily: data.fruitCatchDaily || current.fruitCatchDaily,
         completedMiniGames: data.completedGames || current.completedMiniGames,
       }));
+      if (data.success) setMiniGameLeaderboardVersion((current) => current + 1);
       showToast(result.success
         ? !wasRewarded ? "接果子过关，获得 1 颗星星！" : "接果子过关啦，今天的星星已经领过了"
         : `本局得到 ${result.score} 分，再试一次就更接近啦`);
@@ -1514,7 +1524,13 @@ export default function ReadingApp({
       const response = await fetch(`${BASE_PATH}/api/minigames`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "complete", gameId: result.game, runId }),
+        body: JSON.stringify({
+          action: "complete",
+          gameId: result.game,
+          runId,
+          score: result.score,
+          secondaryScore: result.secondaryScore,
+        }),
       });
       const data = await response.json() as {
         error?: string;
@@ -1528,6 +1544,7 @@ export default function ReadingApp({
         boredom: clamp(current.boredom - 6),
         completedMiniGames: data.completedGames || current.completedMiniGames,
       }));
+      setMiniGameLeaderboardVersion((current) => current + 1);
       showToast(`${activity}挑战完成，龟龟又学会了一项新本领！`);
       void remember({ type: "activity", activity, detail: result.detail });
     } catch (error) {
@@ -3274,6 +3291,7 @@ export default function ReadingApp({
                 onLearningGameComplete={completeLearningMiniGame}
                 onSpendPlayTicket={spendPlayTicket}
                 onPlayingChange={setMiniGamePlaying}
+                leaderboardVersion={miniGameLeaderboardVersion}
               />
             </Suspense>
           </section>

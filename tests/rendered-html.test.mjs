@@ -961,6 +961,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(userStateDb, /trustedImport/);
   assert.match(minigamesRoute, /startMiniGame/);
   assert.match(minigamesRoute, /completeMiniGame/);
+  assert.match(minigamesRoute, /getMiniGameLeaderboards/);
+  assert.match(minigamesRoute, /export async function GET/);
+  assert.match(schemaStatements, /CREATE TABLE IF NOT EXISTS user_minigame_scores/);
+  assert.match(styles, /\.game-rank-preview/);
+  assert.match(styles, /\.game-rank-dialog/);
+  assert.match(styles, /\.game-rank-list li\.is-me/);
   assert.match(schemaStatements, /user_id TEXT PRIMARY KEY/);
   assert.match(hosting, /"d1": "DB"/);
   assert.match(hosting, /"r2": "UPLOADS"/);

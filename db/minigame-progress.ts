@@ -1,18 +1,7 @@
+import { isMiniGameId, MINI_GAME_ORDER } from "../lib/minigame-config";
+import { miniGameScoreStatement } from "./minigame-leaderboard";
 import { applyRewardChanges, getRewardBalances } from "./reward-wallet";
 import { readyRuntimeDatabase } from "./runtime-database";
-
-export const MINI_GAME_ORDER = [
-  "fruit-catch",
-  "turtle-courier",
-  "weather-outfit",
-  "lotus-jump",
-  "spot-difference",
-  "story-puzzle",
-  "turtle-sky",
-  "tortoise-race",
-] as const;
-
-export type MiniGameId = typeof MINI_GAME_ORDER[number];
 
 function chinaDayKey(now = Date.now()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -25,10 +14,6 @@ function chinaDayKey(now = Date.now()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function validGameId(value: unknown): value is MiniGameId {
-  return typeof value === "string" && MINI_GAME_ORDER.includes(value as MiniGameId);
-}
-
 async function completedGames(userId: string) {
   const database = await readyRuntimeDatabase();
   if (!database) return [];
@@ -36,11 +21,11 @@ async function completedGames(userId: string) {
     "SELECT game_id FROM user_minigame_progress WHERE user_id = ? ORDER BY completed_at ASC",
     [userId],
   );
-  return rows.map((row) => row.game_id).filter(validGameId);
+  return rows.map((row) => row.game_id).filter(isMiniGameId);
 }
 
 export async function startMiniGame(userId: string, gameId: unknown) {
-  if (!validGameId(gameId)) throw new Error("小游戏不存在");
+  if (!isMiniGameId(gameId)) throw new Error("小游戏不存在");
   const database = await readyRuntimeDatabase();
   if (!database) throw new Error("小游戏进度暂时不可用");
   const index = MINI_GAME_ORDER.indexOf(gameId);
@@ -82,15 +67,16 @@ export async function completeMiniGame(input: {
   gameId: unknown;
   score?: unknown;
   caught?: unknown;
+  secondaryScore?: unknown;
 }) {
-  if (!validGameId(input.gameId)) throw new Error("小游戏不存在");
+  if (!isMiniGameId(input.gameId)) throw new Error("小游戏不存在");
   const runId = typeof input.runId === "string" ? input.runId.trim() : "";
   if (!/^[0-9a-f-]{36}$/.test(runId)) throw new Error("本局游戏记录无效");
   const database = await readyRuntimeDatabase();
   if (!database) throw new Error("小游戏进度暂时不可用");
   const now = Date.now();
-  const run = await database.first<{ completed_at: number | null; expires_at: number }>(
-    "SELECT completed_at, expires_at FROM user_minigame_runs WHERE run_id = ? AND user_id = ? AND game_id = ?",
+  const run = await database.first<{ completed_at: number | null; expires_at: number; started_at: number }>(
+    "SELECT completed_at, expires_at, started_at FROM user_minigame_runs WHERE run_id = ? AND user_id = ? AND game_id = ?",
     [runId, input.userId, input.gameId],
   );
   if (!run) throw new Error("没有找到本局游戏记录");
@@ -163,7 +149,14 @@ export async function completeMiniGame(input: {
   }, ...(success ? [{
     sql: "INSERT OR IGNORE INTO user_minigame_progress (user_id, game_id, completed_at) VALUES (?, ?, ?)",
     params: [input.userId, input.gameId, now],
-  }] : [])]);
+  }, miniGameScoreStatement({
+    userId: input.userId,
+    gameId: input.gameId,
+    startedAt: run.started_at,
+    completedAt: now,
+    score: input.score,
+    secondaryScore: input.secondaryScore,
+  })] : [])]);
   return {
     alreadyCompleted: false,
     success,

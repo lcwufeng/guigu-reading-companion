@@ -502,6 +502,194 @@
 }
 .game-park-choice button svg { height: 19px; width: 19px; }
 
+.game-rank-preview {
+  background: rgba(255, 253, 235, 0.88);
+  border: 2px solid rgba(161, 119, 50, 0.48);
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.42);
+  margin-top: 15px;
+  overflow: hidden;
+  padding: 10px 11px 9px;
+}
+.game-rank-preview > header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+.game-rank-preview > header > span {
+  align-items: center;
+  color: #68491d;
+  display: flex;
+  font-size: 17px;
+  font-weight: 950;
+  gap: 5px;
+}
+.game-rank-preview > header > span svg { color: #e2a21d; height: 20px; width: 20px; }
+.game-rank-preview button.game-rank-open,
+.game-park-choice button.game-rank-open {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+  color: #557a3e;
+  display: flex;
+  font-size: 15px;
+  font-weight: 950;
+  gap: 1px;
+  margin: 0;
+  min-height: 34px;
+  padding: 5px 3px 5px 8px;
+  width: auto;
+}
+.game-rank-preview button.game-rank-open:hover { background: rgba(117, 158, 80, 0.13); filter: none; transform: none; }
+.game-rank-preview button.game-rank-open svg { height: 17px; width: 17px; }
+.game-rank-preview ol { display: grid; gap: 4px; list-style: none; margin: 8px 0 0; padding: 0; }
+.game-rank-preview li {
+  align-items: center;
+  background: rgba(255, 255, 247, 0.72);
+  border-radius: 8px;
+  color: #6b583d;
+  display: grid;
+  font-size: 15px;
+  font-weight: 850;
+  gap: 7px;
+  grid-template-columns: 25px minmax(0, 1fr) auto;
+  min-height: 31px;
+  padding: 3px 7px;
+}
+.game-rank-preview li b {
+  align-items: center;
+  background: #e7c365;
+  border-radius: 999px;
+  color: #704a16;
+  display: flex;
+  font-size: 13px;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+.game-rank-preview li:nth-child(2) b { background: #d7d5cd; color: #5f5e58; }
+.game-rank-preview li:nth-child(3) b { background: #dca77b; color: #70441e; }
+.game-rank-preview li strong { color: #4f7138; font-size: 15px; white-space: nowrap; }
+.game-rank-empty { color: #867154 !important; font-size: 15px !important; font-weight: 800 !important; margin: 9px 0 4px !important; }
+.game-rank-me {
+  align-items: center;
+  border-top: 1px dashed rgba(148, 110, 55, 0.45);
+  color: #674718 !important;
+  display: flex;
+  font-size: 15px !important;
+  font-weight: 850 !important;
+  gap: 4px;
+  margin: 8px 0 0 !important;
+  padding-top: 7px;
+}
+.game-rank-me svg { color: #dda21d; height: 17px; width: 17px; }
+.game-rank-me strong { color: #4d7437; font-size: 17px; }
+.game-rank-me span { color: #806746; margin-left: auto; }
+.game-rank-me.unranked { color: #877559 !important; }
+
+.game-rank-dialog-backdrop {
+  align-items: center;
+  background: rgba(44, 55, 33, 0.62);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 120;
+}
+.game-rank-dialog {
+  background: linear-gradient(145deg, #fff9dc, #f1f1cf);
+  border: 4px solid #a66d25;
+  border-radius: 25px;
+  box-shadow: inset 0 0 0 5px rgba(255, 255, 244, 0.78), 0 18px 55px rgba(36, 40, 24, 0.38);
+  max-height: min(860px, calc(100dvh - 48px));
+  max-width: 760px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(20px, 3vw, 32px);
+  scrollbar-gutter: stable;
+  width: 100%;
+}
+.game-rank-dialog > header { align-items: flex-start; display: flex; gap: 15px; justify-content: space-between; }
+.game-rank-dialog > header > div > span { align-items: center; color: #567a3e; display: flex; font-size: 17px; font-weight: 950; gap: 6px; }
+.game-rank-dialog > header > div > span svg { height: 21px; width: 21px; }
+.game-rank-dialog h2 { color: #513215; font-size: clamp(34px, 4vw, 48px); line-height: 1.18; margin: 5px 0 7px; }
+.game-rank-dialog > header p { color: #735d3e; font-size: 18px; font-weight: 760; line-height: 1.55; margin: 0; }
+.game-rank-dialog > header > button {
+  align-items: center;
+  background: #fff9e4;
+  border: 2px solid #b98a49;
+  border-radius: 11px;
+  color: #704c22;
+  cursor: pointer;
+  display: flex;
+  flex: 0 0 auto;
+  height: 43px;
+  justify-content: center;
+  width: 43px;
+}
+.game-rank-dialog > header > button svg { height: 24px; width: 24px; }
+.game-rank-my-card {
+  background: linear-gradient(100deg, #ffedaa, #e0eebf);
+  border: 3px solid #c2943e;
+  border-radius: 17px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr auto;
+  margin-top: 22px;
+  padding: 15px 18px;
+}
+.game-rank-my-card > div { display: flex; flex-direction: column; justify-content: center; }
+.game-rank-my-card > div:last-child { align-items: flex-end; }
+.game-rank-my-card small { color: #7e602f; font-size: 15px; font-weight: 900; }
+.game-rank-my-card strong { color: #543415; font-size: 30px; line-height: 1.25; }
+.game-rank-my-card b { color: #477034; font-size: 26px; }
+.game-rank-my-card span { color: #806842; font-size: 14px; font-weight: 850; }
+.game-rank-my-card.unranked { background: linear-gradient(100deg, #f3ead1, #e6ebd9); border-color: #b5a270; }
+.game-rank-list-heading { align-items: baseline; color: #5b3b1b; display: flex; justify-content: space-between; margin-top: 23px; }
+.game-rank-list-heading strong { font-size: 23px; }
+.game-rank-list-heading span { color: #80694a; font-size: 15px; font-weight: 800; }
+.game-rank-list { display: grid; gap: 8px; list-style: none; margin: 10px 0 0; padding: 0; }
+.game-rank-list li {
+  align-items: center;
+  background: rgba(255, 255, 245, 0.8);
+  border: 2px solid rgba(166, 133, 79, 0.36);
+  border-radius: 12px;
+  color: #664b2e;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  min-height: 61px;
+  padding: 8px 12px;
+}
+.game-rank-list li.is-me { background: #eaf2cf; border-color: #82a75e; box-shadow: inset 4px 0 #6f9b4f; }
+.game-rank-list li > b {
+  align-items: center;
+  color: #7a664a;
+  display: flex;
+  font-size: 19px;
+  justify-content: center;
+}
+.game-rank-list li > b svg { height: 27px; width: 27px; }
+.game-rank-list li > b.rank-1 svg { color: #e3aa1e; fill: #ffdf69; }
+.game-rank-list li > b.rank-2 svg { color: #888d8d; fill: #dfe3df; }
+.game-rank-list li > b.rank-3 svg { color: #a96b36; fill: #e6a873; }
+.game-rank-list li > span { align-items: center; display: flex; font-size: 19px; font-weight: 900; gap: 6px; }
+.game-rank-list li em { background: #5e8e42; border-radius: 999px; color: #fff; font-size: 12px; font-style: normal; padding: 2px 6px; }
+.game-rank-list li > div { align-items: flex-end; display: flex; flex-direction: column; }
+.game-rank-list li > div strong { color: #4a7136; font-size: 20px; }
+.game-rank-list li > div small { color: #8a7150; font-size: 12px; font-weight: 800; }
+.game-rank-dialog-status { align-items: center; color: #64784c; display: flex; font-size: 18px; font-weight: 900; gap: 8px; justify-content: center; min-height: 200px; }
+.game-rank-dialog-status.error { color: #92543c; flex-direction: column; }
+.game-rank-dialog-status button { background: #5f913f; border: 0; border-radius: 10px; color: #fff; cursor: pointer; font: inherit; padding: 8px 15px; }
+.game-rank-dialog-empty { align-items: center; color: #72583b; display: flex; flex-direction: column; padding: 30px 12px 15px; text-align: center; }
+.game-rank-dialog-empty img { max-height: 150px; object-fit: contain; width: 160px; }
+.game-rank-dialog-empty strong { color: #533719; font-size: 25px; }
+.game-rank-dialog-empty span { font-size: 17px; font-weight: 750; margin-top: 4px; }
+
 .game-challenge-shell { min-height: 100%; position: relative; }
 .game-challenge-health {
   align-items: center;
@@ -1714,6 +1902,36 @@
   .game-park-choice h3 { font-size: 32px; }
   .game-park-choice p { font-size: 19px; }
   .game-park-choice button { font-size: 19px; width: 100%; }
+  .game-rank-preview { margin-top: 12px; padding: 9px; }
+  .game-rank-preview > header > span { font-size: 16px; }
+  .game-park-choice button.game-rank-open,
+  .game-rank-preview button.game-rank-open { font-size: 14px; min-height: 32px; padding: 4px 2px 4px 7px; width: auto; }
+  .game-rank-preview li { font-size: 14px; }
+  .game-rank-preview li strong { font-size: 14px; }
+  .game-rank-me { font-size: 14px !important; }
+  .game-rank-me strong { font-size: 16px; }
+  .game-rank-dialog-backdrop { align-items: flex-end; padding: 0; }
+  .game-rank-dialog {
+    border-bottom: 0;
+    border-radius: 22px 22px 0 0;
+    border-width: 3px;
+    max-height: min(88dvh, 820px);
+    padding: 18px 13px calc(20px + env(safe-area-inset-bottom));
+  }
+  .game-rank-dialog > header > div > span { font-size: 15px; }
+  .game-rank-dialog h2 { font-size: 31px; }
+  .game-rank-dialog > header p { font-size: 16px; line-height: 1.48; }
+  .game-rank-dialog > header > button { height: 39px; width: 39px; }
+  .game-rank-my-card { margin-top: 17px; padding: 12px; }
+  .game-rank-my-card strong { font-size: 25px; }
+  .game-rank-my-card b { font-size: 21px; }
+  .game-rank-list-heading { margin-top: 18px; }
+  .game-rank-list-heading strong { font-size: 20px; }
+  .game-rank-list-heading span { font-size: 13px; }
+  .game-rank-list li { gap: 7px; grid-template-columns: 34px minmax(0, 1fr) auto; min-height: 56px; padding: 7px 9px; }
+  .game-rank-list li > span { font-size: 17px; }
+  .game-rank-list li > div strong { font-size: 17px; }
+  .game-rank-list li > div small { font-size: 11px; }
 
   .fruit-catch-panel { min-height: 0; }
   .fruit-catch-hud { gap: 5px; grid-template-columns: 0.76fr 1.38fr 0.76fr; margin-block: 9px 8px; }

@@ -76,12 +76,12 @@ export default function TurtleSkyGame({
   hearts: number;
   onBack: () => void;
   onMistake: () => void;
-  onComplete: (detail: string) => void;
+  onComplete: (detail: string, performance: { score: number; cloudHits: number }) => void;
 }) {
   const [levelIndex, setLevelIndex] = useState(0);
   const [run, setRun] = useState<FlightRun>(() => initialRun());
   const [allComplete, setAllComplete] = useState(false);
-  const [totalStars, setTotalStars] = useState(0);
+  const [totalScore, setTotalScore] = useState(0);
   const [totalCloudHits, setTotalCloudHits] = useState(0);
   const reportedRef = useRef(false);
   const reportedCloudHitsRef = useRef(0);
@@ -162,7 +162,7 @@ export default function TurtleSkyGame({
 
   const advanceMission = () => {
     if (!success) return;
-    setTotalStars((current) => current + run.collected);
+    setTotalScore((current) => current + run.score);
     setTotalCloudHits((current) => current + run.cloudHits);
     if (levelIndex < missions.length - 1) {
       setLevelIndex((current) => current + 1);
@@ -173,7 +173,12 @@ export default function TurtleSkyGame({
     setAllComplete(true);
     if (!reportedRef.current) {
       reportedRef.current = true;
-      onComplete(`完成${missions.length}关龟龟飞机大战，收集${totalStars + run.collected}颗星星，碰到乌云${totalCloudHits + run.cloudHits}次，练习了方向判断和快速反应`);
+      const score = totalScore + run.score;
+      const cloudHits = totalCloudHits + run.cloudHits;
+      onComplete(
+        `完成${missions.length}关龟龟飞机大战，得到${score}星光分，碰到乌云${cloudHits}次，练习了方向判断和快速反应`,
+        { score, cloudHits },
+      );
     }
   };
 

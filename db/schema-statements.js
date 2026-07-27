@@ -352,6 +352,18 @@ export const SCHEMA_STATEMENTS = [
   )`,
   "CREATE INDEX IF NOT EXISTS user_minigame_runs_user_date_idx ON user_minigame_runs(user_id, started_at DESC)",
   "CREATE INDEX IF NOT EXISTS user_minigame_runs_expiry_idx ON user_minigame_runs(expires_at)",
+  `CREATE TABLE IF NOT EXISTS user_minigame_scores (
+    user_id TEXT NOT NULL,
+    game_id TEXT NOT NULL,
+    primary_value INTEGER NOT NULL,
+    secondary_value INTEGER NOT NULL DEFAULT 0,
+    duration_ms INTEGER NOT NULL,
+    achieved_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, game_id)
+  )`,
+  "CREATE INDEX IF NOT EXISTS user_minigame_scores_game_rank_idx ON user_minigame_scores(game_id, primary_value, secondary_value)",
+  "CREATE INDEX IF NOT EXISTS user_minigame_scores_user_idx ON user_minigame_scores(user_id)",
   `CREATE TABLE IF NOT EXISTS user_chat_messages (
     user_id TEXT NOT NULL,
     message_id TEXT NOT NULL,
