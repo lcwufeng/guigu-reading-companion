@@ -484,6 +484,41 @@ test("forces first-login password reset and isolates every student's data", asyn
   }
 });
 
+test("provides five pixel-art achievement routes with persistent selectable titles", async () => {
+  const [page, styles, catalog, achievementDb, achievementRoute, schema] = await Promise.all([
+    readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../lib/achievement-catalog.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/achievements.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/achievements/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
+  ]);
+  for (const title of ["书香成长路", "错题进步路", "山海旅行路", "龟龟乐园路", "知识探险路"]) {
+    assert.match(catalog, new RegExp(title));
+  }
+  assert.equal((catalog.match(/badgeSrc: "\/assets\/achievements\//g) || []).length, 20);
+  assert.match(page, /我的成长称号/);
+  assert.match(page, /achievementOverview/);
+  assert.match(page, /佩戴称号/);
+  assert.match(styles, /\.achievement-scene \{[\s\S]*overflow-y: auto/);
+  assert.match(styles, /@media \(max-width: 430px\) \{[\s\S]*\.achievement-grid \{ grid-template-columns: 1fr;/);
+  assert.match(achievementDb, /user_achievements/);
+  assert.match(achievementDb, /user_title_profile/);
+  assert.match(achievementDb, /WHERE user_id = \?/);
+  assert.match(achievementRoute, /validMutationOrigin/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS user_achievements/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS user_title_profile/);
+  for (const badge of [
+    "reading-sprout", "reading-pathfinder", "story-collector", "little-scholar",
+    "mistake-detective", "correction-helper", "solution-mender", "review-expert",
+    "first-departure", "footprint-collector", "mountain-sea-traveler", "world-wanderer",
+    "park-rookie", "level-brave", "turtle-gamer", "park-champion",
+    "curiosity-sprout", "knowledge-pathfinder", "bridge-builder", "little-mentor",
+  ]) {
+    await access(new URL(`../public/assets/achievements/${badge}.webp`, import.meta.url));
+  }
+});
+
 test("keeps the product loops, account safeguards, and required art assets", async () => {
   const [page, styles, layout, nextConfig, companionRoute, speechRoute, speechClient, serverBundle, mistakeScanRoute, mistakesRoute, mistakeReviewRoute, mistakesDb, mistakeAi, studentMemoryRoute, studentMemoryDb, bookKnowledge, bookPrompts, packageJson, authDb, authUser, loginRoute, resetRoute, userStateRoute, userStateDb, schemaStatements, hosting, studentActionsRoute, studentActionsDb, rewardWallet, minigamesRoute, bundledBookRoute] = await Promise.all([
     readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8"),

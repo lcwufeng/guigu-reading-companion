@@ -45,8 +45,14 @@ import type {
   InterestDomain,
   InterestDomainId,
 } from "../lib/exploration-catalog";
+import {
+  achievementById,
+  achievementCatalog,
+  achievementTracks,
+  type AchievementMetricKey,
+} from "../lib/achievement-catalog";
 
-type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "explore" | "games";
+type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "achievements" | "explore" | "games";
 
 const GamePark = lazy(() => import("./GamePark"));
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
@@ -302,6 +308,16 @@ type WeeklyLeaderboard = {
     dailyCap: number;
     dailyMaxPoints: number;
   }>;
+};
+
+type AchievementOverview = {
+  achievements: Array<{ id: string; unlockedAt: number | null; current: number }>;
+  metrics: Record<AchievementMetricKey, number>;
+  selectedAchievementId: string | null;
+  newlyUnlockedIds: string[];
+  totalUnlocked: number;
+  totalAchievements: number;
+  tracks: Array<{ id: string; unlocked: number; total: number }>;
 };
 
 type ExplorationOverview = {
@@ -1250,6 +1266,10 @@ export default function ReadingApp({
   const [leaderboard, setLeaderboard] = useState<WeeklyLeaderboard | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState("");
+  const [achievementOverview, setAchievementOverview] = useState<AchievementOverview | null>(null);
+  const [achievementLoading, setAchievementLoading] = useState(false);
+  const [achievementSaving, setAchievementSaving] = useState(false);
+  const [achievementError, setAchievementError] = useState("");
   const [explorationOverview, setExplorationOverview] = useState<ExplorationOverview | null>(null);
   const [selectedInterestDomain, setSelectedInterestDomain] = useState<InterestDomainId | null>(null);
   const [activeExplorationNode, setActiveExplorationNode] = useState<ExplorationNode | null>(null);
@@ -1285,6 +1305,7 @@ export default function ReadingApp({
   const submitChatRef = useRef<(message: string) => void>(() => undefined);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const travelCompletingRef = useRef(false);
+  const achievementInitialSyncRef = useRef(false);
 
   const mood = useMemo(
     () => clamp(0.35 * (100 - game.hunger) + 0.3 * game.cleanliness + 0.35 * (100 - game.boredom)),
@@ -1372,6 +1393,52 @@ export default function ReadingApp({
     }
   }, []);
 
+  const loadAchievements = useCallback(async (announce = true) => {
+    setAchievementLoading(true);
+    setAchievementError("");
+    try {
+      const response = await fetch(`${BASE_PATH}/api/achievements`, { cache: "no-store" });
+      const data = await response.json().catch(() => null) as AchievementOverview | { error?: string } | null;
+      if (!response.ok || !data || !("achievements" in data)) {
+        throw new Error(data && "error" in data ? data.error || "称号进度暂时不可用" : "称号进度暂时不可用");
+      }
+      setAchievementOverview(data);
+      if (announce && data.newlyUnlockedIds.length) {
+        const newest = achievementById.get(data.newlyUnlockedIds.at(-1) || "");
+        showToast(data.newlyUnlockedIds.length === 1 && newest
+          ? `新成就解锁：${newest.title}！`
+          : `一次解锁了 ${data.newlyUnlockedIds.length} 个成长成就！`);
+      }
+    } catch (error) {
+      setAchievementError(error instanceof Error ? error.message : "称号进度暂时不可用");
+    } finally {
+      setAchievementLoading(false);
+    }
+  }, [showToast]);
+
+  const selectAchievement = useCallback(async (achievementId: string) => {
+    if (achievementSaving) return;
+    setAchievementSaving(true);
+    setAchievementError("");
+    try {
+      const response = await fetch(`${BASE_PATH}/api/achievements`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ achievementId }),
+      });
+      const data = await response.json().catch(() => null) as AchievementOverview | { error?: string } | null;
+      if (!response.ok || !data || !("achievements" in data)) {
+        throw new Error(data && "error" in data ? data.error || "称号暂时没有戴好" : "称号暂时没有戴好");
+      }
+      setAchievementOverview(data);
+      showToast(`已佩戴称号：${achievementById.get(achievementId)?.title || "新称号"}`);
+    } catch (error) {
+      setAchievementError(error instanceof Error ? error.message : "称号暂时没有戴好");
+    } finally {
+      setAchievementSaving(false);
+    }
+  }, [achievementSaving, showToast]);
+
   const navigateTo = useCallback((nextView: View) => {
     stopBookAudio();
     if (nextView === "library") {
@@ -1380,6 +1447,7 @@ export default function ReadingApp({
       setChapterQuestionOpen(false);
     }
     if (nextView === "leaderboard") void loadLeaderboard();
+    if (nextView === "achievements") void loadAchievements();
     if (nextView === "explore") {
       setSelectedInterestDomain(null);
       setActiveExplorationNode(null);
@@ -1387,7 +1455,7 @@ export default function ReadingApp({
     }
     if (nextView === "games") setMiniGamePlaying(false);
     setView(nextView);
-  }, [loadExploration, loadLeaderboard, stopBookAudio]);
+  }, [loadAchievements, loadExploration, loadLeaderboard, stopBookAudio]);
 
   const remember = useCallback((event: StudentMemoryEvent) => {
     return fetch(`${BASE_PATH}/api/student-memory`, {
@@ -1623,6 +1691,26 @@ export default function ReadingApp({
       active = false;
     };
   }, [explorationDomains.length, view]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const timer = window.setTimeout(() => {
+      const announce = achievementInitialSyncRef.current;
+      void loadAchievements(announce).finally(() => {
+        achievementInitialSyncRef.current = true;
+      });
+    }, achievementInitialSyncRef.current ? 450 : 0);
+    return () => window.clearTimeout(timer);
+  }, [
+    explorationOverview?.completedNodeIds.length,
+    game.completedMiniGames.length,
+    game.mistakes.length,
+    mistakeStats.mastered,
+    game.readingRewards.length,
+    game.travelRecords.length,
+    hydrated,
+    loadAchievements,
+  ]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -2905,6 +2993,10 @@ export default function ReadingApp({
   const selectedDestinationMissingStars = Math.max(0, selectedDestination.requiredStars - game.stars);
   const journalTravelItems = game.travelRecords.slice(0, 9);
   const journalUnlockedItems = Math.min(12, 3 + journalTravelItems.length);
+  const achievementStateById = new Map((achievementOverview?.achievements || []).map((achievement) => [achievement.id, achievement]));
+  const selectedAchievement = achievementOverview?.selectedAchievementId
+    ? achievementById.get(achievementOverview.selectedAchievementId) || null
+    : null;
   return (
     <main
       className={`app view-${view}`}
@@ -2949,6 +3041,19 @@ export default function ReadingApp({
             <span><img className="wallet-icon" src={`${ASSET}/objects/fruit_orange.png`} alt="" /> {game.fruits}</span>
             <span className="wallet-ticket"><img src={`${ASSET}/legacy/travel/travel_ticket.png`} alt="" /> {game.tickets}</span>
             <span className="wallet-play-ticket" title="游玩票"><img src={`${ASSET}/ui/icons/play-ticket-pixel.png`} alt="" /> {game.playTickets}</span>
+            <button
+              className={`achievement-button ${view === "achievements" ? "active" : ""}`}
+              type="button"
+              onClick={() => navigateTo("achievements")}
+              disabled={navigationLocked}
+              aria-label={selectedAchievement ? `打开成长称号，当前称号${selectedAchievement.title}` : "打开成长称号"}
+              title={selectedAchievement ? `当前称号：${selectedAchievement.title}` : "成长称号"}
+            >
+              {selectedAchievement
+                ? <img src={`${BASE_PATH}${selectedAchievement.badgeSrc}`} alt="" />
+                : <Sparkles aria-hidden="true" />}
+              <b>{selectedAchievement?.title || "成长称号"}</b>
+            </button>
             <button
               className={`leaderboard-button ${view === "leaderboard" ? "active" : ""}`}
               type="button"
@@ -3623,6 +3728,111 @@ export default function ReadingApp({
                       ))}
                     </div>
                   </section>
+                </>
+              )}
+            </main>
+          </section>
+        )}
+
+        {view === "achievements" && (
+          <section className="scene achievement-scene">
+            <main className="achievement-panel">
+              <header className="achievement-heading">
+                <div>
+                  <span><Sparkles aria-hidden="true" /> 我的成长称号</span>
+                  <h1>每一次认真，都值得一枚徽章</h1>
+                  <p>读书、改错、旅行、闯关和知识探险，都会在这里留下成长进度。</p>
+                </div>
+                <button type="button" className="achievement-back" onClick={() => navigateTo("home")}>
+                  <ChevronLeft aria-hidden="true" /> 回家
+                </button>
+              </header>
+
+              {achievementLoading && !achievementOverview && (
+                <div className="achievement-status" role="status"><Sparkles aria-hidden="true" /> 龟龟正在擦亮你的徽章…</div>
+              )}
+
+              {achievementError && !achievementLoading && (
+                <div className="achievement-status achievement-error" role="alert">
+                  <span>{achievementError}</span>
+                  <button type="button" onClick={() => void loadAchievements()}>再试一次</button>
+                </div>
+              )}
+
+              {achievementOverview && (
+                <>
+                  <section className="achievement-current" aria-label="当前佩戴称号">
+                    <div className="achievement-current-badge">
+                      {selectedAchievement
+                        ? <img src={`${BASE_PATH}${selectedAchievement.badgeSrc}`} alt={`${selectedAchievement.title}徽章`} />
+                        : <Sparkles aria-hidden="true" />}
+                    </div>
+                    <div>
+                      <span>现在佩戴</span>
+                      <h2>{selectedAchievement?.title || "等待第一枚成长徽章"}</h2>
+                      <p>{selectedAchievement?.shortDescription || "完成任意一条成长路线的第一个目标，就会解锁称号。"}</p>
+                    </div>
+                    <strong><b>{achievementOverview.totalUnlocked}</b> / {achievementOverview.totalAchievements}<small>已解锁</small></strong>
+                  </section>
+
+                  <div className="achievement-track-list">
+                    {achievementTracks.map((track) => {
+                      const trackAchievements = achievementCatalog.filter((achievement) => achievement.trackId === track.id);
+                      const trackSummary = achievementOverview.tracks.find((item) => item.id === track.id);
+                      return (
+                        <section className={`achievement-track track-${track.id}`} key={track.id} style={{ "--track-color": track.color } as React.CSSProperties}>
+                          <header>
+                            <div><span>{track.title}</span><p>{track.subtitle}</p></div>
+                            <strong>{trackSummary?.unlocked || 0} / {trackSummary?.total || trackAchievements.length}</strong>
+                          </header>
+                          <div className="achievement-grid">
+                            {trackAchievements.map((achievement) => {
+                              const state = achievementStateById.get(achievement.id);
+                              const unlocked = Boolean(state?.unlockedAt);
+                              const selected = achievementOverview.selectedAchievementId === achievement.id;
+                              const current = Math.min(achievement.target, state?.current || 0);
+                              const progress = Math.round(current / achievement.target * 100);
+                              return (
+                                <article className={`achievement-card ${unlocked ? "unlocked" : "locked"} ${selected ? "selected" : ""}`} key={achievement.id}>
+                                  <div className="achievement-badge-wrap">
+                                    <img src={`${BASE_PATH}${achievement.badgeSrc}`} alt="" loading="lazy" decoding="async" />
+                                    {!unlocked && <span><Lock aria-hidden="true" /></span>}
+                                    <i>第 {achievement.level} 阶</i>
+                                  </div>
+                                  <div className="achievement-card-copy">
+                                    <h3>{achievement.title}</h3>
+                                    <p>{achievement.shortDescription}</p>
+                                    <small>{achievement.requirement}</small>
+                                    <div className="achievement-progress" aria-label={`${achievement.title}进度 ${current}/${achievement.target}`}>
+                                      <i style={{ width: `${progress}%` }} />
+                                    </div>
+                                    <b>{current} / {achievement.target}</b>
+                                  </div>
+                                  {unlocked ? (
+                                    <button
+                                      type="button"
+                                      className={selected ? "wearing" : ""}
+                                      disabled={selected || achievementSaving}
+                                      onClick={() => void selectAchievement(achievement.id)}
+                                    >
+                                      {selected ? <><Check aria-hidden="true" /> 正在佩戴</> : "佩戴称号"}
+                                    </button>
+                                  ) : (
+                                    <span className="achievement-locked-copy"><Lock aria-hidden="true" /> 继续成长来解锁</span>
+                                  )}
+                                  {state?.unlockedAt ? (
+                                    <time dateTime={new Date(state.unlockedAt).toISOString()}>
+                                      {new Date(state.unlockedAt).toLocaleDateString("zh-CN", { month: "long", day: "numeric" })} 获得
+                                    </time>
+                                  ) : null}
+                                </article>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
                 </>
               )}
             </main>

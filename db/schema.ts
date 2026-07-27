@@ -561,6 +561,21 @@ export const userExplorationAttempts = sqliteTable("user_exploration_attempts", 
   index("user_exploration_attempts_user_node_idx").on(table.userId, table.nodeId, table.createdAt),
 ]);
 
+export const userAchievements = sqliteTable("user_achievements", {
+  userId: text("user_id").notNull(),
+  achievementId: text("achievement_id").notNull(),
+  unlockedAt: integer("unlocked_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.achievementId] }),
+  index("user_achievements_user_date_idx").on(table.userId, table.unlockedAt),
+]);
+
+export const userTitleProfile = sqliteTable("user_title_profile", {
+  userId: text("user_id").primaryKey(),
+  selectedAchievementId: text("selected_achievement_id"),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export const importedBooks = sqliteTable("imported_books", {
   bookId: text("book_id").primaryKey(),
   slug: text("slug").notNull(),

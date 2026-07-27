@@ -480,6 +480,18 @@ export const SCHEMA_STATEMENTS = [
     created_at INTEGER NOT NULL
   )`,
   "CREATE INDEX IF NOT EXISTS user_exploration_attempts_user_node_idx ON user_exploration_attempts(user_id, node_id, created_at DESC)",
+  `CREATE TABLE IF NOT EXISTS user_achievements (
+    user_id TEXT NOT NULL,
+    achievement_id TEXT NOT NULL,
+    unlocked_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, achievement_id)
+  )`,
+  "CREATE INDEX IF NOT EXISTS user_achievements_user_date_idx ON user_achievements(user_id, unlocked_at DESC)",
+  `CREATE TABLE IF NOT EXISTS user_title_profile (
+    user_id TEXT PRIMARY KEY NOT NULL,
+    selected_achievement_id TEXT,
+    updated_at INTEGER NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS imported_books (
     book_id TEXT PRIMARY KEY NOT NULL,
     slug TEXT NOT NULL UNIQUE,
