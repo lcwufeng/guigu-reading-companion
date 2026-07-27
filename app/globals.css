@@ -11360,3 +11360,269 @@ button:disabled {
     position: relative;
   }
 }
+
+/* Eye-comfort paper palette for every book reader. The cream page echoes
+   natural book paper, while the sage panels borrow the soft grass colors from
+   the supplied rainy-garden reference without reducing text contrast. */
+.library-mode-reader {
+  --reader-ink: #383a30;
+  --reader-muted: #6d7262;
+  --reader-green: #58754b;
+  --reader-green-dark: #405f3b;
+  --reader-paper: #f3eed9;
+  --reader-paper-deep: #e9e2c8;
+  --reader-sage: #e8efda;
+  --reader-sage-deep: #d9e5c7;
+  --reader-line: rgba(85, 101, 68, 0.24);
+}
+
+.library-mode-reader .library-reader-header {
+  background:
+    radial-gradient(circle at 50% -70%, rgba(255, 255, 255, 0.82), transparent 70%),
+    linear-gradient(135deg, #f5f1df, #e9edd7);
+  border-color: rgba(100, 116, 73, 0.54);
+  box-shadow: 0 9px 24px rgba(47, 66, 39, 0.17);
+}
+
+.library-mode-reader .library-reader-header button {
+  background: var(--reader-green);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.library-mode-reader .library-reader-header button:hover {
+  background: var(--reader-green-dark);
+}
+
+.library-mode-reader .library-reader-header small,
+.library-mode-reader .library-reader-header > span {
+  color: var(--reader-muted);
+}
+
+.library-mode-reader .library-reader-header strong {
+  color: var(--reader-ink);
+}
+
+.library-mode-reader .complete-reading-paper {
+  background-color: var(--reader-paper);
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.48), transparent 34%),
+    radial-gradient(circle at 88% 84%, rgba(211, 220, 181, 0.26), transparent 38%),
+    linear-gradient(145deg, var(--reader-paper), var(--reader-paper-deep));
+  border: 1px solid var(--reader-line);
+  border-radius: 14px;
+  box-shadow:
+    0 18px 42px rgba(45, 57, 36, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.46),
+    inset 0 0 34px rgba(124, 119, 83, 0.06);
+}
+
+.library-mode-reader .complete-reading-paper h2,
+.library-mode-reader .original-book-text p {
+  color: var(--reader-ink);
+}
+
+.library-mode-reader .original-book-text {
+  scrollbar-color: #aab99a transparent;
+}
+
+.library-mode-reader .original-book-text p::selection {
+  background: #d8e5bd;
+  color: #293126;
+}
+
+.library-mode-reader .reading-page-meta,
+.library-mode-reader .chapter-position,
+.library-mode-reader .reading-font-controls > span {
+  color: var(--reader-muted);
+}
+
+.library-mode-reader .reading-progress {
+  background: #d4ddc4;
+}
+
+.library-mode-reader .reading-progress i {
+  background: var(--reader-green);
+}
+
+.library-mode-reader .content-type-label.original {
+  background: var(--reader-green-dark);
+}
+
+.library-mode-reader .reading-font-controls button {
+  background: #e7ead7;
+  border-color: #b9c5a8;
+  color: #515b49;
+}
+
+.library-mode-reader .reading-font-controls button:hover,
+.library-mode-reader .reading-font-controls button[aria-pressed="true"] {
+  background: var(--reader-green-dark);
+  border-color: var(--reader-green-dark);
+  color: #fffdf3;
+}
+
+.library-mode-reader .book-inline-illustrations figure {
+  background: rgba(250, 247, 228, 0.72);
+  border-color: rgba(102, 111, 75, 0.24);
+  border-radius: 10px;
+}
+
+.library-mode-reader .book-inline-illustrations figcaption {
+  color: #746f5d;
+}
+
+.library-mode-reader .book-audio-bar {
+  background: linear-gradient(135deg, #e4ecd5, #dce6ca);
+  border-color: #b2c39f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.library-mode-reader .book-audio-bar.phase-playing {
+  background: linear-gradient(135deg, #dce9ca, #d1e0bc);
+  border-color: #8fa97b;
+}
+
+.library-mode-reader .book-audio-bar.phase-unavailable {
+  background: linear-gradient(135deg, #eee7cf, #e5ddc3);
+  border-color: #c7bb94;
+}
+
+.library-mode-reader .book-audio-toggle {
+  background: var(--reader-green);
+}
+
+.library-mode-reader .book-audio-toggle:hover:not(:disabled) {
+  background: var(--reader-green-dark);
+}
+
+.library-mode-reader .book-audio-status {
+  color: #4f5c49;
+}
+
+.library-mode-reader .book-audio-rates button {
+  background: #f1edd8;
+  border-color: #bac5aa;
+  color: #525b4b;
+}
+
+.library-mode-reader .book-audio-rates button[aria-pressed="true"] {
+  background: var(--reader-green-dark);
+  border-color: var(--reader-green-dark);
+}
+
+.library-mode-reader .complete-reading-paper .reading-controls {
+  border-top-color: rgba(100, 105, 77, 0.2);
+}
+
+.library-mode-reader .complete-reading-paper .reading-controls > span {
+  color: var(--reader-muted);
+}
+
+.library-mode-reader .complete-reading-paper .icon-button {
+  background: #e5e8d4;
+  border-color: #b8c3a8;
+  color: #4d5b49;
+}
+
+.library-mode-reader .chapter-drawer {
+  background:
+    radial-gradient(circle at 25% 10%, rgba(255, 255, 255, 0.38), transparent 34%),
+    linear-gradient(155deg, var(--reader-sage), var(--reader-sage-deep));
+  border-color: var(--reader-line);
+  border-radius: 13px;
+  box-shadow: 0 15px 34px rgba(42, 62, 36, 0.18);
+}
+
+.library-mode-reader .chapter-drawer-toggle {
+  background: var(--reader-green-dark);
+  color: #fffdf1;
+}
+
+.library-mode-reader .chapter-list-scroll {
+  scrollbar-color: #9daf8d transparent;
+}
+
+.library-mode-reader .chapter-list-scroll button {
+  border-bottom-color: rgba(91, 108, 73, 0.17);
+  color: #4d5747;
+}
+
+.library-mode-reader .chapter-list-scroll button > span,
+.library-mode-reader .chapter-list-scroll button small {
+  color: #77816f;
+}
+
+.library-mode-reader .chapter-list-scroll button:hover,
+.library-mode-reader .chapter-list-scroll button.active {
+  background: rgba(248, 244, 220, 0.78);
+  color: #31462f;
+}
+
+.library-mode-reader .reader-side-panel {
+  background:
+    radial-gradient(circle at 85% 8%, rgba(255, 255, 255, 0.42), transparent 34%),
+    linear-gradient(155deg, #edf2df, #dfe9ce);
+  border-color: #9db489;
+  border-radius: 13px;
+  box-shadow: 0 15px 34px rgba(42, 62, 36, 0.18);
+}
+
+.library-mode-reader .reader-side-tabs {
+  background: rgba(210, 224, 194, 0.78);
+}
+
+.library-mode-reader .reader-side-tabs button {
+  color: #5b6855;
+}
+
+.library-mode-reader .reader-side-tabs button[aria-selected="true"] {
+  background: #f2eed9;
+  color: #365033;
+  box-shadow: 0 2px 8px rgba(51, 72, 43, 0.12);
+}
+
+.library-mode-reader .reading-companion-card.embedded,
+.library-mode-reader .knowledge-only-panel {
+  background: transparent;
+}
+
+.library-mode-reader .reading-guide,
+.library-mode-reader .answered-note,
+.library-mode-reader .quiet-reading-note {
+  background: rgba(246, 242, 219, 0.72);
+  color: #596353;
+}
+
+.library-mode-reader .companion-reward-rule {
+  background: linear-gradient(90deg, #f5edc8, #eee8ce);
+  border-color: #d3bd75;
+}
+
+.library-mode-reader .knowledge-only-panel h3,
+.library-mode-reader .knowledge-only-panel > p,
+.library-mode-reader .knowledge-only-panel dd {
+  color: #455044;
+}
+
+.library-mode-reader .knowledge-only-panel dl {
+  border-top-color: rgba(92, 105, 74, 0.2);
+}
+
+.library-mode-reader .book-loading-panel,
+.library-mode-reader .licensed-content-panel {
+  background:
+    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.48), transparent 34%),
+    linear-gradient(145deg, var(--reader-paper), var(--reader-paper-deep));
+  border: 1px solid var(--reader-line);
+  border-radius: 14px;
+}
+
+@media (max-width: 760px) {
+  .library-mode-reader .chapter-list-scroll {
+    background: linear-gradient(155deg, var(--reader-sage), var(--reader-sage-deep));
+  }
+
+  .library-mode-reader .complete-reading-paper {
+    border-radius: 12px;
+  }
+}

@@ -174,6 +174,13 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(styles, /library-shelf-screen/);
   assert.match(styles, /library-mode-reader \.complete-reader/);
   assert.match(styles, /chapter-list-scroll button strong \{ font-size: 16px/);
+  assert.match(styles, /Eye-comfort paper palette for every book reader/);
+  assert.match(styles, /--reader-paper: #f3eed9/);
+  assert.match(styles, /--reader-sage: #e8efda/);
+  assert.match(styles, /\.library-mode-reader \.complete-reading-paper \{[\s\S]*?background-image:/);
+  assert.match(styles, /\.library-mode-reader \.chapter-drawer \{[\s\S]*?var\(--reader-sage\)/);
+  assert.match(styles, /\.library-mode-reader \.reader-side-panel \{[\s\S]*?linear-gradient/);
+  assert.match(styles, /\.library-mode-reader \.original-book-text p::selection/);
 });
 
 test("provides a separate eight-domain knowledge expedition with evidence gates and spaced review", async () => {
