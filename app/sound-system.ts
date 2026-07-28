@@ -1,6 +1,6 @@
 "use client";
 
-export type SoundScene = "home" | "library" | "park";
+export type SoundScene = "home" | "library" | "park" | "explore";
 
 export type SoundEffectId =
   | "ui-tap"
@@ -46,6 +46,7 @@ const musicByScene: Record<SoundScene, string> = {
   home: `${BASE_PATH}/audio/music/home-garden.mp3`,
   library: `${BASE_PATH}/audio/music/quiet-library.mp3`,
   park: `${BASE_PATH}/audio/music/turtle-park.mp3`,
+  explore: `${BASE_PATH}/audio/music/knowledge-adventure.mp3`,
 };
 
 const effectSources: Record<SoundEffectId, string> = {
@@ -106,6 +107,7 @@ class SoundEngine {
   private unlocked = false;
   private suppressed = false;
   private quiet = false;
+  private syncVersion = 0;
 
   constructor() {
     if (typeof document !== "undefined") {
@@ -120,6 +122,16 @@ class SoundEngine {
     this.settings = normalizeSoundSettings(settings);
     if (this.music) this.music.volume = this.musicVolume();
     void this.syncMusic();
+  }
+
+  configure(settings: SoundSettings, scene: SoundScene, quiet: boolean, suppressed: boolean) {
+    const sceneChanged = this.scene !== scene;
+    this.settings = normalizeSoundSettings(settings);
+    this.scene = scene;
+    this.quiet = quiet;
+    this.suppressed = suppressed;
+    if (this.music) this.music.volume = this.musicVolume();
+    void this.syncMusic(sceneChanged);
   }
 
   unlock(settings: SoundSettings, scene: SoundScene) {
@@ -172,6 +184,7 @@ class SoundEngine {
 
   private async syncMusic(forceSource = false) {
     if (typeof Audio === "undefined") return;
+    const version = ++this.syncVersion;
     if (!this.music) {
       this.music = new Audio();
       this.music.loop = true;
@@ -195,14 +208,16 @@ class SoundEngine {
       return;
     }
     await this.music.play().catch(() => undefined);
+    if (version !== this.syncVersion && this.music.src.endsWith(expectedSource)) return;
   }
 }
 
-let soundEngine: SoundEngine | null = null;
+type SoundEngineGlobal = typeof globalThis & { __guiguReadingSoundEngine?: SoundEngine };
 
 export function getSoundEngine() {
-  if (!soundEngine) soundEngine = new SoundEngine();
-  return soundEngine;
+  const shared = globalThis as SoundEngineGlobal;
+  if (!shared.__guiguReadingSoundEngine) shared.__guiguReadingSoundEngine = new SoundEngine();
+  return shared.__guiguReadingSoundEngine;
 }
 
 export function emitSoundEffect(effect: SoundEffectId) {

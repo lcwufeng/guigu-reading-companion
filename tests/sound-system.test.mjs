@@ -6,9 +6,9 @@ import test from "node:test";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-test("original sound pack contains three local music loops and twenty effects", async () => {
+test("original sound pack contains four local music loops and twenty effects", async () => {
   const manifest = JSON.parse(await readFile(join(root, "public/audio/sound-pack.json"), "utf8"));
-  assert.deepEqual(Object.keys(manifest.music).sort(), ["home-garden", "quiet-library", "turtle-park"]);
+  assert.deepEqual(Object.keys(manifest.music).sort(), ["home-garden", "knowledge-adventure", "quiet-library", "turtle-park"]);
   assert.equal(Object.keys(manifest.effects).length, 20);
 
   for (const entry of [...Object.values(manifest.music), ...Object.values(manifest.effects)]) {
@@ -36,6 +36,9 @@ test("sound settings are account-persisted and narration-aware", async () => {
   assert.match(readingApp, /bookAudioPhase === "playing" \|\| voicePhase !== "idle"/);
   assert.match(readingApp, /className="sound-panel"/);
   assert.match(soundSystem, /quiet-library\.mp3/);
+  assert.match(soundSystem, /knowledge-adventure\.mp3/);
+  assert.match(soundSystem, /__guiguReadingSoundEngine/);
+  assert.match(readingApp, /if \(view === "explore"\) return "explore"/);
   assert.match(soundSystem, /minimumEffectInterval/);
   assert.match(styles, /\.sound-menu-button/);
   assert.match(styles, /\.sound-panel/);

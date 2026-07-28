@@ -64,6 +64,13 @@ import {
 
 type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "achievements" | "explore" | "games";
 
+function soundSceneForView(view: View): SoundScene {
+  if (view === "library") return "library";
+  if (view === "games") return "park";
+  if (view === "explore") return "explore";
+  return "home";
+}
+
 const GamePark = lazy(() => import("./GamePark"));
 type BusyAction = "feeding" | "swimming" | "sleeping" | null;
 type RecordTab = "travel" | "reading" | "items";
@@ -1365,7 +1372,7 @@ export default function ReadingApp({
     toastTimer.current = setTimeout(() => setToast(""), 3600);
   }, []);
 
-  const soundScene: SoundScene = view === "library" ? "library" : view === "games" ? "park" : "home";
+  const soundScene = soundSceneForView(view);
   const playSound = useCallback((effect: SoundEffectId) => {
     getSoundEngine().playEffect(effect);
   }, []);
@@ -1380,10 +1387,12 @@ export default function ReadingApp({
 
   useEffect(() => {
     const engine = getSoundEngine();
-    engine.update(game.soundSettings);
-    engine.setScene(soundScene);
-    engine.setQuiet(view === "library" && libraryMode === "reader");
-    engine.setSuppressed(bookAudioPhase === "playing" || voicePhase !== "idle");
+    engine.configure(
+      game.soundSettings,
+      soundScene,
+      view === "library" && libraryMode === "reader",
+      bookAudioPhase === "playing" || voicePhase !== "idle",
+    );
   }, [bookAudioPhase, game.soundSettings, libraryMode, soundScene, view, voicePhase]);
 
   useEffect(() => {
@@ -1509,6 +1518,7 @@ export default function ReadingApp({
 
   const navigateTo = useCallback((nextView: View) => {
     stopBookAudio();
+    getSoundEngine().setScene(soundSceneForView(nextView));
     if (nextView === "library") {
       setLibraryMode("shelf");
       setChapterListOpen(false);

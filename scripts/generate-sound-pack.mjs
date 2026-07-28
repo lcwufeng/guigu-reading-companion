@@ -144,12 +144,12 @@ function fadeEdges(track, seconds = 0.08) {
   }
 }
 
-function normalize(track, peakTarget = 0.78) {
+function normalize(track, peakTarget = 0.78, allowBoost = false) {
   let peak = 0;
   for (let index = 0; index < track.left.length; index += 1) {
     peak = Math.max(peak, Math.abs(track.left[index]), Math.abs(track.right[index]));
   }
-  const gain = peak > peakTarget ? peakTarget / peak : 1;
+  const gain = peak > 0 && (allowBoost || peak > peakTarget) ? peakTarget / peak : 1;
   for (let index = 0; index < track.left.length; index += 1) {
     track.left[index] *= gain;
     track.right[index] *= gain;
@@ -181,52 +181,54 @@ function wavBuffer(track) {
 }
 
 function homeGardenMusic() {
-  const bpm = 72;
+  const bpm = 84;
   const beat = 60 / bpm;
   const bars = 16;
   const track = createTrack(bars * 4 * beat);
-  const chords = [[48, 55, 60, 64], [53, 57, 60, 65], [45, 52, 57, 60], [43, 50, 55, 59]];
-  const melody = [64, 67, 69, 67, 64, 62, 60, 62, 64, 67, 72, 69, 67, 64, 62, 60];
+  const chords = [[60, 64, 67], [65, 69, 72], [57, 60, 64], [55, 59, 62]];
+  const melody = [72, 76, 79, 76, 74, 72, 69, 72, 76, 79, 81, 79, 76, 74, 72, 76];
   for (let bar = 0; bar < bars; bar += 1) {
     const start = bar * 4 * beat;
     const chord = chords[bar % chords.length];
-    addPad(track, start, 4 * beat - 0.08, chord, 0.018);
-    addTone(track, { start, duration: 2.8 * beat, frequency: midi(chord[0] - 12), amplitude: 0.026, type: "triangle", attack: 0.08, release: 0.45, decay: 0.35 });
-    addKalimba(track, start + beat * 0.25, beat * 1.25, melody[bar], 0.055, bar % 2 ? 0.2 : -0.2);
-    addKalimba(track, start + beat * 2.25, beat * 1.05, melody[(bar + 5) % melody.length], 0.043, bar % 2 ? -0.3 : 0.3);
+    addPad(track, start, 4 * beat - 0.08, chord, 0.008);
+    [0, 1, 2, 3].forEach((pulse) => {
+      addKalimba(track, start + pulse * beat + beat * 0.08, beat * 0.58, chord[pulse % chord.length] - 12, 0.026, pulse % 2 ? 0.18 : -0.18);
+    });
+    addKalimba(track, start + beat * 0.28, beat * 1.05, melody[bar], 0.057, bar % 2 ? 0.22 : -0.22);
+    addBell(track, start + beat * 2.35, beat * 0.8, melody[(bar + 5) % melody.length], 0.025, bar % 2 ? -0.25 : 0.25);
     if (bar % 4 === 1) {
       const chirpStart = start + beat * 3.1;
-      addTone(track, { start: chirpStart, duration: 0.22, frequency: 1_750, amplitude: 0.018, sweep: 1_400, attack: 0.01, release: 0.06, pan: 0.65 });
-      addTone(track, { start: chirpStart + 0.18, duration: 0.18, frequency: 2_050, amplitude: 0.014, sweep: -500, attack: 0.01, release: 0.05, pan: 0.65 });
+      addTone(track, { start: chirpStart, duration: 0.18, frequency: 1_900, amplitude: 0.012, sweep: 1_050, attack: 0.01, release: 0.06, pan: 0.65 });
+      addTone(track, { start: chirpStart + 0.16, duration: 0.16, frequency: 2_250, amplitude: 0.01, sweep: -420, attack: 0.01, release: 0.05, pan: 0.65 });
     }
   }
-  addNoise(track, { start: 0, duration: track.duration, amplitude: 0.028, attack: 1.5, release: 1.5, filter: "low", cutoff: 0.004 });
   fadeEdges(track);
   return track;
 }
 
 function quietLibraryMusic() {
-  const bpm = 60;
+  const bpm = 68;
   const beat = 60 / bpm;
   const bars = 8;
   const track = createTrack(bars * 4 * beat);
-  const chords = [[48, 55, 59, 64], [45, 52, 55, 60], [41, 48, 52, 57], [43, 50, 55, 60]];
-  const melody = [[64, 67], [60, 64], [57, 60], [62, 67]];
+  const chords = [[60, 64, 67], [65, 69, 72], [57, 60, 64], [55, 59, 62]];
+  const melody = [[72, 76], [74, 72], [69, 72], [71, 74]];
   for (let bar = 0; bar < bars; bar += 1) {
     const start = bar * 4 * beat;
     const chord = chords[bar % 4];
-    addPad(track, start, 4 * beat - 0.1, chord, 0.016);
-    addTone(track, { start, duration: 3.2 * beat, frequency: midi(chord[0] - 12), amplitude: 0.02, attack: 0.7, release: 0.9 });
-    addBell(track, start + beat * 0.55, beat * 1.7, melody[bar % 4][0], 0.038, -0.18);
-    addBell(track, start + beat * 2.6, beat * 1.25, melody[bar % 4][1], 0.03, 0.22);
+    addPad(track, start, 4 * beat - 0.1, chord, 0.007);
+    [0.1, 1.1, 2.1, 3.1].forEach((offset, index) => {
+      addKalimba(track, start + beat * offset, beat * 0.7, chord[index % chord.length] - 12, 0.018, index % 2 ? 0.12 : -0.12);
+    });
+    addBell(track, start + beat * 0.48, beat * 1.35, melody[bar % 4][0], 0.029, -0.18);
+    addBell(track, start + beat * 2.55, beat * 1.05, melody[bar % 4][1], 0.024, 0.22);
   }
-  addNoise(track, { start: 0, duration: track.duration, amplitude: 0.015, attack: 1, release: 1, filter: "low", cutoff: 0.003 });
   fadeEdges(track);
   return track;
 }
 
 function turtleParkMusic() {
-  const bpm = 108;
+  const bpm = 112;
   const beat = 60 / bpm;
   const bars = 16;
   const track = createTrack(bars * 4 * beat);
@@ -235,13 +237,12 @@ function turtleParkMusic() {
   for (let bar = 0; bar < bars; bar += 1) {
     const start = bar * 4 * beat;
     const chord = chords[bar % 4];
-    addPad(track, start, 4 * beat - 0.08, chord, 0.014);
     for (let pulse = 0; pulse < 4; pulse += 1) {
       addTone(track, {
         start: start + pulse * beat,
         duration: beat * 0.58,
         frequency: midi(chord[0] - 12),
-        amplitude: 0.043,
+        amplitude: 0.038,
         type: "triangle",
         attack: 0.01,
         release: 0.12,
@@ -249,9 +250,46 @@ function turtleParkMusic() {
       });
       addNoise(track, { start: start + pulse * beat, duration: 0.08, amplitude: pulse % 2 ? 0.035 : 0.055, release: 0.06, filter: "high", cutoff: 0.16 });
     }
-    addKalimba(track, start + beat * 0.25, beat * 0.75, melody[bar], 0.065, -0.25);
-    addKalimba(track, start + beat * 1.25, beat * 0.72, melody[(bar + 2) % melody.length], 0.047, 0.25);
-    addKalimba(track, start + beat * 2.5, beat * 0.92, melody[(bar + 5) % melody.length], 0.058, 0.05);
+    addKalimba(track, start + beat * 0.25, beat * 0.75, melody[bar], 0.061, -0.25);
+    addKalimba(track, start + beat * 1.25, beat * 0.72, melody[(bar + 2) % melody.length], 0.043, 0.25);
+    addKalimba(track, start + beat * 2.5, beat * 0.92, melody[(bar + 5) % melody.length], 0.053, 0.05);
+  }
+  fadeEdges(track);
+  return track;
+}
+
+function knowledgeAdventureMusic() {
+  const bpm = 102;
+  const beat = 60 / bpm;
+  const bars = 16;
+  const track = createTrack(bars * 4 * beat);
+  const chords = [[50, 54, 57], [55, 59, 62], [47, 50, 54], [45, 49, 52]];
+  const melody = [69, 71, 74, 76, 74, 71, 69, 74, 76, 78, 81, 78, 76, 74, 71, 74];
+  for (let bar = 0; bar < bars; bar += 1) {
+    const start = bar * 4 * beat;
+    const chord = chords[bar % chords.length];
+    for (let pulse = 0; pulse < 4; pulse += 1) {
+      addTone(track, {
+        start: start + pulse * beat,
+        duration: beat * 0.54,
+        frequency: midi(chord[pulse % chord.length]),
+        amplitude: 0.032,
+        type: "triangle",
+        attack: 0.01,
+        release: 0.16,
+        decay: 1.2,
+        pan: pulse % 2 ? 0.15 : -0.15,
+      });
+      if (pulse === 0 || pulse === 2) {
+        addNoise(track, { start: start + pulse * beat, duration: 0.09, amplitude: 0.04, release: 0.07, filter: "high", cutoff: 0.13 });
+      }
+    }
+    addKalimba(track, start + beat * 0.18, beat * 0.9, melody[bar], 0.056, -0.2);
+    addBell(track, start + beat * 1.55, beat * 0.78, melody[(bar + 3) % melody.length], 0.031, 0.25);
+    addKalimba(track, start + beat * 2.6, beat * 0.9, melody[(bar + 6) % melody.length], 0.047, 0.05);
+    if (bar % 4 === 3) {
+      addBell(track, start + beat * 3.25, beat * 0.62, melody[(bar + 8) % melody.length] + 12, 0.024, 0.3);
+    }
   }
   fadeEdges(track);
   return track;
@@ -295,9 +333,11 @@ const effects = {
     return track;
   },
   "page-turn": () => {
-    const track = createTrack(0.62);
-    addNoise(track, { start: 0, duration: 0.55, amplitude: 0.16, attack: 0.03, release: 0.18, decay: 1.7, filter: "high", cutoff: 0.06, pan: -0.4 });
-    addNoise(track, { start: 0.12, duration: 0.4, amplitude: 0.1, attack: 0.03, release: 0.12, decay: 2.6, filter: "band", cutoff: 0.08, pan: 0.45 });
+    const track = createTrack(0.44);
+    addNoise(track, { start: 0, duration: 0.32, amplitude: 0.1, attack: 0.05, release: 0.16, decay: 2.6, filter: "low", cutoff: 0.11, pan: -0.45 });
+    addNoise(track, { start: 0.07, duration: 0.29, amplitude: 0.038, attack: 0.04, release: 0.13, decay: 3.4, filter: "high", cutoff: 0.025, pan: 0.42 });
+    addNoise(track, { start: 0.25, duration: 0.12, amplitude: 0.055, attack: 0.005, release: 0.1, decay: 5, filter: "low", cutoff: 0.18, pan: 0.28 });
+    normalize(track, 0.12, true);
     return track;
   },
   "answer-correct": () => sequence([[64, 0], [67, 0.15], [72, 0.31], [76, 0.5]], 1.06, "bell"),
@@ -336,6 +376,7 @@ const music = {
   "home-garden": homeGardenMusic,
   "quiet-library": quietLibraryMusic,
   "turtle-park": turtleParkMusic,
+  "knowledge-adventure": knowledgeAdventureMusic,
 };
 
 async function encodeMp3(track, wavPath, mp3Path, title, bitrate) {
@@ -365,6 +406,7 @@ async function main() {
     ]);
     for (const [id, create] of Object.entries(music)) {
       const track = create();
+      normalize(track, 0.36, true);
       const wavPath = join(temporary, `${id}.wav`);
       const mp3Path = join(outputRoot, "music", `${id}.mp3`);
       await encodeMp3(track, wavPath, mp3Path, id, "96k");
