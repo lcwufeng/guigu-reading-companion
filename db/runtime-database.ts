@@ -26,7 +26,7 @@ type D1DatabaseLike = {
 
 let databasePromise: Promise<RuntimeDatabase | null> | null = null;
 let schemaPromise: Promise<void> | null = null;
-const APP_SCHEMA_VERSION = 4;
+const APP_SCHEMA_VERSION = 5;
 
 async function d1Database(): Promise<RuntimeDatabase | null> {
   try {

@@ -26,6 +26,13 @@ function integer(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? Math.round(parsed) : fallback;
 }
 
+function volumePercent(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed)
+    ? Math.min(100, Math.max(0, Math.round(parsed * 100)))
+    : fallback;
+}
+
 function booleanInteger(value: unknown) {
   return value ? 1 : 0;
 }
@@ -106,6 +113,12 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     "SELECT balance FROM user_play_ticket_wallet WHERE user_id = ?",
     [userId],
   );
+  const soundSettings = await database.first<{
+    enabled: number; music_enabled: number; effects_enabled: number; music_volume: number; effects_volume: number;
+  }>(
+    "SELECT enabled, music_enabled, effects_enabled, music_volume, effects_volume FROM user_sound_settings WHERE user_id = ?",
+    [userId],
+  );
   const now = Date.now();
   await database.run("DELETE FROM user_chat_messages WHERE expires_at <= ?", [now]);
   const parentControls = await database.first<{ chat_cleared_at: number }>(
@@ -164,6 +177,13 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     playTickets: Math.max(0, playTicketWallet?.balance || 0),
     lastSeen: pet.last_seen,
     readingFontSize: ["small", "medium", "large"].includes(pet.reading_font_size) ? pet.reading_font_size : "medium",
+    soundSettings: soundSettings ? {
+      enabled: Boolean(soundSettings.enabled),
+      musicEnabled: Boolean(soundSettings.music_enabled),
+      effectsEnabled: Boolean(soundSettings.effects_enabled),
+      musicVolume: Math.min(1, Math.max(0, soundSettings.music_volume / 100)),
+      effectsVolume: Math.min(1, Math.max(0, soundSettings.effects_volume / 100)),
+    } : undefined,
     readingRecords: readingRecords.map((record) => ({
       id: Number(record.record_id), title: record.title, date: record.read_date, answer: record.answer, summary: record.summary,
     })),
@@ -243,6 +263,9 @@ async function saveNormalizedState(
   const nextPlayTickets = trustedImport
     ? Math.max(0, integer(state.playTickets))
     : Math.max(0, currentPlayTicketWallet?.balance || 0);
+  const soundSettings = object(state.soundSettings);
+  const musicVolume = volumePercent(soundSettings.musicVolume, 32);
+  const effectsVolume = volumePercent(soundSettings.effectsVolume, 72);
   const statements: SqlStatement[] = [{
     sql: `INSERT INTO user_state_meta (user_id, updated_at) VALUES (?, ?)
       ON CONFLICT(user_id) DO UPDATE SET updated_at = excluded.updated_at WHERE excluded.updated_at >= user_state_meta.updated_at`,
@@ -259,6 +282,23 @@ async function saveNormalizedState(
       userId, text(state.name, 24, "小乌龟"), integer(state.hunger, 30), integer(state.cleanliness, 80), integer(state.boredom, 25),
       nextBalances.fruits, nextBalances.stars, nextBalances.tickets, Math.max(0, integer(state.lastSeen, updatedAt)),
       ["small", "medium", "large"].includes(String(state.readingFontSize)) ? String(state.readingFontSize) : "medium", updatedAt,
+    ],
+  }, {
+    sql: `INSERT INTO user_sound_settings
+      (user_id, enabled, music_enabled, effects_enabled, music_volume, effects_volume, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET enabled = excluded.enabled, music_enabled = excluded.music_enabled,
+        effects_enabled = excluded.effects_enabled, music_volume = excluded.music_volume,
+        effects_volume = excluded.effects_volume, updated_at = excluded.updated_at
+      WHERE excluded.updated_at >= user_sound_settings.updated_at`,
+    params: [
+      userId,
+      soundSettings.enabled === false ? 0 : 1,
+      soundSettings.musicEnabled === false ? 0 : 1,
+      soundSettings.effectsEnabled === false ? 0 : 1,
+      musicVolume,
+      effectsVolume,
+      updatedAt,
     ],
   }, {
     sql: `INSERT INTO user_play_ticket_wallet (user_id, balance, updated_at)

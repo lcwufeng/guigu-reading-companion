@@ -265,6 +265,16 @@ export const userPetState = sqliteTable("user_pet_state", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+export const userSoundSettings = sqliteTable("user_sound_settings", {
+  userId: text("user_id").primaryKey(),
+  enabled: integer("enabled").notNull().default(1),
+  musicEnabled: integer("music_enabled").notNull().default(1),
+  effectsEnabled: integer("effects_enabled").notNull().default(1),
+  musicVolume: integer("music_volume").notNull().default(32),
+  effectsVolume: integer("effects_volume").notNull().default(72),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 export const userPlayTicketWallet = sqliteTable("user_play_ticket_wallet", {
   userId: text("user_id").primaryKey(),
   balance: integer("balance").notNull().default(0),

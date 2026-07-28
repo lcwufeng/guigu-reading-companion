@@ -3,6 +3,7 @@
 
 import { Check, ChevronLeft, Lightbulb, RotateCcw, Sparkles, Waves } from "lucide-react";
 import { useRef, useState } from "react";
+import { emitSoundEffect } from "./sound-system";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_idle_standing.png`;
@@ -164,6 +165,7 @@ export default function LotusJumpGame({
       setFeedback("这片荷叶还不是下一步。看看规律，再选一次。");
       return;
     }
+    emitSoundEffect("game-jump");
     setStep(expectedOrder);
     setFeedback(expectedOrder === level.stepCount ? "顺利到岸！这条规律路线完全正确。" : `跳对啦！继续寻找第 ${expectedOrder + 1} 片荷叶。`);
     setShowHint(false);

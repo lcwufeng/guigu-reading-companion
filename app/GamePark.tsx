@@ -12,6 +12,7 @@ import {
   type MiniGameLeaderboard,
   type MiniGameLeaderboards,
 } from "./game-park-types";
+import { emitSoundEffect } from "./sound-system";
 const CourierGame = lazy(() => import("./CourierGame"));
 const LotusJumpGame = lazy(() => import("./LotusJumpGame"));
 const SpotDifferenceGame = lazy(() => import("./SpotDifferenceGame"));
@@ -269,6 +270,7 @@ export default function GamePark({
   const reportedResultRef = useRef(false);
   const challengeHeartsRef = useRef(3);
   const ticketStartingRef = useRef(false);
+  const lastCatchPulseRef = useRef(0);
 
   const requestGameLeaderboards = useCallback(async () => {
     const response = await fetch(`${BASE_PATH}/api/minigames`, { cache: "no-store" });
@@ -340,6 +342,7 @@ export default function GamePark({
   };
 
   const registerMistake = () => {
+    emitSoundEffect("game-hit");
     if (challengeHeartsRef.current > 0) {
       const next = challengeHeartsRef.current - 1;
       challengeHeartsRef.current = next;
@@ -429,6 +432,11 @@ export default function GamePark({
   }, [run.phase]);
 
   useEffect(() => {
+    if (run.catchPulse > lastCatchPulseRef.current) emitSoundEffect("fruit-catch");
+    lastCatchPulseRef.current = run.catchPulse;
+  }, [run.catchPulse]);
+
+  useEffect(() => {
     if (run.phase !== "finished" || reportedResultRef.current) return;
     reportedResultRef.current = true;
     setEarnedRewardThisRound(result.success && !daily.rewarded);
@@ -437,6 +445,7 @@ export default function GamePark({
 
   const startRound = () => {
     reportedResultRef.current = false;
+    lastCatchPulseRef.current = 0;
     setEarnedRewardThisRound(false);
     setRun({
       ...initialRun(),
@@ -477,6 +486,7 @@ export default function GamePark({
     resetChallenge();
     setChallengeRunKey((current) => current + 1);
     if (game === "fruit-catch") setRun(initialRun());
+    emitSoundEffect(game === "lotus-jump" ? "game-jump" : "game-star");
     setActiveGame(game);
   };
 

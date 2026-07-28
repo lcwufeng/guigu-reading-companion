@@ -209,6 +209,15 @@ export const SCHEMA_STATEMENTS = [
     reading_font_size TEXT NOT NULL DEFAULT 'medium',
     updated_at INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS user_sound_settings (
+    user_id TEXT PRIMARY KEY NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    music_enabled INTEGER NOT NULL DEFAULT 1,
+    effects_enabled INTEGER NOT NULL DEFAULT 1,
+    music_volume INTEGER NOT NULL DEFAULT 32,
+    effects_volume INTEGER NOT NULL DEFAULT 72,
+    updated_at INTEGER NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS user_play_ticket_wallet (
     user_id TEXT PRIMARY KEY NOT NULL,
     balance INTEGER NOT NULL DEFAULT 0,

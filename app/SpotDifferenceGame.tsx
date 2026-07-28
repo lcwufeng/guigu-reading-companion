@@ -3,6 +3,7 @@
 
 import { Check, ChevronLeft, Eye, Lightbulb, RotateCcw, Search, Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
+import { emitSoundEffect } from "./sound-system";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_idle_front.png`;
@@ -175,6 +176,7 @@ export default function SpotDifferenceGame({
       setFeedback("这个不同已经找到啦，继续找其他地方。");
       return;
     }
+    emitSoundEffect("game-star");
     const nextFound = [...foundIds, feature.id];
     setFoundIds(nextFound);
     setHintedId("");

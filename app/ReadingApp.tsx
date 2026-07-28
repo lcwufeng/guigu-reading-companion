@@ -16,6 +16,7 @@ import {
   LogOut,
   Mic,
   MicOff,
+  Music2,
   Pause,
   Play,
   RotateCcw,
@@ -27,6 +28,7 @@ import {
   Upload,
   Users,
   Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -51,6 +53,14 @@ import {
   achievementTracks,
   type AchievementMetricKey,
 } from "../lib/achievement-catalog";
+import {
+  DEFAULT_SOUND_SETTINGS,
+  getSoundEngine,
+  normalizeSoundSettings,
+  type SoundEffectId,
+  type SoundScene,
+  type SoundSettings,
+} from "./sound-system";
 
 type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "achievements" | "explore" | "games";
 
@@ -164,6 +174,7 @@ type GameState = {
   fruitCatchDaily: FruitCatchDailyState;
   completedMiniGames: GameParkGameId[];
   readingFontSize: ReadingFontSize;
+  soundSettings: SoundSettings;
 };
 
 type Book = {
@@ -410,6 +421,7 @@ const initialState: GameState = {
   fruitCatchDaily: { dateKey: "", plays: 0, rewarded: false, bestScore: 0, totalCaught: 0 },
   completedMiniGames: [],
   readingFontSize: "medium",
+  soundSettings: DEFAULT_SOUND_SETTINGS,
 };
 
 const readingFontOptions: Array<{ value: ReadingFontSize; label: string; hint: string }> = [
@@ -1205,6 +1217,7 @@ export default function ReadingApp({
   const [explorationDomains, setExplorationDomains] = useState<InterestDomain[]>([]);
   const [game, setGame] = useState<GameState>(initialState);
   const [hydrated, setHydrated] = useState(false);
+  const [soundPanelOpen, setSoundPanelOpen] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
   const [actionProgress, setActionProgress] = useState(0);
   const [turtleSprite, setTurtleSprite] = useState<string | null>(null);
@@ -1307,6 +1320,7 @@ export default function ReadingApp({
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const travelCompletingRef = useRef(false);
   const achievementInitialSyncRef = useRef(false);
+  const soundPanelRef = useRef<HTMLDivElement | null>(null);
 
   const mood = useMemo(
     () => clamp(0.35 * (100 - game.hunger) + 0.3 * game.cleanliness + 0.35 * (100 - game.boredom)),
@@ -1350,6 +1364,59 @@ export default function ReadingApp({
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 3600);
   }, []);
+
+  const soundScene: SoundScene = view === "library" ? "library" : view === "games" ? "park" : "home";
+  const playSound = useCallback((effect: SoundEffectId) => {
+    getSoundEngine().playEffect(effect);
+  }, []);
+
+  const applySoundSettings = useCallback((next: SoundSettings) => {
+    const normalized = normalizeSoundSettings(next);
+    const engine = getSoundEngine();
+    engine.unlock(normalized, soundScene);
+    engine.update(normalized);
+    setGame((current) => ({ ...current, soundSettings: normalized }));
+  }, [soundScene]);
+
+  useEffect(() => {
+    const engine = getSoundEngine();
+    engine.update(game.soundSettings);
+    engine.setScene(soundScene);
+    engine.setQuiet(view === "library" && libraryMode === "reader");
+    engine.setSuppressed(bookAudioPhase === "playing" || voicePhase !== "idle");
+  }, [bookAudioPhase, game.soundSettings, libraryMode, soundScene, view, voicePhase]);
+
+  useEffect(() => {
+    const engine = getSoundEngine();
+    const unlockAndTap = (event: PointerEvent) => {
+      engine.unlock(game.soundSettings, soundScene);
+      const target = event.target instanceof Element ? event.target.closest("button, [role='button']") : null;
+      if (target && !target.matches(":disabled") && !target.hasAttribute("data-sound-silent")) {
+        engine.playEffect("ui-tap");
+      }
+    };
+    document.addEventListener("pointerdown", unlockAndTap, true);
+    return () => document.removeEventListener("pointerdown", unlockAndTap, true);
+  }, [game.soundSettings, soundScene]);
+
+  useEffect(() => {
+    const handleSoundEffect = (event: Event) => {
+      const detail = (event as CustomEvent<SoundEffectId>).detail;
+      if (detail) playSound(detail);
+    };
+    window.addEventListener("guigu-sound-effect", handleSoundEffect);
+    return () => window.removeEventListener("guigu-sound-effect", handleSoundEffect);
+  }, [playSound]);
+
+  useEffect(() => {
+    if (!soundPanelOpen) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (soundPanelRef.current?.contains(event.target as Node)) return;
+      setSoundPanelOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [soundPanelOpen]);
 
   const stopBookAudio = useCallback((reset = true) => {
     const audio = bookAudioRef.current;
@@ -1497,6 +1564,7 @@ export default function ReadingApp({
         completedMiniGames: data.completedGames || current.completedMiniGames,
       }));
       if (data.success) setMiniGameLeaderboardVersion((current) => current + 1);
+      playSound(result.success ? "game-win" : "answer-retry");
       showToast(result.success
         ? !wasRewarded ? "接果子过关，获得 1 颗星星！" : "接果子过关啦，今天的星星已经领过了"
         : `本局得到 ${result.score} 分，再试一次就更接近啦`);
@@ -1508,7 +1576,7 @@ export default function ReadingApp({
     } catch (error) {
       showToast(error instanceof Error ? error.message : "本局成绩暂时没有保存");
     }
-  }, [game, remember, showToast]);
+  }, [game, playSound, remember, showToast]);
 
   const completeLearningMiniGame = useCallback(async (result: LearningMiniGameResult, runId: string) => {
     const activity = {
@@ -1545,12 +1613,13 @@ export default function ReadingApp({
         completedMiniGames: data.completedGames || current.completedMiniGames,
       }));
       setMiniGameLeaderboardVersion((current) => current + 1);
+      playSound("game-win");
       showToast(`${activity}挑战完成，龟龟又学会了一项新本领！`);
       void remember({ type: "activity", activity, detail: result.detail });
     } catch (error) {
       showToast(error instanceof Error ? error.message : "通关记录暂时没有保存");
     }
-  }, [remember, showToast]);
+  }, [playSound, remember, showToast]);
 
   const spendPlayTicket = useCallback(async (gameId: GameParkGameId) => {
     const activity = {
@@ -1676,6 +1745,7 @@ export default function ReadingApp({
                 ? [...new Set(parsed.completedMiniGames.filter((gameId): gameId is GameParkGameId => GAME_PARK_ORDER.includes(gameId as GameParkGameId)))]
                 : [],
               readingFontSize: isReadingFontSize(parsed.readingFontSize) ? parsed.readingFontSize : "medium",
+              soundSettings: normalizeSoundSettings(parsed.soundSettings),
               lastSeen: Date.now(),
             };
           } catch {
@@ -1748,6 +1818,7 @@ export default function ReadingApp({
         boredom: game.boredom,
         lastSeen: Date.now(),
         readingFontSize: game.readingFontSize,
+        soundSettings: game.soundSettings,
         chatMessages: game.chatMessages.slice(-16),
       };
       void fetch(`${BASE_PATH}/api/user-state`, {
@@ -2016,6 +2087,7 @@ export default function ReadingApp({
         });
         setTravelProgress(0);
         setTravelReward({ destination: traveling, card: knowledgeCard });
+        playSound("travel-arrive");
         showToast(`${game.name}带着新发现回来啦！`);
         void remember({ type: "activity", activity: "旅行", detail: `一起去了${traveling.name}，随机带回${knowledgeCard.title}` });
       }).catch((error) => {
@@ -2031,7 +2103,7 @@ export default function ReadingApp({
       });
     }, 100);
     return () => window.clearInterval(interval);
-  }, [game.activeTravel, game.name, game.travelRecords, hydrated, remember, showToast, traveling]);
+  }, [game.activeTravel, game.name, game.travelRecords, hydrated, playSound, remember, showToast, traveling]);
 
   const runTimedAction = useCallback(
     (
@@ -2073,6 +2145,7 @@ export default function ReadingApp({
         const data = await runStudentAction({ action: "pick-fruit" });
         applyServerProgress(data);
         if (data.picked) {
+          playSound("fruit-pick");
           showToast(`从树上摘下 1 个果子，今天还可以摘 ${Math.max(0, 5 - (data.fruitPicking?.picked || 0))} 个`);
           void remember({ type: "activity", activity: "摘果喂食", detail: "从果树上摘下一个新鲜果子" });
         } else {
@@ -2093,6 +2166,7 @@ export default function ReadingApp({
       return;
     }
     setFruitPicker(false);
+    playSound("feed-bite");
     runTimedAction(
       "feeding",
       1800,
@@ -2120,6 +2194,7 @@ export default function ReadingApp({
   };
 
   const startSwim = () => {
+    playSound("water-splash");
     runTimedAction(
       "swimming",
       5200,
@@ -2146,6 +2221,7 @@ export default function ReadingApp({
   };
 
   const startSleep = () => {
+    playSound("sleep-yawn");
     runTimedAction(
       "sleeping",
       5000,
@@ -2191,6 +2267,7 @@ export default function ReadingApp({
 
   const findHiddenTurtle = () => {
     if (!hideTarget || hideFound) return;
+    playSound("hide-found");
     const nextFastRounds = hideFastRounds + (hideSeconds > HIDE_ROUND_SECONDS - 5 ? 1 : 0);
     const completedRound = hideRound;
     setHideFastRounds(nextFastRounds);
@@ -2218,6 +2295,7 @@ export default function ReadingApp({
           ...(data.hideAndSeekDaily ? { hideAndSeekDaily: data.hideAndSeekDaily } : {}),
           boredom: clamp(current.boredom - 30),
         }));
+        if (data.rewarded) playSound("reward-star");
         showToast(data.rewarded
           ? `五次全找到！奖励 1 颗星星，今天已完成 ${data.hideAndSeekDaily?.completed || nextCompletedToday}/5 局`
           : "今天的捉迷藏奖励已经领满啦");
@@ -2351,6 +2429,7 @@ export default function ReadingApp({
     if (!activeChapter) return;
     stopBookAudio();
     if (bookPage < activeChapter.pages.length - 1) {
+      playSound("page-turn");
       setBookPage((page) => page + 1);
       setReadingAnswer("");
       setReadingFeedback("");
@@ -2370,8 +2449,10 @@ export default function ReadingApp({
   const previousBookPage = () => {
     stopBookAudio();
     if (bookPage > 0) {
+      playSound("page-turn");
       setBookPage((page) => page - 1);
     } else if (selectedChapter > 0) {
+      playSound("page-turn");
       const previousChapter = selectedChapters[selectedChapter - 1];
       setSelectedChapter((chapter) => chapter - 1);
       setBookPage(Math.max(0, (previousChapter.pageCount ?? previousChapter.pages.length) - 1));
@@ -2384,6 +2465,7 @@ export default function ReadingApp({
 
   const chooseChapter = (index: number) => {
     stopBookAudio();
+    if (index !== selectedChapter) playSound("page-turn");
     setBookLoadError("");
     setSelectedChapter(index);
     setBookPage(0);
@@ -2473,6 +2555,13 @@ export default function ReadingApp({
               : [...current.readingRewards, currentChapterQuestionKey],
           }));
         }
+        playSound(alreadyRewarded
+          ? "answer-correct"
+          : rewardKind === "stars"
+            ? "reward-star"
+            : rewardKind === "tickets" || rewardKind === "play_tickets"
+              ? "reward-ticket"
+              : "answer-correct");
         const rewardMessage = result.rewardPending
           ? ""
           : alreadyRewarded
@@ -2495,6 +2584,7 @@ export default function ReadingApp({
       } else {
         setReadingFeedback(result.reply);
         setReadingEvaluation("incorrect");
+        playSound("answer-retry");
         showToast("龟龟把这一章的思考整理给你啦");
       }
     } catch (error) {
@@ -2529,6 +2619,7 @@ export default function ReadingApp({
         boredom: clamp(current.boredom - 12),
         readingRecords: [record, ...current.readingRecords.filter((item) => item.title !== record.title)],
       }));
+      playSound("reward-ticket");
       void remember({
         type: "learning",
         detail: `完成《${selectedBook.title}》全书阅读`,
@@ -2552,6 +2643,7 @@ export default function ReadingApp({
       } catch (error) {
         showToast(error instanceof Error ? error.message : "阅读任务进度暂时没有保存");
       }
+      playSound("page-turn");
       setSelectedChapter((chapter) => chapter + 1);
       setBookPage(0);
       showToast(completesDailyReadingTask
@@ -2951,6 +3043,7 @@ export default function ReadingApp({
       const data = await runStudentAction({ action: "start-travel", destinationId: selectedDestination.id });
       if (!data.activeTravel || !data.balances) throw new Error("旅行暂时不能开始");
       setGame((current) => ({ ...current, ...data.balances!, activeTravel: data.activeTravel! }));
+      playSound("travel-depart");
       showToast(`${game.name}背好行囊，出发去${selectedDestination.name}`);
     } catch (error) {
       showToast(error instanceof Error ? error.message : "旅行暂时不能开始");
@@ -3084,9 +3177,91 @@ export default function ReadingApp({
             </button>
           </div>
         </div>
-        <button className="logout-button" type="button" onClick={logout} aria-label="退出登录" title={`退出 ${student.displayName} 的账号`}>
-          <LogOut aria-hidden="true" />
-        </button>
+        <div className="topbar-actions">
+          <div className="sound-control" ref={soundPanelRef}>
+            <button
+              className={`sound-menu-button ${game.soundSettings.enabled ? "enabled" : "muted"}`}
+              type="button"
+              onClick={() => setSoundPanelOpen((open) => !open)}
+              aria-label={game.soundSettings.enabled ? "打开声音设置，当前声音已开启" : "打开声音设置，当前声音已关闭"}
+              aria-expanded={soundPanelOpen}
+              title="声音设置"
+            >
+              {game.soundSettings.enabled ? <Volume2 aria-hidden="true" /> : <VolumeX aria-hidden="true" />}
+            </button>
+            {soundPanelOpen && (
+              <section className="sound-panel" role="dialog" aria-label="声音设置">
+                <header>
+                  <span><Music2 aria-hidden="true" /><strong>声音设置</strong></span>
+                  <button type="button" onClick={() => setSoundPanelOpen(false)} aria-label="关闭声音设置"><X aria-hidden="true" /></button>
+                </header>
+                <button
+                  className={`sound-master-toggle ${game.soundSettings.enabled ? "active" : ""}`}
+                  type="button"
+                  aria-pressed={game.soundSettings.enabled}
+                  onClick={() => applySoundSettings({ ...game.soundSettings, enabled: !game.soundSettings.enabled })}
+                >
+                  <span>{game.soundSettings.enabled ? "声音已开启" : "声音已关闭"}</span>
+                  <i aria-hidden="true" />
+                </button>
+                <label className={!game.soundSettings.enabled ? "disabled" : ""}>
+                  <span>
+                    <b>背景音乐</b>
+                    <button
+                      type="button"
+                      aria-pressed={game.soundSettings.musicEnabled}
+                      onClick={() => applySoundSettings({ ...game.soundSettings, musicEnabled: !game.soundSettings.musicEnabled })}
+                    >
+                      {game.soundSettings.musicEnabled ? "开" : "关"}
+                    </button>
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={Math.round(game.soundSettings.musicVolume * 100)}
+                    disabled={!game.soundSettings.enabled || !game.soundSettings.musicEnabled}
+                    onChange={(event) => applySoundSettings({ ...game.soundSettings, musicVolume: Number(event.target.value) / 100 })}
+                    aria-label="背景音乐音量"
+                  />
+                </label>
+                <label className={!game.soundSettings.enabled ? "disabled" : ""}>
+                  <span>
+                    <b>操作音效</b>
+                    <button
+                      type="button"
+                      aria-pressed={game.soundSettings.effectsEnabled}
+                      onClick={() => applySoundSettings({ ...game.soundSettings, effectsEnabled: !game.soundSettings.effectsEnabled })}
+                    >
+                      {game.soundSettings.effectsEnabled ? "开" : "关"}
+                    </button>
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={Math.round(game.soundSettings.effectsVolume * 100)}
+                    disabled={!game.soundSettings.enabled || !game.soundSettings.effectsEnabled}
+                    onChange={(event) => applySoundSettings({ ...game.soundSettings, effectsVolume: Number(event.target.value) / 100 })}
+                    aria-label="操作音效音量"
+                  />
+                </label>
+                <p>朗读和语音输入时，背景音乐会自动暂停。</p>
+                <button
+                  className="sound-preview-button"
+                  type="button"
+                  disabled={!game.soundSettings.enabled || !game.soundSettings.effectsEnabled}
+                  onClick={() => playSound("answer-correct")}
+                >
+                  播放试听音
+                </button>
+              </section>
+            )}
+          </div>
+          <button className="logout-button" type="button" onClick={logout} aria-label="退出登录" title={`退出 ${student.displayName} 的账号`}>
+            <LogOut aria-hidden="true" />
+          </button>
+        </div>
       </header>
 
       <section className="scene-shell">
@@ -4667,7 +4842,7 @@ export default function ReadingApp({
                   <img src={`${ASSET}/objects/fruit_orange.png`} alt="" />
                   <span>还带回了 <b>1 个野外果子</b></span>
                 </div>
-                <button className="knowledge-link" type="button" onClick={() => setKnowledgeOpen(travelReward)}><img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 展开查看知识卡</button>
+                <button className="knowledge-link" type="button" onClick={() => { playSound("card-unlock"); setKnowledgeOpen(travelReward); }}><img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 展开查看知识卡</button>
               </div>
             </div>
             <button className="primary-button full-button" type="button" onClick={() => { setTravelReward(null); navigateTo("journal"); setRecordTab("travel"); }}><Backpack /> 放进旅行手账</button>
