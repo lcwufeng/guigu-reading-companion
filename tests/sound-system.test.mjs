@@ -38,6 +38,7 @@ test("sound settings are account-persisted and narration-aware", async () => {
   assert.match(soundSystem, /quiet-library\.mp3/);
   assert.match(soundSystem, /knowledge-adventure\.mp3/);
   assert.match(soundSystem, /__guiguReadingSoundEngine/);
+  assert.match(soundSystem, /SOUND_PACK_VERSION/);
   assert.match(readingApp, /if \(view === "explore"\) return "explore"/);
   assert.match(soundSystem, /minimumEffectInterval/);
   assert.match(styles, /\.sound-menu-button/);

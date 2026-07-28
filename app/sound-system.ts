@@ -41,35 +41,37 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
 };
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const SOUND_PACK_VERSION = "20260728-bright";
+const audioSource = (path: string) => `${BASE_PATH}${path}?v=${SOUND_PACK_VERSION}`;
 
 const musicByScene: Record<SoundScene, string> = {
-  home: `${BASE_PATH}/audio/music/home-garden.mp3`,
-  library: `${BASE_PATH}/audio/music/quiet-library.mp3`,
-  park: `${BASE_PATH}/audio/music/turtle-park.mp3`,
-  explore: `${BASE_PATH}/audio/music/knowledge-adventure.mp3`,
+  home: audioSource("/audio/music/home-garden.mp3"),
+  library: audioSource("/audio/music/quiet-library.mp3"),
+  park: audioSource("/audio/music/turtle-park.mp3"),
+  explore: audioSource("/audio/music/knowledge-adventure.mp3"),
 };
 
 const effectSources: Record<SoundEffectId, string> = {
-  "ui-tap": `${BASE_PATH}/audio/sfx/ui-tap.mp3`,
-  "reward-star": `${BASE_PATH}/audio/sfx/reward-star.mp3`,
-  "reward-ticket": `${BASE_PATH}/audio/sfx/reward-ticket.mp3`,
-  "fruit-pick": `${BASE_PATH}/audio/sfx/fruit-pick.mp3`,
-  "fruit-catch": `${BASE_PATH}/audio/sfx/fruit-catch.mp3`,
-  "feed-bite": `${BASE_PATH}/audio/sfx/feed-bite.mp3`,
-  "water-splash": `${BASE_PATH}/audio/sfx/water-splash.mp3`,
-  "hide-found": `${BASE_PATH}/audio/sfx/hide-found.mp3`,
-  "sleep-yawn": `${BASE_PATH}/audio/sfx/sleep-yawn.mp3`,
-  "page-turn": `${BASE_PATH}/audio/sfx/page-turn.mp3`,
-  "answer-correct": `${BASE_PATH}/audio/sfx/answer-correct.mp3`,
-  "answer-retry": `${BASE_PATH}/audio/sfx/answer-retry.mp3`,
-  "travel-depart": `${BASE_PATH}/audio/sfx/travel-depart.mp3`,
-  "travel-arrive": `${BASE_PATH}/audio/sfx/travel-arrive.mp3`,
-  "card-unlock": `${BASE_PATH}/audio/sfx/card-unlock.mp3`,
-  "game-jump": `${BASE_PATH}/audio/sfx/game-jump.mp3`,
-  "game-hit": `${BASE_PATH}/audio/sfx/game-hit.mp3`,
-  "game-win": `${BASE_PATH}/audio/sfx/game-win.mp3`,
-  "game-star": `${BASE_PATH}/audio/sfx/game-star.mp3`,
-  "new-record": `${BASE_PATH}/audio/sfx/new-record.mp3`,
+  "ui-tap": audioSource("/audio/sfx/ui-tap.mp3"),
+  "reward-star": audioSource("/audio/sfx/reward-star.mp3"),
+  "reward-ticket": audioSource("/audio/sfx/reward-ticket.mp3"),
+  "fruit-pick": audioSource("/audio/sfx/fruit-pick.mp3"),
+  "fruit-catch": audioSource("/audio/sfx/fruit-catch.mp3"),
+  "feed-bite": audioSource("/audio/sfx/feed-bite.mp3"),
+  "water-splash": audioSource("/audio/sfx/water-splash.mp3"),
+  "hide-found": audioSource("/audio/sfx/hide-found.mp3"),
+  "sleep-yawn": audioSource("/audio/sfx/sleep-yawn.mp3"),
+  "page-turn": audioSource("/audio/sfx/page-turn.mp3"),
+  "answer-correct": audioSource("/audio/sfx/answer-correct.mp3"),
+  "answer-retry": audioSource("/audio/sfx/answer-retry.mp3"),
+  "travel-depart": audioSource("/audio/sfx/travel-depart.mp3"),
+  "travel-arrive": audioSource("/audio/sfx/travel-arrive.mp3"),
+  "card-unlock": audioSource("/audio/sfx/card-unlock.mp3"),
+  "game-jump": audioSource("/audio/sfx/game-jump.mp3"),
+  "game-hit": audioSource("/audio/sfx/game-hit.mp3"),
+  "game-win": audioSource("/audio/sfx/game-win.mp3"),
+  "game-star": audioSource("/audio/sfx/game-star.mp3"),
+  "new-record": audioSource("/audio/sfx/new-record.mp3"),
 };
 
 const minimumEffectInterval: Partial<Record<SoundEffectId, number>> = {
