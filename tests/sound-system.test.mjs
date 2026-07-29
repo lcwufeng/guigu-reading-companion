@@ -6,13 +6,15 @@ import test from "node:test";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-test("original sound pack contains four local music loops and twenty effects", async () => {
+test("provided sound pack contains seven local music loops and twenty effects", async () => {
   const manifest = JSON.parse(await readFile(join(root, "public/audio/sound-pack.json"), "utf8"));
-  assert.deepEqual(Object.keys(manifest.music).sort(), ["home-garden", "knowledge-adventure", "quiet-library", "turtle-park"]);
+  assert.deepEqual(Object.keys(manifest.music).sort(), [
+    "library-1", "library-2", "library-3", "main", "park-1", "park-2", "travel-1",
+  ]);
   assert.equal(Object.keys(manifest.effects).length, 20);
 
   for (const entry of [...Object.values(manifest.music), ...Object.values(manifest.effects)]) {
-    assert.match(entry.src, /^\/audio\/(?:music|sfx)\/[a-z-]+\.mp3$/);
+    assert.match(entry.src, /^\/audio\/(?:music\/provided|music|sfx)\/[a-z0-9-]+\.mp3$/);
     assert.ok(entry.duration > 0);
     const audioPath = join(root, "public", entry.src);
     const info = await stat(audioPath);
@@ -35,11 +37,15 @@ test("sound settings are account-persisted and narration-aware", async () => {
   assert.match(readingApp, /soundSettings: game\.soundSettings/);
   assert.match(readingApp, /bookAudioPhase === "playing" \|\| voicePhase !== "idle"/);
   assert.match(readingApp, /className="sound-panel"/);
-  assert.match(soundSystem, /quiet-library\.mp3/);
-  assert.match(soundSystem, /knowledge-adventure\.mp3/);
+  assert.match(soundSystem, /provided\/library-1\.mp3/);
+  assert.match(soundSystem, /provided\/library-2\.mp3/);
+  assert.match(soundSystem, /provided\/library-3\.mp3/);
+  assert.match(soundSystem, /provided\/park-1\.mp3/);
+  assert.match(soundSystem, /provided\/park-2\.mp3/);
+  assert.match(soundSystem, /Math\.random\(\)/);
   assert.match(soundSystem, /__guiguReadingSoundEngine/);
   assert.match(soundSystem, /SOUND_PACK_VERSION/);
-  assert.match(readingApp, /if \(view === "explore"\) return "explore"/);
+  assert.match(readingApp, /if \(view === "travel"\) return "travel"/);
   assert.match(soundSystem, /minimumEffectInterval/);
   assert.match(styles, /\.sound-menu-button/);
   assert.match(styles, /\.sound-panel/);

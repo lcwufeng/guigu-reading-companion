@@ -67,7 +67,7 @@ type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "l
 function soundSceneForView(view: View): SoundScene {
   if (view === "library") return "library";
   if (view === "games") return "park";
-  if (view === "explore") return "explore";
+  if (view === "travel") return "travel";
   return "home";
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-export type SoundScene = "home" | "library" | "park" | "explore";
+export type SoundScene = "home" | "library" | "park" | "travel";
 
 export type SoundEffectId =
   | "ui-tap"
@@ -41,14 +41,27 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
 };
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const SOUND_PACK_VERSION = "20260728-bright";
+const SOUND_PACK_VERSION = "20260729-provided";
 const audioSource = (path: string) => `${BASE_PATH}${path}?v=${SOUND_PACK_VERSION}`;
 
-const musicByScene: Record<SoundScene, string> = {
-  home: audioSource("/audio/music/home-garden.mp3"),
-  library: audioSource("/audio/music/quiet-library.mp3"),
-  park: audioSource("/audio/music/turtle-park.mp3"),
-  explore: audioSource("/audio/music/knowledge-adventure.mp3"),
+type MusicTrack = { src: string; gain: number };
+
+const musicByScene: Record<SoundScene, MusicTrack[]> = {
+  home: [
+    { src: audioSource("/audio/music/provided/main.mp3"), gain: 1 },
+  ],
+  library: [
+    { src: audioSource("/audio/music/provided/library-1.mp3"), gain: 0.38 },
+    { src: audioSource("/audio/music/provided/library-2.mp3"), gain: 0.4 },
+    { src: audioSource("/audio/music/provided/library-3.mp3"), gain: 0.32 },
+  ],
+  park: [
+    { src: audioSource("/audio/music/provided/park-1.mp3"), gain: 1 },
+    { src: audioSource("/audio/music/provided/park-2.mp3"), gain: 1 },
+  ],
+  travel: [
+    { src: audioSource("/audio/music/provided/travel-1.mp3"), gain: 0.39 },
+  ],
 };
 
 const effectSources: Record<SoundEffectId, string> = {
@@ -105,6 +118,7 @@ class SoundEngine {
   private effectPools = new Map<SoundEffectId, HTMLAudioElement[]>();
   private lastPlayed = new Map<SoundEffectId, number>();
   private scene: SoundScene = "home";
+  private track: MusicTrack = musicByScene.home[0];
   private settings = DEFAULT_SOUND_SETTINGS;
   private unlocked = false;
   private suppressed = false;
@@ -130,6 +144,7 @@ class SoundEngine {
     const sceneChanged = this.scene !== scene;
     this.settings = normalizeSoundSettings(settings);
     this.scene = scene;
+    if (sceneChanged) this.track = this.pickTrack(scene);
     this.quiet = quiet;
     this.suppressed = suppressed;
     if (this.music) this.music.volume = this.musicVolume();
@@ -138,6 +153,7 @@ class SoundEngine {
 
   unlock(settings: SoundSettings, scene: SoundScene) {
     this.unlocked = true;
+    if (this.scene !== scene) this.track = this.pickTrack(scene);
     this.scene = scene;
     this.settings = normalizeSoundSettings(settings);
     void this.syncMusic();
@@ -146,6 +162,7 @@ class SoundEngine {
   setScene(scene: SoundScene) {
     if (this.scene === scene) return;
     this.scene = scene;
+    this.track = this.pickTrack(scene);
     void this.syncMusic(true);
   }
 
@@ -181,7 +198,12 @@ class SoundEngine {
   }
 
   private musicVolume() {
-    return this.settings.musicVolume * (this.quiet ? 0.42 : 1);
+    return this.settings.musicVolume * this.track.gain * (this.quiet ? 0.42 : 1);
+  }
+
+  private pickTrack(scene: SoundScene) {
+    const pool = musicByScene[scene];
+    return pool[Math.floor(Math.random() * pool.length)] || pool[0];
   }
 
   private async syncMusic(forceSource = false) {
@@ -192,7 +214,7 @@ class SoundEngine {
       this.music.loop = true;
       this.music.preload = "metadata";
     }
-    const expectedSource = musicByScene[this.scene];
+    const expectedSource = this.track.src;
     if (forceSource || !this.music.src.endsWith(expectedSource)) {
       this.music.pause();
       this.music.src = expectedSource;

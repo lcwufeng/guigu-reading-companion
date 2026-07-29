@@ -372,11 +372,21 @@ function sequence(notes, duration, instrument = "kalimba", amplitude = 0.07) {
   return track;
 }
 
-const music = {
+const fallbackMusic = {
   "home-garden": homeGardenMusic,
   "quiet-library": quietLibraryMusic,
   "turtle-park": turtleParkMusic,
   "knowledge-adventure": knowledgeAdventureMusic,
+};
+
+const providedMusic = {
+  "main": { src: "/audio/music/provided/main.mp3", duration: 103.661, loop: true, scene: "home" },
+  "library-1": { src: "/audio/music/provided/library-1.mp3", duration: 204.48, loop: true, scene: "library" },
+  "library-2": { src: "/audio/music/provided/library-2.mp3", duration: 188.08, loop: true, scene: "library" },
+  "library-3": { src: "/audio/music/provided/library-3.mp3", duration: 209.96, loop: true, scene: "library" },
+  "travel-1": { src: "/audio/music/provided/travel-1.mp3", duration: 113.68, loop: true, scene: "travel" },
+  "park-1": { src: "/audio/music/provided/park-1.mp3", duration: 45.677, loop: true, scene: "park" },
+  "park-2": { src: "/audio/music/provided/park-2.mp3", duration: 59.997, loop: true, scene: "park" },
 };
 
 async function encodeMp3(track, wavPath, mp3Path, title, bitrate) {
@@ -398,19 +408,20 @@ async function encodeMp3(track, wavPath, mp3Path, title, bitrate) {
 
 async function main() {
   const temporary = await mkdtemp(join(tmpdir(), "guigu-sound-pack-"));
-  const manifest = { version: 1, generatedAt: new Date().toISOString(), music: {}, effects: {} };
+  const manifest = { version: 2, generatedAt: new Date().toISOString(), music: providedMusic, effects: {} };
   try {
     await Promise.all([
       mkdir(join(outputRoot, "music"), { recursive: true }),
       mkdir(join(outputRoot, "sfx"), { recursive: true }),
     ]);
-    for (const [id, create] of Object.entries(music)) {
-      const track = create();
-      normalize(track, 0.36, true);
-      const wavPath = join(temporary, `${id}.wav`);
-      const mp3Path = join(outputRoot, "music", `${id}.mp3`);
-      await encodeMp3(track, wavPath, mp3Path, id, "96k");
-      manifest.music[id] = { src: `/audio/music/${id}.mp3`, duration: Number(track.duration.toFixed(3)), loop: true };
+    if (process.env.GENERATE_FALLBACK_MUSIC === "1") {
+      for (const [id, create] of Object.entries(fallbackMusic)) {
+        const track = create();
+        normalize(track, 0.36, true);
+        const wavPath = join(temporary, `${id}.wav`);
+        const mp3Path = join(outputRoot, "music", `${id}.mp3`);
+        await encodeMp3(track, wavPath, mp3Path, id, "96k");
+      }
     }
     for (const [id, create] of Object.entries(effects)) {
       const track = create();
@@ -420,7 +431,7 @@ async function main() {
       manifest.effects[id] = { src: `/audio/sfx/${id}.mp3`, duration: Number(track.duration.toFixed(3)) };
     }
     await writeFile(join(outputRoot, "sound-pack.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-    process.stdout.write(`Generated ${Object.keys(music).length} music loops and ${Object.keys(effects).length} effects in ${outputRoot}\n`);
+    process.stdout.write(`Prepared ${Object.keys(providedMusic).length} provided music loops and generated ${Object.keys(effects).length} effects in ${outputRoot}\n`);
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

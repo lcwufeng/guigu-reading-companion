@@ -1,26 +1,48 @@
 {
-  "version": 1,
-  "generatedAt": "2026-07-28T11:41:47.506Z",
+  "version": 2,
+  "generatedAt": "2026-07-29T00:00:00.000Z",
   "music": {
-    "home-garden": {
-      "src": "/audio/music/home-garden.mp3",
-      "duration": 45.714,
-      "loop": true
+    "main": {
+      "src": "/audio/music/provided/main.mp3",
+      "duration": 103.661,
+      "loop": true,
+      "scene": "home"
     },
-    "quiet-library": {
-      "src": "/audio/music/quiet-library.mp3",
-      "duration": 28.235,
-      "loop": true
+    "library-1": {
+      "src": "/audio/music/provided/library-1.mp3",
+      "duration": 204.48,
+      "loop": true,
+      "scene": "library"
     },
-    "turtle-park": {
-      "src": "/audio/music/turtle-park.mp3",
-      "duration": 34.286,
-      "loop": true
+    "library-2": {
+      "src": "/audio/music/provided/library-2.mp3",
+      "duration": 188.08,
+      "loop": true,
+      "scene": "library"
     },
-    "knowledge-adventure": {
-      "src": "/audio/music/knowledge-adventure.mp3",
-      "duration": 37.647,
-      "loop": true
+    "library-3": {
+      "src": "/audio/music/provided/library-3.mp3",
+      "duration": 209.96,
+      "loop": true,
+      "scene": "library"
+    },
+    "travel-1": {
+      "src": "/audio/music/provided/travel-1.mp3",
+      "duration": 113.68,
+      "loop": true,
+      "scene": "travel"
+    },
+    "park-1": {
+      "src": "/audio/music/provided/park-1.mp3",
+      "duration": 45.677,
+      "loop": true,
+      "scene": "park"
+    },
+    "park-2": {
+      "src": "/audio/music/provided/park-2.mp3",
+      "duration": 59.997,
+      "loop": true,
+      "scene": "park"
     }
   },
   "effects": {
