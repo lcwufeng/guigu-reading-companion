@@ -10,7 +10,7 @@ const root = join(tmpdir(), `guigu-security-tests-${process.pid}-${Date.now()}`)
 const databasePath = join(root, "security.sqlite");
 const tsx = fileURLToPath(new URL("../node_modules/.bin/tsx", import.meta.url));
 
-function runScript(source) {
+function runScript(source, environment = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(tsx, ["-e", source], {
       cwd: fileURLToPath(new URL("..", import.meta.url)),
@@ -19,6 +19,7 @@ function runScript(source) {
         NODE_ENV: "production",
         APP_DATABASE_FILE: databasePath,
         SEED_INITIAL_STUDENT_ACCOUNTS: "",
+        ...environment,
       },
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -106,6 +107,45 @@ test("rewards, minigame tickets, rate limits, and production seed accounts stay 
     assert.ok(result.balances.playTickets <= 1);
     assert.deepEqual(result.limits, [false, false, true, false]);
     assert.equal(result.seededAccount, false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Sites initializes Bubu once without resetting a later student password", async () => {
+  const bootstrapDatabasePath = join(root, "sites-demo.sqlite");
+  await mkdir(root, { recursive: true });
+  try {
+    const firstOutput = await runScript(`
+      (async () => {
+        const { authenticateUser, passwordHash } = await import("./db/auth.ts");
+        const { readyRuntimeDatabase } = await import("./db/runtime-database.ts");
+        const firstLogin = await authenticateUser("同学二", "123456");
+        const database = await readyRuntimeDatabase();
+        const marker = await database.first("SELECT COUNT(*) AS count FROM app_data_migrations WHERE migration_id = ?", ["sites-demo-account-20260729"]);
+        const accounts = await database.first("SELECT COUNT(*) AS count FROM app_users");
+        await database.run("UPDATE app_users SET password_hash = ?, must_reset_password = 0 WHERE username = ?", [await passwordHash("changed-after-first-login"), "同学二"]);
+        process.stdout.write(JSON.stringify({ firstLogin: Boolean(firstLogin), mustReset: firstLogin?.mustResetPassword, marker: marker.count, accounts: accounts.count }));
+      })();
+    `, {
+      APP_DATABASE_FILE: bootstrapDatabasePath,
+      SITES_BOOTSTRAP_DEMO_ACCOUNT: "1",
+    });
+    const first = JSON.parse(firstOutput);
+    assert.deepEqual(first, { firstLogin: true, mustReset: true, marker: 1, accounts: 1 });
+
+    const secondOutput = await runScript(`
+      (async () => {
+        const { authenticateUser } = await import("./db/auth.ts");
+        const oldPassword = await authenticateUser("同学二", "123456");
+        const changedPassword = await authenticateUser("同学二", "changed-after-first-login");
+        process.stdout.write(JSON.stringify({ oldPassword: Boolean(oldPassword), changedPassword: Boolean(changedPassword) }));
+      })();
+    `, {
+      APP_DATABASE_FILE: bootstrapDatabasePath,
+      SITES_BOOTSTRAP_DEMO_ACCOUNT: "1",
+    });
+    assert.deepEqual(JSON.parse(secondOutput), { oldPassword: false, changedPassword: true });
   } finally {
     await rm(root, { recursive: true, force: true });
   }
