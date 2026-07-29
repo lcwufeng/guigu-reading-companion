@@ -61,6 +61,7 @@ import {
   type SoundScene,
   type SoundSettings,
 } from "./sound-system";
+import { preloadStartupAssets } from "./startup-preload";
 
 type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "achievements" | "explore" | "games";
 
@@ -1224,6 +1225,15 @@ export default function ReadingApp({
   const [explorationDomains, setExplorationDomains] = useState<InterestDomain[]>([]);
   const [game, setGame] = useState<GameState>(initialState);
   const [hydrated, setHydrated] = useState(false);
+  const [startupLoad, setStartupLoad] = useState({
+    completed: 0,
+    total: 1,
+    failed: 0,
+    percent: 0,
+    label: "正在叫醒龟龟",
+    ready: false,
+    timedOut: false,
+  });
   const [soundPanelOpen, setSoundPanelOpen] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
   const [actionProgress, setActionProgress] = useState(0);
@@ -1774,6 +1784,48 @@ export default function ReadingApp({
       .catch(() => setGame(initialState))
       .finally(() => setHydrated(true));
     return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void preloadStartupAssets((progress) => {
+      if (!active) return;
+      setStartupLoad((current) => ({
+        ...current,
+        completed: progress.completed,
+        total: progress.total,
+        failed: progress.failed,
+        percent: progress.percent,
+        label: progress.label,
+      }));
+    }).then((result) => {
+      if (!active) return;
+      setStartupLoad({
+        completed: result.completed,
+        total: result.total,
+        failed: result.failed,
+        percent: 100,
+        label: result.timedOut
+          ? "网络有点慢，龟龟先带你进去"
+          : result.failed
+            ? "主要内容准备好了"
+            : "小屋准备完成",
+        ready: true,
+        timedOut: result.timedOut,
+      });
+    }).catch(() => {
+      if (!active) return;
+      setStartupLoad((current) => ({
+        ...current,
+        percent: 100,
+        label: "龟龟先带你进去，剩余内容会继续加载",
+        ready: true,
+        timedOut: true,
+      }));
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -3117,6 +3169,51 @@ export default function ReadingApp({
   const selectedAchievement = achievementOverview?.selectedAchievementId
     ? achievementById.get(achievementOverview.selectedAchievementId) || null
     : null;
+  const startupProgress = Math.min(100, Math.round(startupLoad.percent * 0.92 + (hydrated ? 8 : 0)));
+  if (!hydrated || !startupLoad.ready) {
+    const startupLabel = startupLoad.ready && !hydrated ? "正在读取你的专属学习进度" : startupLoad.label;
+    return (
+      <main
+        className={`startup-loading-screen ${startupLoad.timedOut || startupLoad.failed ? "degraded" : ""}`}
+        style={{ "--startup-background": `url("${ASSET}/optimized/backgrounds/main_home.webp")` } as React.CSSProperties}
+      >
+        <div className="startup-cloud cloud-one" aria-hidden="true" />
+        <div className="startup-cloud cloud-two" aria-hidden="true" />
+        <img className="startup-loading-logo" src={`${ASSET}/ui/supplied/brand/logo-20260715.png`} alt="龟龟伴读" />
+        <section className="startup-loading-card" role="status" aria-live="polite">
+          <div className="startup-turtle-stage" aria-hidden="true">
+            <i className="startup-path path-one" />
+            <i className="startup-path path-two" />
+            <i className="startup-path path-three" />
+            <img src={`${ASSET}/characters/turtle/turtle_idle_standing.png`} alt="" />
+          </div>
+          <h1>龟龟正在准备今天的小屋</h1>
+          <p>{startupLabel}</p>
+          <div
+            className="startup-progress-track"
+            role="progressbar"
+            aria-label="启动资源加载进度"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={startupProgress}
+          >
+            <i style={{ width: `${startupProgress}%` }} />
+          </div>
+          <div className="startup-progress-meta">
+            <span>{startupLoad.completed}/{startupLoad.total} 项资源</span>
+            <strong>{startupProgress}%</strong>
+          </div>
+          <small>
+            {startupLoad.timedOut
+              ? "网络较慢，未完成的内容会在进入后自动补上"
+              : startupLoad.failed
+                ? `${startupLoad.failed} 项内容暂时没有加载成功，进入后会自动重试`
+                : "正在准备首屏图片和全部背景音乐"}
+          </small>
+        </section>
+      </main>
+    );
+  }
   return (
     <main
       className={`app view-${view}`}

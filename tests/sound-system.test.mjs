@@ -24,10 +24,11 @@ test("provided sound pack contains seven local music loops and twenty effects", 
   }
 });
 
-test("sound settings are account-persisted and narration-aware", async () => {
-  const [readingApp, soundSystem, styles, schema, userState] = await Promise.all([
+test("sound settings and post-login preload are account-aware and narration-aware", async () => {
+  const [readingApp, soundSystem, startupPreload, styles, schema, userState] = await Promise.all([
     readFile(join(root, "app/ReadingApp.tsx"), "utf8"),
     readFile(join(root, "app/sound-system.ts"), "utf8"),
+    readFile(join(root, "app/startup-preload.ts"), "utf8"),
     readFile(join(root, "app/globals.css"), "utf8"),
     readFile(join(root, "db/schema-statements.js"), "utf8"),
     readFile(join(root, "db/user-state.ts"), "utf8"),
@@ -45,10 +46,19 @@ test("sound settings are account-persisted and narration-aware", async () => {
   assert.match(soundSystem, /Math\.random\(\)/);
   assert.match(soundSystem, /__guiguReadingSoundEngine/);
   assert.match(soundSystem, /SOUND_PACK_VERSION/);
+  assert.match(soundSystem, /getBackgroundMusicSources/);
+  assert.match(readingApp, /preloadStartupAssets/);
+  assert.match(readingApp, /startup-loading-screen/);
+  assert.match(startupPreload, /STARTUP_TIMEOUT_MS = 35_000/);
+  assert.match(startupPreload, /cache: "force-cache"/);
+  assert.match(startupPreload, /runWithConcurrency\(musicTasks, 2\)/);
+  assert.match(startupPreload, /getBackgroundMusicSources\(\)/);
   assert.match(readingApp, /if \(view === "travel"\) return "travel"/);
   assert.match(soundSystem, /minimumEffectInterval/);
   assert.match(styles, /\.sound-menu-button/);
   assert.match(styles, /\.sound-panel/);
+  assert.match(styles, /\.startup-progress-track/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS user_sound_settings/);
   assert.match(userState, /FROM user_sound_settings WHERE user_id = \?/);
   assert.match(userState, /INSERT INTO user_sound_settings/);

@@ -330,13 +330,18 @@ test("provides eight responsive turtle games with progressive learning challenge
   assert.match(flightGame, /避开乌云/);
   assert.match(flightGame, /turtle_excited\.png/);
   assert.match(flightGame, /鼠标跟随控制/);
-  assert.match(raceGame, /RABBIT_STEP = 0\.18/);
+  assert.match(raceGame, /RABBIT_STEP = 0\.13/);
+  assert.equal((raceGame.match(/id: "(?:flower-meadow|pond-bridge|orchard-bends|hill-switchback|firefly-forest|rainbow-cloud)"/g) || []).length, 6);
+  assert.match(raceGame, /function routeY/);
+  assert.match(raceGame, /race-route-line/);
+  assert.match(raceGame, /完成龟兔赛跑六关赛程/);
+  assert.match(raceGame, /前往下一关/);
   assert.match(raceGame, /current\.lastTapAt <= 430/);
   assert.match(raceGame, /点击越快，龟龟爬得越快/);
   assert.match(raceGame, /龟龟和灰兔都在起点准备/);
   assert.match(raceGame, /onClick=\{tapTurtle\}/);
   assert.match(raceGame, /turtle_idle_standing\.png/);
-  assert.match(raceGame, /不用再花游玩票/);
+  assert.match(raceGame, /不会重复消耗游玩票/);
   assert.match(readingApp, /completeLearningMiniGame/);
   assert.match(readingApp, /completedMiniGames/);
   assert.match(readingApp, /"lotus-jump": "荷叶跳跳"/);
@@ -359,6 +364,9 @@ test("provides eight responsive turtle games with progressive learning challenge
   assert.match(styles, /\.game-challenge-health/);
   assert.match(styles, /\.game-park-choice\.locked/);
   assert.match(styles, /\.race-game-layout/);
+  assert.match(styles, /\.race-level-progress/);
+  assert.match(styles, /\.race-track\.route-rainbow-cloud/);
+  assert.match(styles, /\.race-route-line polyline/);
   assert.match(styles, /\.wallet-play-ticket img \{[\s\S]*image-rendering: pixelated/);
   assert.match(styles, /\.game-park-choice p \{[^}]*font-size: 20px;/);
   assert.match(styles, /\.learning-game-feedback p \{[^}]*font-size: 19px !important;/);
@@ -423,7 +431,9 @@ test("forces first-login password reset and isolates every student's data", asyn
 
   const appPage = await fetchApp("/", { headers: { accept: "text/html", cookie: activeCookie } });
   assert.equal(appPage.status, 200);
-  assert.match(await appPage.text(), /我的伙伴/);
+  const appHtml = await appPage.text();
+  assert.match(appHtml, /龟龟正在准备今天的小屋/);
+  assert.match(appHtml, /启动资源加载进度/);
 
   const audioDirectory = join(testRoot, "book-audio", "scarecrow-zh");
   await mkdir(audioDirectory, { recursive: true });

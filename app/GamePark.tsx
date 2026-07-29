@@ -722,10 +722,10 @@ export default function GamePark({
                 <img src={`${ASSET}/characters/turtle/turtle_idle_standing.png`} alt="" />
               </div>
               <div>
-                <small>手速与坚持游戏</small>
+                <small>六关手速与坚持游戏</small>
                 <h3>龟兔赛跑</h3>
-                <p>灰兔会慢慢向前跑，直接连续点击龟龟；点得越快，龟龟爬得越快。</p>
-                <ul><li>双方同时从起点出发</li><li>连点形成加速</li><li>本局重赛不重复扣票</li></ul>
+                <p>从花田一路跑到彩虹云端，每关路线都不同；连续点击越有节奏，龟龟爬得越快。</p>
+                <ul><li>六条不同曲线赛道</li><li>过关后解锁下一关</li><li>本关重试不重复扣票</li></ul>
                 <GameLeaderboardPreview board={leaderboards?.["tortoise-race"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("tortoise-race")} />
                 <button type="button" disabled={playTickets < 1 || !isGameUnlocked("tortoise-race")} onClick={() => openTicketedGame("tortoise-race")}>
                   {gameButtonLabel("tortoise-race")} {isGameUnlocked("tortoise-race") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
