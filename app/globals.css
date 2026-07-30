@@ -3331,54 +3331,90 @@ button:disabled {
 
 .nav-button {
   align-items: center;
-  background: transparent;
-  border: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), transparent 34%),
+    linear-gradient(180deg, #fff7d7, #f7e7b7);
+  border: 3px solid #d5a13d;
+  border-radius: 15px;
+  box-shadow:
+    0 4px 0 #a96720,
+    inset 0 0 0 2px rgba(255, 255, 255, 0.84),
+    inset 0 -5px 0 rgba(215, 165, 67, 0.12);
   cursor: pointer;
   display: flex;
+  gap: clamp(5px, 0.7vw, 10px);
   height: 82px;
   justify-content: center;
-  overflow: visible;
-  padding: 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 6px clamp(8px, 1.15vw, 16px);
   position: relative;
+  transition: filter 140ms ease, transform 140ms ease;
 }
 
-.nav-art {
-  height: auto;
-  image-rendering: pixelated;
-  max-width: none;
+.nav-button::after {
+  border: 1px solid rgba(166, 103, 24, 0.32);
+  border-radius: 9px;
+  content: "";
+  inset: 5px;
   pointer-events: none;
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: min(230px, 18vw);
 }
 
-.nav-art-masked {
-  clip-path: polygon(
-    14% 26%, 86% 26%, 86% 28%, 90% 28%, 90% 31%, 93% 31%, 93% 34%, 95% 34%,
-    95% 63%, 93% 63%, 93% 66%, 90% 66%, 90% 69%, 86% 69%, 86% 71%, 14% 71%,
-    14% 69%, 10% 69%, 10% 66%, 7% 66%, 7% 63%, 5% 63%, 5% 34%, 7% 34%,
-    7% 31%, 10% 31%, 10% 28%, 14% 28%
-  );
+.nav-icon {
+  flex: 0 0 auto;
+  height: 62px;
+  image-rendering: pixelated;
+  object-fit: contain;
+  pointer-events: none;
+  position: relative;
+  width: 62px;
+  z-index: 1;
 }
 
-.nav-button span {
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  padding: 0;
-  position: absolute;
-  width: 1px;
-  clip: rect(0 0 0 0);
+.nav-label {
+  color: #543116;
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  font-size: clamp(17px, 1.45vw, 23px);
+  font-weight: 950;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  position: relative;
+  text-shadow: 0 1px 0 #fff8dc;
+  white-space: nowrap;
+  z-index: 1;
 }
 
 .nav-button.active {
-  filter: brightness(1.06) drop-shadow(0 7px 4px rgba(42, 79, 38, 0.3));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), transparent 34%),
+    linear-gradient(180deg, #ffe887, #f6c24d);
+  border-color: #e19616;
+  box-shadow:
+    0 5px 0 #9f6117,
+    0 7px 11px rgba(42, 79, 38, 0.24),
+    inset 0 0 0 2px rgba(255, 251, 214, 0.9);
+  filter: brightness(1.03);
   transform: translateY(-4px);
 }
 
 .nav-button.active::before {
   content: none;
+}
+
+.nav-button:hover:not(:disabled) {
+  filter: brightness(1.04);
+  transform: translateY(-2px);
+}
+
+.nav-button.active:hover:not(:disabled) {
+  transform: translateY(-4px);
+}
+
+.nav-button:disabled {
+  cursor: default;
+  filter: grayscale(0.28) brightness(0.94);
+  opacity: 0.72;
 }
 
 .page-heading {
@@ -7015,12 +7051,17 @@ button:disabled {
   }
 
   .nav-button {
-    padding: 0;
+    gap: 4px;
+    padding: 5px 7px;
   }
 
-  .nav-art {
-    height: auto;
-    width: min(205px, 19vw);
+  .nav-icon {
+    height: 54px;
+    width: 54px;
+  }
+
+  .nav-label {
+    font-size: clamp(16px, 1.7vw, 20px);
   }
 
   .chat-scene {
@@ -7204,12 +7245,18 @@ button:disabled {
 
   .nav-button {
     height: 66px;
-    padding: 0;
+    border-radius: 12px;
+    gap: 4px;
+    padding: 4px 7px;
   }
 
-  .nav-art {
-    height: auto;
-    width: 78px;
+  .nav-icon {
+    height: 45px;
+    width: 45px;
+  }
+
+  .nav-label {
+    font-size: clamp(14px, 1.55vw, 18px);
   }
 
   .scene-title {
@@ -8659,12 +8706,32 @@ button:disabled {
   }
 
   .nav-button {
+    border-width: 2px;
+    border-radius: 10px;
+    box-shadow:
+      0 3px 0 #a96720,
+      inset 0 0 0 1px rgba(255, 255, 255, 0.84);
+    flex-direction: column;
+    gap: 0;
     height: 64px;
     min-width: 0;
+    padding: 2px 1px 3px;
   }
 
-  .nav-art {
-    width: clamp(62px, 20vw, 78px);
+  .nav-button::after {
+    border-radius: 6px;
+    inset: 3px;
+  }
+
+  .nav-icon {
+    height: 38px;
+    margin-bottom: -2px;
+    width: 38px;
+  }
+
+  .nav-label {
+    font-size: clamp(10px, 2.8vw, 12px);
+    letter-spacing: 0;
   }
 
   .home-scene {
@@ -12276,6 +12343,65 @@ button:disabled {
   font-size: 21px;
 }
 
+.startup-enter-button {
+  align-items: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 38%),
+    linear-gradient(180deg, #78c84f, #4a9d37);
+  border: 3px solid #356f2e;
+  border-radius: 15px;
+  box-shadow:
+    0 6px 0 #285727,
+    0 10px 18px rgba(48, 91, 42, 0.2),
+    inset 0 0 0 2px rgba(226, 255, 180, 0.58);
+  color: #fffef0;
+  cursor: pointer;
+  display: flex;
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  font-size: clamp(21px, 2.5vw, 27px);
+  font-weight: 950;
+  gap: 10px;
+  justify-content: center;
+  margin: 18px 0 5px;
+  min-height: 64px;
+  padding: 10px 24px;
+  text-shadow: 0 2px 0 rgba(35, 92, 38, 0.66);
+  transition: filter 140ms ease, transform 140ms ease;
+  width: min(100%, 360px);
+}
+
+.startup-enter-button svg {
+  height: 27px;
+  width: 27px;
+}
+
+.startup-enter-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+}
+
+.startup-enter-button:active:not(:disabled) {
+  box-shadow:
+    0 3px 0 #285727,
+    inset 0 0 0 2px rgba(226, 255, 180, 0.58);
+  transform: translateY(3px);
+}
+
+.startup-enter-button:disabled {
+  cursor: wait;
+  filter: saturate(0.75);
+  opacity: 0.86;
+}
+
+.startup-loading-screen.ready .startup-progress-track > i::after {
+  animation: none;
+  transform: translateX(100%);
+}
+
+.startup-loading-screen.ready .startup-turtle-stage img {
+  animation-duration: 650ms;
+}
+
 .startup-loading-card > small {
   color: #7a7865;
   font-size: 15px;
@@ -12369,6 +12495,12 @@ button:disabled {
     font-size: 18px;
   }
 
+  .startup-enter-button {
+    font-size: 21px;
+    min-height: 58px;
+    padding: 9px 16px;
+  }
+
   .startup-cloud {
     opacity: 0.56;
     transform: scale(0.58);
@@ -12379,6 +12511,7 @@ button:disabled {
   .startup-turtle-stage img,
   .startup-path,
   .startup-progress-track > i::after,
+  .startup-enter-button,
   .startup-cloud {
     animation: none;
   }

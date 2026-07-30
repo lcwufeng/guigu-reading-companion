@@ -677,10 +677,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /ui\/home-refresh\/actions\/swim\.png/);
   assert.match(page, /ui\/home-refresh\/status\/panel\.png/);
   assert.match(page, /ui\/supplied\/brand\/logo-20260715\.png/);
-  assert.match(page, /ui\/supplied\/nav\/home\.png/);
-  assert.match(page, /ui\/supplied\/nav\/reading-20260714\.png/);
-  assert.match(page, /ui\/supplied\/nav\/mistakes-20260714\.png/);
-  assert.match(page, /ui\/supplied\/nav\/journal-20260714\.png/);
+  assert.match(page, /ui\/nav-v2\/learning-house\.png/);
+  assert.match(page, /ui\/nav-v2\/library\.png/);
+  assert.match(page, /ui\/nav-v2\/mistakes\.png/);
+  assert.match(page, /ui\/nav-v2\/chat\.png/);
+  assert.match(page, /ui\/nav-v2\/travel\.png/);
+  assert.match(page, /ui\/nav-v2\/journal\.png/);
   assert.match(page, /className="logout-button"/);
   assert.match(page, /aria-label="退出登录"/);
   assert.doesNotMatch(page, /<LogOut[^>]*\/>退出/);

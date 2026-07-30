@@ -1,6 +1,6 @@
 "use client";
 
-import { getBackgroundMusicSources } from "./sound-system";
+import { getBackgroundMusicSources, prepareStartupMusic } from "./sound-system";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const ASSET = `${BASE_PATH}/assets`;
@@ -124,6 +124,7 @@ export async function preloadStartupAssets(
   const resources = [
     ...STARTUP_IMAGE_SOURCES.map((source) => ({ source, kind: "image" as const })),
     ...musicSources.map((source) => ({ source, kind: "music" as const })),
+    { source: "startup-audio-player", kind: "music" as const },
   ];
   const controller = new AbortController();
   const startedAt = performance.now();
@@ -163,7 +164,7 @@ export async function preloadStartupAssets(
       }
     });
   const musicTasks = resources
-    .filter((resource) => resource.kind === "music")
+    .filter((resource) => resource.kind === "music" && resource.source !== "startup-audio-player")
     .map((resource) => async () => {
       try {
         await fullyFetchMusic(resource.source, controller.signal);
@@ -174,6 +175,17 @@ export async function preloadStartupAssets(
         notify("music");
       }
     });
+  musicTasks.push(async () => {
+    try {
+      const ready = await prepareStartupMusic(controller.signal);
+      if (!ready && !controller.signal.aborted) failed += 1;
+    } catch {
+      if (!controller.signal.aborted) failed += 1;
+    } finally {
+      completed += 1;
+      notify("music");
+    }
+  });
 
   notify("image");
   await Promise.all([

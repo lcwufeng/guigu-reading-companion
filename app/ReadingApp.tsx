@@ -1172,14 +1172,12 @@ function NavButton({
   label,
   onClick,
   art,
-  maskBackground,
 }: {
   active: boolean;
   disabled?: boolean;
   label: string;
   onClick: () => void;
   art: string;
-  maskBackground?: boolean;
 }) {
   return (
     <button
@@ -1190,8 +1188,8 @@ function NavButton({
       disabled={disabled}
       type="button"
     >
-      <img className={`nav-art ${maskBackground ? "nav-art-masked" : ""}`} src={art} alt="" />
-      <span>{label}</span>
+      <img className="nav-icon" src={art} alt="" />
+      <span className="nav-label">{label}</span>
     </button>
   );
 }
@@ -1234,6 +1232,8 @@ export default function ReadingApp({
     ready: false,
     timedOut: false,
   });
+  const [startupEntered, setStartupEntered] = useState(false);
+  const [startupEntering, setStartupEntering] = useState(false);
   const [soundPanelOpen, setSoundPanelOpen] = useState(false);
   const [busy, setBusy] = useState<BusyAction>(null);
   const [actionProgress, setActionProgress] = useState(0);
@@ -1394,6 +1394,18 @@ export default function ReadingApp({
     engine.update(normalized);
     setGame((current) => ({ ...current, soundSettings: normalized }));
   }, [soundScene]);
+
+  const enterAfterStartup = useCallback(async () => {
+    if (startupEntering) return;
+    setStartupEntering(true);
+    const playback = getSoundEngine().unlock(game.soundSettings, soundScene);
+    await Promise.race([
+      playback,
+      new Promise<void>((resolve) => window.setTimeout(resolve, 900)),
+    ]);
+    setStartupEntered(true);
+    setStartupEntering(false);
+  }, [game.soundSettings, soundScene, startupEntering]);
 
   useEffect(() => {
     const engine = getSoundEngine();
@@ -3170,25 +3182,26 @@ export default function ReadingApp({
     ? achievementById.get(achievementOverview.selectedAchievementId) || null
     : null;
   const startupProgress = Math.min(100, Math.round(startupLoad.percent * 0.92 + (hydrated ? 8 : 0)));
-  if (!hydrated || !startupLoad.ready) {
+  const startupPrepared = hydrated && startupLoad.ready;
+  if (!startupPrepared || !startupEntered) {
     const startupLabel = startupLoad.ready && !hydrated ? "正在读取你的专属学习进度" : startupLoad.label;
     return (
       <main
-        className={`startup-loading-screen ${startupLoad.timedOut || startupLoad.failed ? "degraded" : ""}`}
+        className={`startup-loading-screen ${startupPrepared ? "ready" : ""} ${startupLoad.timedOut || startupLoad.failed ? "degraded" : ""}`}
         style={{ "--startup-background": `url("${ASSET}/optimized/backgrounds/main_home.webp")` } as React.CSSProperties}
       >
         <div className="startup-cloud cloud-one" aria-hidden="true" />
         <div className="startup-cloud cloud-two" aria-hidden="true" />
         <img className="startup-loading-logo" src={`${ASSET}/ui/supplied/brand/logo-20260715.png`} alt="龟龟伴读" />
-        <section className="startup-loading-card" role="status" aria-live="polite">
+        <section className="startup-loading-card" role={startupPrepared ? undefined : "status"} aria-live="polite">
           <div className="startup-turtle-stage" aria-hidden="true">
             <i className="startup-path path-one" />
             <i className="startup-path path-two" />
             <i className="startup-path path-three" />
             <img src={`${ASSET}/characters/turtle/turtle_idle_standing.png`} alt="" />
           </div>
-          <h1>龟龟正在准备今天的小屋</h1>
-          <p>{startupLabel}</p>
+          <h1>{startupPrepared ? "今天的小屋准备好啦" : "龟龟正在准备今天的小屋"}</h1>
+          <p>{startupPrepared ? "点一下，和龟龟一起开始今天的学习吧！" : startupLabel}</p>
           <div
             className="startup-progress-track"
             role="progressbar"
@@ -3203,13 +3216,29 @@ export default function ReadingApp({
             <span>{startupLoad.completed}/{startupLoad.total} 项资源</span>
             <strong>{startupProgress}%</strong>
           </div>
-          <small>
-            {startupLoad.timedOut
-              ? "网络较慢，未完成的内容会在进入后自动补上"
-              : startupLoad.failed
-                ? `${startupLoad.failed} 项内容暂时没有加载成功，进入后会自动重试`
-                : "正在准备首屏图片和全部背景音乐"}
-          </small>
+          {startupPrepared ? (
+            <>
+              <button
+                className="startup-enter-button"
+                type="button"
+                disabled={startupEntering}
+                onClick={() => void enterAfterStartup()}
+              >
+                <Volume2 aria-hidden="true" />
+                {startupEntering ? "龟龟正在开门…" : "进入学习屋"}
+                <ChevronRight aria-hidden="true" />
+              </button>
+              <small>这次点击会开启声音权限；如果声音设置已开启，首页音乐会马上播放。</small>
+            </>
+          ) : (
+            <small>
+              {startupLoad.timedOut
+                ? "网络较慢，未完成的内容会在进入后自动补上"
+                : startupLoad.failed
+                  ? `${startupLoad.failed} 项内容暂时没有加载成功，进入后会自动重试`
+                  : "正在准备首屏图片和全部背景音乐"}
+            </small>
+          )}
         </section>
       </main>
     );
@@ -4686,12 +4715,12 @@ export default function ReadingApp({
       </section>
 
       <nav className="bottom-nav" aria-label="主要功能">
-        <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="家园" art={`${ASSET}/ui/supplied/nav/home.png`} onClick={() => navigateTo("home")} />
-        <NavButton active={view === "library"} disabled={navigationLocked} label="读书" art={`${ASSET}/ui/supplied/nav/reading-20260714.png`} maskBackground onClick={() => navigateTo("library")} />
-        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/supplied/nav/mistakes-20260714.png`} maskBackground onClick={() => navigateTo("mistakes")} />
-        <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/supplied/nav/chat.png`} onClick={() => navigateTo("chat")} />
-        <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/supplied/nav/travel.png`} onClick={() => navigateTo("travel")} />
-        <NavButton active={view === "journal"} disabled={navigationLocked} label="手账" art={`${ASSET}/ui/supplied/nav/journal-20260714.png`} maskBackground onClick={() => navigateTo("journal")} />
+        <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="学习屋" art={`${ASSET}/ui/nav-v2/learning-house.png`} onClick={() => navigateTo("home")} />
+        <NavButton active={view === "library"} disabled={navigationLocked} label="书房" art={`${ASSET}/ui/nav-v2/library.png`} onClick={() => navigateTo("library")} />
+        <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/nav-v2/mistakes.png`} onClick={() => navigateTo("mistakes")} />
+        <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/nav-v2/chat.png`} onClick={() => navigateTo("chat")} />
+        <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/nav-v2/travel.png`} onClick={() => navigateTo("travel")} />
+        <NavButton active={view === "journal"} disabled={navigationLocked} label="手帐" art={`${ASSET}/ui/nav-v2/journal.png`} onClick={() => navigateTo("journal")} />
       </nav>
 
       {toast && <div className={`toast ${view === "chat" ? "chat-toast" : ""}`} role="status"><Sparkles /> {toast}</div>}

@@ -160,7 +160,7 @@ class SoundEngine {
     if (this.scene !== scene) this.track = this.pickTrack(scene);
     this.scene = scene;
     this.settings = normalizeSoundSettings(settings);
-    void this.syncMusic();
+    return this.syncMusic();
   }
 
   setScene(scene: SoundScene) {
@@ -210,13 +210,12 @@ class SoundEngine {
     return pool[Math.floor(Math.random() * pool.length)] || pool[0];
   }
 
-  private async syncMusic(forceSource = false) {
-    if (typeof Audio === "undefined") return;
-    const version = ++this.syncVersion;
+  private ensureMusic(forceSource = false) {
+    if (typeof Audio === "undefined") return null;
     if (!this.music) {
       this.music = new Audio();
       this.music.loop = true;
-      this.music.preload = "metadata";
+      this.music.preload = "auto";
     }
     const expectedSource = this.track.src;
     if (forceSource || !this.music.src.endsWith(expectedSource)) {
@@ -224,7 +223,44 @@ class SoundEngine {
       this.music.src = expectedSource;
       this.music.load();
     }
-    this.music.volume = this.musicVolume();
+    return this.music;
+  }
+
+  async prepare(scene: SoundScene, signal?: AbortSignal) {
+    if (this.scene !== scene) {
+      this.scene = scene;
+      this.track = this.pickTrack(scene);
+    }
+    const audio = this.ensureMusic();
+    if (!audio || signal?.aborted) return false;
+    audio.preload = "auto";
+    if (audio.readyState >= 3) return true;
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const finish = (ready: boolean) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        audio.removeEventListener("canplay", handleReady);
+        audio.removeEventListener("error", handleError);
+        signal?.removeEventListener("abort", handleAbort);
+        resolve(ready);
+      };
+      const handleReady = () => finish(true);
+      const handleError = () => finish(false);
+      const handleAbort = () => finish(false);
+      const timer = window.setTimeout(() => finish(audio.readyState >= 3), 6_000);
+      audio.addEventListener("canplay", handleReady, { once: true });
+      audio.addEventListener("error", handleError, { once: true });
+      signal?.addEventListener("abort", handleAbort, { once: true });
+    });
+  }
+
+  private async syncMusic(forceSource = false) {
+    const audio = this.ensureMusic(forceSource);
+    if (!audio) return false;
+    const version = ++this.syncVersion;
+    audio.volume = this.musicVolume();
     if (
       !this.unlocked
       || !this.settings.enabled
@@ -232,11 +268,15 @@ class SoundEngine {
       || this.suppressed
       || document.hidden
     ) {
-      this.music.pause();
-      return;
+      audio.pause();
+      return false;
     }
-    await this.music.play().catch(() => undefined);
-    if (version !== this.syncVersion && this.music.src.endsWith(expectedSource)) return;
+    try {
+      await audio.play();
+      return version === this.syncVersion || !audio.paused;
+    } catch {
+      return false;
+    }
   }
 }
 
@@ -246,6 +286,10 @@ export function getSoundEngine() {
   const shared = globalThis as SoundEngineGlobal;
   if (!shared.__guiguReadingSoundEngine) shared.__guiguReadingSoundEngine = new SoundEngine();
   return shared.__guiguReadingSoundEngine;
+}
+
+export function prepareStartupMusic(signal?: AbortSignal) {
+  return getSoundEngine().prepare("home", signal);
 }
 
 export function emitSoundEffect(effect: SoundEffectId) {

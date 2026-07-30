@@ -47,19 +47,32 @@ test("sound settings and post-login preload are account-aware and narration-awar
   assert.match(soundSystem, /__guiguReadingSoundEngine/);
   assert.match(soundSystem, /SOUND_PACK_VERSION/);
   assert.match(soundSystem, /getBackgroundMusicSources/);
+  assert.match(soundSystem, /prepareStartupMusic/);
+  assert.match(soundSystem, /this\.music\.preload = "auto"/);
   assert.match(readingApp, /preloadStartupAssets/);
   assert.match(readingApp, /startup-loading-screen/);
+  assert.match(readingApp, /startup-enter-button/);
+  assert.match(readingApp, /进入学习屋/);
+  assert.match(readingApp, /getSoundEngine\(\)\.unlock\(game\.soundSettings, soundScene\)/);
   assert.match(startupPreload, /STARTUP_TIMEOUT_MS = 35_000/);
   assert.match(startupPreload, /cache: "force-cache"/);
   assert.match(startupPreload, /runWithConcurrency\(musicTasks, 2\)/);
   assert.match(startupPreload, /getBackgroundMusicSources\(\)/);
+  assert.match(startupPreload, /prepareStartupMusic\(controller\.signal\)/);
   assert.match(readingApp, /if \(view === "travel"\) return "travel"/);
   assert.match(soundSystem, /minimumEffectInterval/);
   assert.match(styles, /\.sound-menu-button/);
   assert.match(styles, /\.sound-panel/);
   assert.match(styles, /\.startup-progress-track/);
+  assert.match(styles, /\.startup-enter-button/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS user_sound_settings/);
   assert.match(userState, /FROM user_sound_settings WHERE user_id = \?/);
   assert.match(userState, /INSERT INTO user_sound_settings/);
+
+  for (const name of ["learning-house", "library", "mistakes", "chat", "travel", "journal"]) {
+    const icon = await stat(join(root, "public/assets/ui/nav-v2", `${name}.png`));
+    assert.ok(icon.size > 5_000, `${name} should contain a generated pixel-art navigation icon`);
+    assert.ok(readingApp.includes(`nav-v2/${name}.png`));
+  }
 });
