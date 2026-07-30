@@ -1231,7 +1231,9 @@ export default function ReadingApp({
     label: "正在叫醒龟龟",
     ready: false,
     timedOut: false,
+    settled: false,
   });
+  const [startupAttempt, setStartupAttempt] = useState(0);
   const [startupEntered, setStartupEntered] = useState(false);
   const [startupEntering, setStartupEntering] = useState(false);
   const [soundPanelOpen, setSoundPanelOpen] = useState(false);
@@ -1800,6 +1802,7 @@ export default function ReadingApp({
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
     void preloadStartupAssets((progress) => {
       if (!active) return;
       setStartupLoad((current) => ({
@@ -1810,35 +1813,41 @@ export default function ReadingApp({
         percent: progress.percent,
         label: progress.label,
       }));
-    }).then((result) => {
+    }, controller.signal).then((result) => {
       if (!active) return;
+      const ready = result.completed === result.total && result.failed === 0 && !result.timedOut;
       setStartupLoad({
         completed: result.completed,
         total: result.total,
         failed: result.failed,
         percent: 100,
-        label: result.timedOut
-          ? "网络有点慢，龟龟先带你进去"
-          : result.failed
-            ? "主要内容准备好了"
-            : "小屋准备完成",
-        ready: true,
+        label: ready
+          ? "全部图片和背景音乐准备完成"
+          : result.timedOut
+            ? "加载时间过长，请检查网络后重试"
+            : result.failed
+              ? `${result.failed} 项资源未能完整加载，请重试`
+              : "资源还没有准备完整，请重试",
+        ready,
         timedOut: result.timedOut,
+        settled: true,
       });
     }).catch(() => {
       if (!active) return;
       setStartupLoad((current) => ({
         ...current,
-        percent: 100,
-        label: "龟龟先带你进去，剩余内容会继续加载",
-        ready: true,
-        timedOut: true,
+        failed: Math.max(1, current.failed),
+        label: "完整资源清单读取失败，请检查网络后重试",
+        ready: false,
+        timedOut: false,
+        settled: true,
       }));
     });
     return () => {
       active = false;
+      controller.abort();
     };
-  }, []);
+  }, [startupAttempt]);
 
   useEffect(() => {
     if (view !== "explore" || explorationDomains.length) return;
@@ -3230,13 +3239,38 @@ export default function ReadingApp({
               </button>
               <small>这次点击会开启声音权限；如果声音设置已开启，首页音乐会马上播放。</small>
             </>
+          ) : startupLoad.settled ? (
+            <>
+              <button
+                className="startup-enter-button startup-retry-button"
+                type="button"
+                onClick={() => {
+                  setStartupLoad({
+                    completed: 0,
+                    total: 1,
+                    failed: 0,
+                    percent: 0,
+                    label: "龟龟正在重新检查全部图片",
+                    ready: false,
+                    timedOut: false,
+                    settled: false,
+                  });
+                  setStartupAttempt((attempt) => attempt + 1);
+                }}
+              >
+                <RotateCcw aria-hidden="true" />
+                重新加载全部资源
+                <ChevronRight aria-hidden="true" />
+              </button>
+              <small>
+                {startupLoad.timedOut
+                  ? "网络较慢，本次没有放行进入；重新加载会复用已经缓存好的图片。"
+                  : `${startupLoad.failed || 1} 项资源尚未完成，全部加载成功后才能进入。`}
+              </small>
+            </>
           ) : (
             <small>
-              {startupLoad.timedOut
-                ? "网络较慢，未完成的内容会在进入后自动补上"
-                : startupLoad.failed
-                  ? `${startupLoad.failed} 项内容暂时没有加载成功，进入后会自动重试`
-                  : "正在准备首屏图片和全部背景音乐"}
+              正在准备全部图片和全部背景音乐，首次加载会稍久一些。
             </small>
           )}
         </section>

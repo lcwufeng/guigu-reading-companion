@@ -7,7 +7,8 @@
   },
   "scripts": {
     "dev": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
-    "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build && node scripts/prune-dist-assets.mjs",
+    "assets:manifest": "node scripts/generate-startup-asset-manifest.mjs",
+    "build": "npm run assets:manifest && WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build && node scripts/prune-dist-assets.mjs",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "audio:generate": "node scripts/pregenerate-book-audio.mjs",
     "audio:sounds": "node scripts/generate-sound-pack.mjs",
