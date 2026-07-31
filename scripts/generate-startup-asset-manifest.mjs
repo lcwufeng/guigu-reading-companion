@@ -6,15 +6,35 @@ const assetsRoot = resolve(projectRoot, "public/assets");
 const outputPath = resolve(assetsRoot, "startup-assets-manifest.json");
 const imageExtensions = new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"]);
 
-// These source assets are replaced by smaller optimized copies during the build.
-// Keeping them out of the manifest prevents the loader from requesting files that
-// are intentionally removed from the deployed bundle.
+// Only preload the five image-heavy core areas the student is most likely to
+// enter immediately. Chat, knowledge exploration, achievements, the game park,
+// and in-book illustrations stay lazy so login is not held behind unrelated art.
+const includedPrefixes = [
+  "characters/turtle",
+  "legacy/travel",
+  "optimized/travel",
+  "optimized/ui/journal",
+  "travel/knowledge-cards-20260716",
+  "ui/daily-tasks",
+  "ui/home-refresh",
+  "ui/journal",
+  "ui/mistakes",
+  "ui/nav-v2",
+];
+
+const includedFiles = new Set([
+  "legacy/icons/knowledge_card.png",
+  "legacy/travel/travel_ticket.png",
+  "objects/fruit_orange.png",
+  "optimized/backgrounds/main_home.webp",
+  "optimized/backgrounds/reading_room.webp",
+  "optimized/backgrounds/travel_map.webp",
+  "ui/icons/play-ticket-pixel.png",
+  "ui/supplied/brand/logo-20260715.png",
+]);
+
+// These source images have optimized equivalents in the included directories.
 const excludedPaths = [
-  "exploration",
-  "backgrounds",
-  "travel/photos",
-  "travel/knowledge_cards",
-  "ui/login/background.png",
   "ui/journal/background.png",
   "ui/journal/knowledge-card-background.png",
   "ui/journal/books",
@@ -28,6 +48,11 @@ function isExcluded(path) {
   return excludedPaths.some((excluded) => path === excluded || path.startsWith(`${excluded}/`));
 }
 
+function isIncluded(path) {
+  return includedFiles.has(path)
+    || includedPrefixes.some((included) => path === included || path.startsWith(`${included}/`));
+}
+
 async function collectImages(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const images = [];
@@ -39,7 +64,7 @@ async function collectImages(directory) {
     }
     if (!entry.isFile() || !imageExtensions.has(extname(entry.name).toLowerCase())) continue;
     const assetPath = normalizePath(relative(assetsRoot, absolutePath));
-    if (isExcluded(assetPath)) continue;
+    if (!isIncluded(assetPath) || isExcluded(assetPath)) continue;
     const info = await stat(absolutePath);
     images.push({ path: assetPath, bytes: info.size });
   }

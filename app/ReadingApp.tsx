@@ -1822,7 +1822,7 @@ export default function ReadingApp({
         failed: result.failed,
         percent: 100,
         label: ready
-          ? "全部图片和背景音乐准备完成"
+          ? "主要界面图片和背景音乐准备完成"
           : result.timedOut
             ? "加载时间过长，请检查网络后重试"
             : result.failed
@@ -3250,7 +3250,7 @@ export default function ReadingApp({
                     total: 1,
                     failed: 0,
                     percent: 0,
-                    label: "龟龟正在重新检查全部图片",
+                    label: "龟龟正在重新检查主要界面图片",
                     ready: false,
                     timedOut: false,
                     settled: false,
@@ -3259,18 +3259,18 @@ export default function ReadingApp({
                 }}
               >
                 <RotateCcw aria-hidden="true" />
-                重新加载全部资源
+                重新加载主要资源
                 <ChevronRight aria-hidden="true" />
               </button>
               <small>
                 {startupLoad.timedOut
                   ? "网络较慢，本次没有放行进入；重新加载会复用已经缓存好的图片。"
-                  : `${startupLoad.failed || 1} 项资源尚未完成，全部加载成功后才能进入。`}
+                  : `${startupLoad.failed || 1} 项主要资源尚未完成，加载成功后才能进入。`}
               </small>
             </>
           ) : (
             <small>
-              正在准备全部图片和全部背景音乐，首次加载会稍久一些。
+              正在准备学习屋、错题屋、书房、旅行、手帐的界面图片和背景音乐。
             </small>
           )}
         </section>

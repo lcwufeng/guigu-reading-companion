@@ -54,9 +54,9 @@ test("sound settings and post-login preload are account-aware and narration-awar
   assert.match(readingApp, /startup-enter-button/);
   assert.match(readingApp, /进入学习屋/);
   assert.match(readingApp, /getSoundEngine\(\)\.unlock\(game\.soundSettings, soundScene\)/);
-  assert.match(startupPreload, /STARTUP_TIMEOUT_MS = 180_000/);
+  assert.match(startupPreload, /STARTUP_TIMEOUT_MS = 600_000/);
   assert.match(startupPreload, /startup-assets-manifest\.json/);
-  assert.match(startupPreload, /getAllStartupImageSources/);
+  assert.match(startupPreload, /getPrimaryInterfaceImageSources/);
   assert.match(startupPreload, /await image\.decode\(\)/);
   assert.match(startupPreload, /waitForImageWithRetry/);
   assert.match(startupPreload, /cache: "force-cache"/);
@@ -64,7 +64,7 @@ test("sound settings and post-login preload are account-aware and narration-awar
   assert.match(startupPreload, /getBackgroundMusicSources\(\)/);
   assert.match(startupPreload, /prepareStartupMusic\(controller\.signal\)/);
   assert.match(readingApp, /result\.completed === result\.total && result\.failed === 0 && !result\.timedOut/);
-  assert.match(readingApp, /重新加载全部资源/);
+  assert.match(readingApp, /重新加载主要资源/);
   assert.match(readingApp, /if \(view === "travel"\) return "travel"/);
   assert.match(soundSystem, /minimumEffectInterval/);
   assert.match(styles, /\.sound-menu-button/);
@@ -83,15 +83,24 @@ test("sound settings and post-login preload are account-aware and narration-awar
   }
 });
 
-test("startup image manifest covers every deployable image and excludes pruned source art", async () => {
+test("startup image manifest covers the five core interfaces without unrelated feature art", async () => {
   const manifest = JSON.parse(await readFile(join(root, "public/assets/startup-assets-manifest.json"), "utf8"));
   assert.equal(manifest.version, 1);
   assert.equal(manifest.imageCount, manifest.images.length);
-  assert.ok(manifest.imageCount > 800);
-  assert.ok(manifest.totalBytes > 50 * 1024 * 1024);
+  assert.ok(manifest.imageCount > 80);
+  assert.ok(manifest.imageCount < 250);
+  assert.ok(manifest.totalBytes > 20 * 1024 * 1024);
+  assert.ok(manifest.totalBytes < 50 * 1024 * 1024);
   assert.ok(manifest.images.includes("ui/nav-v2/learning-house.png"));
   assert.ok(manifest.images.includes("optimized/backgrounds/main_home.webp"));
-  assert.ok(!manifest.images.some((path) => path.startsWith("backgrounds/")));
+  assert.ok(manifest.images.includes("optimized/backgrounds/reading_room.webp"));
+  assert.ok(manifest.images.includes("optimized/backgrounds/travel_map.webp"));
+  assert.ok(manifest.images.some((path) => path.startsWith("ui/mistakes/")));
+  assert.ok(manifest.images.some((path) => path.startsWith("ui/journal/")));
+  assert.ok(manifest.images.some((path) => path.startsWith("travel/knowledge-cards-20260716/")));
+  assert.ok(!manifest.images.some((path) => path.startsWith("achievements/")));
+  assert.ok(!manifest.images.some((path) => path.startsWith("exploration/")));
+  assert.ok(!manifest.images.some((path) => path.startsWith("books/")));
   assert.ok(!manifest.images.some((path) => path.startsWith("ui/journal/books/")));
 
   for (const path of manifest.images) {

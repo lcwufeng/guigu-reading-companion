@@ -4,7 +4,7 @@ import { getBackgroundMusicSources, prepareStartupMusic } from "./sound-system";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const ASSET = `${BASE_PATH}/assets`;
-const STARTUP_TIMEOUT_MS = 180_000;
+const STARTUP_TIMEOUT_MS = 600_000;
 const MINIMUM_VISIBLE_MS = 900;
 const IMAGE_RETRY_COUNT = 2;
 const IMAGE_CONCURRENCY = 8;
@@ -121,7 +121,7 @@ async function waitForImageWithRetry(source: string, signal: AbortSignal) {
   throw lastError;
 }
 
-async function getAllStartupImageSources(signal: AbortSignal) {
+async function getPrimaryInterfaceImageSources(signal: AbortSignal) {
   const response = await fetch(STARTUP_ASSET_MANIFEST, { cache: "no-cache", signal });
   if (!response.ok) throw new Error(`Startup asset manifest unavailable: ${response.status}`);
   const manifest = await response.json() as StartupAssetManifest;
@@ -131,12 +131,12 @@ async function getAllStartupImageSources(signal: AbortSignal) {
     || manifest.imageCount !== manifest.images.length
     || !manifest.images.length
   ) {
-    throw new Error("Startup asset manifest is invalid");
+    throw new Error("Primary interface asset manifest is invalid");
   }
   const images = manifest.images
     .filter((path): path is string => typeof path === "string" && !path.startsWith("/") && !path.includes(".."))
     .map((path) => `${ASSET}/${path}`);
-  if (images.length !== manifest.images.length) throw new Error("Startup asset manifest contains unsafe paths");
+  if (images.length !== manifest.images.length) throw new Error("Primary interface asset manifest contains unsafe paths");
   return [...new Set([...FALLBACK_STARTUP_IMAGE_SOURCES, ...images])];
 }
 
@@ -190,7 +190,7 @@ export async function preloadStartupAssets(
   }, STARTUP_TIMEOUT_MS);
   let imageSources: string[];
   try {
-    imageSources = await getAllStartupImageSources(controller.signal);
+    imageSources = await getPrimaryInterfaceImageSources(controller.signal);
   } catch (error) {
     settled = true;
     window.clearTimeout(timeout);
@@ -211,7 +211,7 @@ export async function preloadStartupAssets(
       failed,
       percent,
       kind,
-      label: kind === "music" ? "正在准备全部背景音乐" : "正在加载并解码全部图片",
+      label: kind === "music" ? "正在准备全部背景音乐" : "正在加载主要界面图片",
     });
   };
 
