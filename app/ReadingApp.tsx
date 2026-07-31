@@ -136,11 +136,13 @@ type MistakeReviewOutcome = { result: MistakeReviewResult; saved: boolean; revie
 const mistakeSubjects = ["数学", "语文", "英语", "科学", "其他"];
 const mistakeCauses = ["知识点没记牢", "题目没读懂", "计算或书写失误", "方法没有想到", "还不确定"];
 
-type DailyTaskKey = "feed" | "swim" | "reading" | "mistake";
+const dailyTaskKeys = ["feed", "swim", "hide", "games", "explore", "travel", "chat", "mistake"] as const;
+type DailyTaskKey = (typeof dailyTaskKeys)[number];
 type DailyMistakeMode = "add" | "review";
 type DailyTaskValues = Record<DailyTaskKey, number>;
 type DailyPlan = {
   dateKey: string;
+  taskKeys: DailyTaskKey[];
   mistakeMode: DailyMistakeMode;
   targets: DailyTaskValues;
   progress: DailyTaskValues;
@@ -269,7 +271,7 @@ type Destination = {
   requiredStars: number;
 };
 
-type TravelDiscovery = { destination: Destination; card: KnowledgeCard };
+type TravelDiscovery = { destination: Destination; card: KnowledgeCard; playTicketAwarded?: boolean };
 
 type CompanionPayload = {
   mode: "chat" | "reading";
@@ -292,7 +294,7 @@ type CompanionResponse = {
   source?: "deepseek" | "mimo" | "local" | "unavailable";
   reward?: {
     alreadyClaimed: boolean;
-    resource: "stars" | "tickets" | "play_tickets";
+    resource: "tickets" | "play_tickets";
     balances: { fruits: number; stars: number; tickets: number; playTickets: number };
   };
   rewardPending?: boolean;
@@ -307,6 +309,12 @@ type StudentActionResponse = {
   activeTravel?: ActiveTravel;
   picked?: boolean;
   rewarded?: boolean;
+  dailyRewardedNow?: boolean;
+  travelPlayTicketAwarded?: boolean;
+  interactionBonus?: {
+    awarded: boolean;
+    resource: "tickets" | "play_tickets" | null;
+  };
 };
 
 type LeaderboardCategoryKey = "interaction" | "reading" | "travel" | "mistake";
@@ -419,9 +427,10 @@ const initialState: GameState = {
   mistakes: [],
   dailyPlan: {
     dateKey: "",
+    taskKeys: ["feed", "swim", "hide", "mistake"],
     mistakeMode: "add",
-    targets: { feed: 1, swim: 1, reading: 1, mistake: 1 },
-    progress: { feed: 0, swim: 0, reading: 0, mistake: 0 },
+    targets: { feed: 1, swim: 1, hide: 1, games: 0, explore: 0, travel: 0, chat: 0, mistake: 1 },
+    progress: { feed: 0, swim: 0, hide: 0, games: 0, explore: 0, travel: 0, chat: 0, mistake: 0 },
     rewardClaimed: false,
   },
   fruitPicking: { dateKey: "", picked: 0 },
@@ -991,16 +1000,23 @@ function ensureDailyFruitCatch(state: Pick<GameState, "fruitCatchDaily">): Fruit
 
 function createDailyPlan(state: Pick<GameState, "mistakes">): DailyPlan {
   const pendingMistakes = state.mistakes.filter((mistake) => mistake.status !== "mastered").length;
+  const dateKey = currentDayKey();
+  const taskKeys = [...dailyTaskKeys]
+    .map((task) => ({
+      task,
+      score: [...`${dateKey}:${task}`].reduce((total, character) => (total * 33 + (character.codePointAt(0) || 0)) >>> 0, 0),
+    }))
+    .sort((left, right) => left.score - right.score)
+    .slice(0, 4)
+    .map((item) => item.task);
+  const targets = Object.fromEntries(dailyTaskKeys.map((task) => [task, taskKeys.includes(task) ? 1 : 0])) as DailyTaskValues;
+  const progress = Object.fromEntries(dailyTaskKeys.map((task) => [task, 0])) as DailyTaskValues;
   return {
-    dateKey: currentDayKey(),
+    dateKey,
+    taskKeys,
     mistakeMode: pendingMistakes > 0 ? "review" : "add",
-    targets: {
-      feed: 1,
-      swim: 1,
-      reading: 1,
-      mistake: pendingMistakes > 0 ? Math.min(2, pendingMistakes) : 1,
-    },
-    progress: { feed: 0, swim: 0, reading: 0, mistake: 0 },
+    targets,
+    progress,
     rewardClaimed: false,
   };
 }
@@ -1009,21 +1025,24 @@ function ensureDailyPlan(state: GameState): DailyPlan {
   const saved = state.dailyPlan;
   if (!saved || saved.dateKey !== currentDayKey()) return createDailyPlan(state);
   const mistakeMode = saved.mistakeMode === "review" ? "review" : "add";
+  const taskKeys = Array.isArray(saved.taskKeys)
+    ? saved.taskKeys.filter((task): task is DailyTaskKey => dailyTaskKeys.includes(task as DailyTaskKey)).slice(0, 4)
+    : [];
+  if (taskKeys.length !== 4) return createDailyPlan(state);
+  const targets = Object.fromEntries(dailyTaskKeys.map((task) => [
+    task,
+    taskKeys.includes(task) ? Math.max(1, Number(saved.targets?.[task]) || 1) : 0,
+  ])) as DailyTaskValues;
+  const progress = Object.fromEntries(dailyTaskKeys.map((task) => [
+    task,
+    Math.max(0, Number(saved.progress?.[task]) || 0),
+  ])) as DailyTaskValues;
   return {
     dateKey: saved.dateKey,
+    taskKeys,
     mistakeMode,
-    targets: {
-      feed: 1,
-      swim: 1,
-      reading: 1,
-      mistake: Math.max(1, Math.min(2, Number(saved.targets?.mistake) || 1)),
-    },
-    progress: {
-      feed: Math.max(0, Number(saved.progress?.feed) || 0),
-      swim: Math.max(0, Number(saved.progress?.swim) || 0),
-      reading: Math.max(0, Number(saved.progress?.reading) || 0),
-      mistake: Math.max(0, Number(saved.progress?.mistake) || 0),
-    },
+    targets,
+    progress,
     rewardClaimed: Boolean(saved.rewardClaimed),
   };
 }
@@ -1364,7 +1383,7 @@ export default function ReadingApp({
 
   const dailyPlan = useMemo(() => ensureDailyPlan(game), [game]);
   const dailyCompletedCount = useMemo(
-    () => (Object.keys(dailyPlan.progress) as DailyTaskKey[]).filter((key) => dailyPlan.progress[key] >= dailyPlan.targets[key]).length,
+    () => dailyPlan.taskKeys.filter((key) => dailyPlan.progress[key] >= dailyPlan.targets[key]).length,
     [dailyPlan],
   );
 
@@ -1585,6 +1604,7 @@ export default function ReadingApp({
       const data = await response.json() as {
         error?: string;
         balances?: { fruits: number; stars: number; tickets: number; playTickets: number };
+        dailyPlan?: DailyPlan;
         completedGames?: GameParkGameId[];
         fruitCatchDaily?: FruitCatchDailyState;
         success?: boolean;
@@ -1594,6 +1614,7 @@ export default function ReadingApp({
         ...current,
         ...data.balances!,
         boredom: clamp(current.boredom - Math.min(8, Math.max(3, Math.floor(result.score / 3)))),
+        ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
         fruitCatchDaily: data.fruitCatchDaily || current.fruitCatchDaily,
         completedMiniGames: data.completedGames || current.completedMiniGames,
       }));
@@ -1637,12 +1658,14 @@ export default function ReadingApp({
       const data = await response.json() as {
         error?: string;
         balances?: { fruits: number; stars: number; tickets: number; playTickets: number };
+        dailyPlan?: DailyPlan;
         completedGames?: GameParkGameId[];
       };
       if (!response.ok || !data.balances) throw new Error(data.error || "通关记录暂时没有保存");
       setGame((current) => ({
         ...current,
         ...data.balances!,
+        ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
         boredom: clamp(current.boredom - 6),
         completedMiniGames: data.completedGames || current.completedMiniGames,
       }));
@@ -1733,16 +1756,30 @@ export default function ReadingApp({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action, nodeId: activeExplorationNode.id, answer: explorationAnswer }),
       });
-      const data = await response.json().catch(() => null) as (ExplorationFeedback & { overview?: ExplorationOverview }) | { error?: string } | null;
+      const data = await response.json().catch(() => null) as (ExplorationFeedback & {
+        overview?: ExplorationOverview;
+        balances?: { fruits: number; stars: number; tickets: number; playTickets: number };
+        dailyPlan?: DailyPlan;
+        rewardedPlayTickets?: number;
+      }) | { error?: string } | null;
       if (!response.ok || !data || !("correct" in data)) {
         throw new Error(data && "error" in data ? data.error || "龟龟暂时没能看完" : "龟龟暂时没能看完");
       }
       setExplorationFeedback(data);
       if (data.correct && data.overview) {
         setExplorationOverview(data.overview);
+        setGame((current) => ({
+          ...current,
+          ...(data.balances || {}),
+          ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
+        }));
         const progress = data.overview.nodeProgress[activeExplorationNode.id];
         setExplorationStage(progress?.state === "mastered" ? "mastered" : "learned");
-        showToast(progress?.state === "mastered" ? "这片知识已经牢牢掌握啦！" : "完成学习，龟龟会在合适的时间请你再想一次");
+        showToast(data.rewardedPlayTickets
+          ? `完成一个知识单元，获得 ${data.rewardedPlayTickets} 张游玩票！`
+          : progress?.state === "mastered"
+            ? "这片知识已经牢牢掌握啦！"
+            : "完成学习，龟龟会在合适的时间请你再想一次");
       }
     } catch (error) {
       setExplorationError(error instanceof Error ? error.message : "龟龟暂时没能看完");
@@ -2165,6 +2202,7 @@ export default function ReadingApp({
           return {
             ...current,
             ...(data.balances || {}),
+            ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
             activeTravel: null,
             boredom: clamp(current.boredom - 18),
             hunger: clamp(current.hunger + 6),
@@ -2172,7 +2210,11 @@ export default function ReadingApp({
           };
         });
         setTravelProgress(0);
-        setTravelReward({ destination: traveling, card: knowledgeCard });
+        setTravelReward({
+          destination: traveling,
+          card: knowledgeCard,
+          playTicketAwarded: Boolean(data.travelPlayTicketAwarded),
+        });
         playSound("travel-arrive");
         showToast(`${game.name}带着新发现回来啦！`);
         void remember({ type: "activity", activity: "旅行", detail: `一起去了${traveling.name}，随机带回${knowledgeCard.title}` });
@@ -2267,7 +2309,10 @@ export default function ReadingApp({
             boredom: clamp(current.boredom - 3),
           }));
           setTurtleSprite("turtle_satisfied.png");
-          showToast(`${game.name}吃下${fruit}，肚子满足啦`);
+          const bonus = data.interactionBonus?.awarded
+            ? data.interactionBonus.resource === "play_tickets" ? "，还幸运获得 1 张游玩票！" : "，还幸运获得 1 张旅行票！"
+            : "";
+          showToast(`${game.name}吃下${fruit}，肚子满足啦${bonus}`);
           void remember({ type: "activity", activity: "摘果喂食", detail: `给龟龟喂了${fruit}` });
           window.setTimeout(() => setTurtleSprite(null), 1800);
         }).catch((error) => {
@@ -2286,7 +2331,7 @@ export default function ReadingApp({
       5200,
       "turtle_swimming.png",
       () => {
-        void runStudentAction({ action: "daily-task", task: "swim" }).then((data) => {
+        void runStudentAction({ action: "swim" }).then((data) => {
           setGame((current) => ({
             ...current,
             ...(data.balances || {}),
@@ -2294,7 +2339,10 @@ export default function ReadingApp({
             cleanliness: 100,
           }));
           setTurtleSprite("turtle_clean_sparkle.png");
-          showToast("游泳完成，龟壳亮晶晶！");
+          const bonus = data.interactionBonus?.awarded
+            ? data.interactionBonus.resource === "play_tickets" ? "还幸运获得 1 张游玩票！" : "还幸运获得 1 张旅行票！"
+            : "";
+          showToast(`游泳完成，龟壳亮晶晶！${bonus}`);
           void remember({ type: "activity", activity: "游泳", detail: "一起在池塘里游泳清洁" });
           window.setTimeout(() => setTurtleSprite(null), 2000);
         }).catch((error) => {
@@ -2378,12 +2426,16 @@ export default function ReadingApp({
         setGame((current) => ({
           ...current,
           ...(data.balances || {}),
+          ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
           ...(data.hideAndSeekDaily ? { hideAndSeekDaily: data.hideAndSeekDaily } : {}),
           boredom: clamp(current.boredom - 30),
         }));
         if (data.rewarded) playSound("reward-star");
+        const bonus = data.interactionBonus?.awarded
+          ? data.interactionBonus.resource === "play_tickets" ? "，还幸运获得 1 张游玩票" : "，还幸运获得 1 张旅行票"
+          : "";
         showToast(data.rewarded
-          ? `五次全找到！奖励 1 颗星星，今天已完成 ${data.hideAndSeekDaily?.completed || nextCompletedToday}/5 局`
+          ? `五次全找到！奖励 1 颗星星${bonus}，今天已完成 ${data.hideAndSeekDaily?.completed || nextCompletedToday}/5 局`
           : "今天的捉迷藏奖励已经领满啦");
         void remember({ type: "activity", activity: "捉迷藏", detail: `完成一局捉迷藏，连续找到5次，获得1颗星星；其中${nextFastRounds}次在5秒内找到` });
       }).catch((error) => {
@@ -2626,11 +2678,7 @@ export default function ReadingApp({
         setAnsweredChapterQuestions((questions) => questions.includes(currentChapterQuestionKey) ? questions : [...questions, currentChapterQuestionKey]);
         const alreadyRewarded = result.reward?.alreadyClaimed ?? game.readingRewards.includes(currentChapterQuestionKey);
         const rewardKind = result.reward?.resource;
-        const rewardLabel = rewardKind === "stars"
-          ? "1 颗成长星星"
-          : rewardKind === "tickets"
-            ? "1 张旅行票"
-            : "1 张游玩票";
+        const rewardLabel = rewardKind === "tickets" ? "2 张旅行票" : "2 张游玩票";
         if (result.reward) {
           setGame((current) => ({
             ...current,
@@ -2641,13 +2689,7 @@ export default function ReadingApp({
               : [...current.readingRewards, currentChapterQuestionKey],
           }));
         }
-        playSound(alreadyRewarded
-          ? "answer-correct"
-          : rewardKind === "stars"
-            ? "reward-star"
-            : rewardKind === "tickets" || rewardKind === "play_tickets"
-              ? "reward-ticket"
-              : "answer-correct");
+        playSound(alreadyRewarded ? "answer-correct" : rewardKind ? "reward-ticket" : "answer-correct");
         const rewardMessage = result.rewardPending
           ? ""
           : alreadyRewarded
@@ -2718,25 +2760,16 @@ export default function ReadingApp({
 
   const continueAfterChapterQuestion = async () => {
     const hasNextChapter = selectedChapter < selectedChapters.length - 1;
-    const completesDailyReadingTask = dailyPlan.progress.reading < dailyPlan.targets.reading;
     setChapterQuestionOpen(false);
     setReadingAnswer("");
     setReadingFeedback("");
     setReadingEvaluation(null);
     if (hasNextChapter) {
-      try {
-        applyServerProgress(await runStudentAction({ action: "daily-task", task: "reading" }));
-      } catch (error) {
-        showToast(error instanceof Error ? error.message : "阅读任务进度暂时没有保存");
-      }
       playSound("page-turn");
       setSelectedChapter((chapter) => chapter + 1);
       setBookPage(0);
-      showToast(completesDailyReadingTask
-        ? "这一章读完啦，今日伴读任务已完成！已经进入下一章"
-        : "已经进入下一章，进度自动保存啦");
+      showToast("已经进入下一章，进度自动保存啦");
     } else {
-      if (completesDailyReadingTask) showToast("这一章读完啦，今日伴读任务已完成！");
       await finishReading();
     }
   };
@@ -2930,8 +2963,13 @@ export default function ReadingApp({
       ...current,
       chatMessages: [...current.chatMessages, turtleMessage].slice(-16),
     }));
+    try {
+      applyServerProgress(await runStudentAction({ action: "daily-task", task: "chat" }));
+    } catch {
+      // The conversation remains usable if daily progress syncing is briefly unavailable.
+    }
     setChatThinking(false);
-  }, [chatInput, chatThinking, game.chatMessages, game.name]);
+  }, [applyServerProgress, chatInput, chatThinking, game.chatMessages, game.name]);
 
   useEffect(() => {
     submitChatRef.current = (message) => void sendChat(message);
@@ -3145,15 +3183,22 @@ export default function ReadingApp({
     setReadingEvaluation(null);
   };
 
-  const dailyTaskItems: Array<{ key: DailyTaskKey; label: string }> = [
+  const dailyTaskCatalog: Array<{ key: DailyTaskKey; label: string }> = [
     { key: "feed", label: `给${game.name}喂 1 个果子` },
     { key: "swim", label: `陪${game.name}游泳清洁` },
-    { key: "reading", label: "完成 1 次伴读" },
+    { key: "hide", label: "完成 1 局捉迷藏" },
+    { key: "games", label: "通关 1 个乐园游戏" },
+    { key: "explore", label: "完成 1 个知识单元" },
+    { key: "travel", label: "完成 1 次旅行" },
+    { key: "chat", label: `和${game.name}聊一聊` },
     {
       key: "mistake",
-      label: dailyPlan.mistakeMode === "review" ? `复习 ${dailyPlan.targets.mistake} 道错题` : "收录 1 道错题",
+      label: dailyPlan.mistakeMode === "review" ? "复习 1 道错题" : "收录 1 道错题",
     },
   ];
+  const dailyTaskItems = dailyPlan.taskKeys
+    .map((key) => dailyTaskCatalog.find((task) => task.key === key))
+    .filter((task): task is { key: DailyTaskKey; label: string } => Boolean(task));
 
   const openDailyTask = (task: DailyTaskKey) => {
     if (task === "feed") {
@@ -3164,8 +3209,24 @@ export default function ReadingApp({
       startSwim();
       return;
     }
-    if (task === "reading") {
-      navigateTo("library");
+    if (task === "hide") {
+      startHideAndSeek();
+      return;
+    }
+    if (task === "games") {
+      navigateTo("games");
+      return;
+    }
+    if (task === "explore") {
+      navigateTo("explore");
+      return;
+    }
+    if (task === "travel") {
+      navigateTo("travel");
+      return;
+    }
+    if (task === "chat") {
+      navigateTo("chat");
       return;
     }
     if (dailyPlan.mistakeMode === "add") {
@@ -3519,8 +3580,8 @@ export default function ReadingApp({
                   })}
                 </div>
                 <div className={`daily-task-reward ${dailyPlan.rewardClaimed ? "claimed" : ""}`}>
-                  <img src={`${ASSET}/ui/daily-tasks/reward-star.png`} alt="" />
-                  <span>{dailyPlan.rewardClaimed ? "今日计划完成，奖励已领取" : "全部完成可得 3 颗星星"}</span>
+                  <img src={`${ASSET}/ui/icons/play-ticket-pixel.png`} alt="" />
+                  <span>{dailyPlan.rewardClaimed ? "今日计划完成，3 张游玩票已领取" : "全部完成可得 3 张游玩票"}</span>
                 </div>
               </div>
             </aside>
@@ -4411,7 +4472,7 @@ export default function ReadingApp({
                     ) : (
                       <div className="reading-companion-card embedded">
                         <div className="companion-card-heading"><img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪读的龟龟" /><div><small>伴读区 · 非原文</small><strong>{game.name}陪你读</strong></div></div>
-                        <div className="companion-reward-rule"><Sparkles /><span>回答正确随机奖励 <strong>1 颗星星、1 张旅行票或 1 张游玩票</strong></span></div>
+                        <div className="companion-reward-rule"><Sparkles /><span>回答正确随机奖励 <strong>2 张旅行票或 2 张游玩票</strong></span></div>
                         <h3>这一章，龟龟陪你留心</h3>
                         {activeChapterPrompt ? <p className="reading-guide"><Lightbulb /> {activeChapterPrompt.guide}</p> : null}
                         {currentChapterQuestionAnswered ? (
@@ -4996,7 +5057,7 @@ export default function ReadingApp({
             <header className="travel-reward-heading">
               <img className="returning-turtle" src={`${ASSET}/characters/turtle/turtle_travel_return.png`} alt="旅行回来的龟龟" />
               <div>
-                <span className="modal-kicker">旅行平安归来 · +4 星星 · +1 游玩票</span>
+                <span className="modal-kicker">旅行平安归来 · +4 星星{travelReward.playTicketAwarded ? " · 幸运带回 1 张游玩票" : ""}</span>
                 <h2 id="reward-title">从{travelReward.destination.name}带回了新发现</h2>
                 <p>龟龟找到了一张新的知识卡，快看看这次带回了什么！</p>
               </div>
@@ -5017,6 +5078,12 @@ export default function ReadingApp({
                   <img src={`${ASSET}/objects/fruit_orange.png`} alt="" />
                   <span>还带回了 <b>1 个野外果子</b></span>
                 </div>
+                {travelReward.playTicketAwarded && (
+                  <div className="travel-extra-reward play-ticket">
+                    <img src={`${ASSET}/ui/icons/play-ticket-pixel.png`} alt="" />
+                    <span>随机带回 <b>1 张游玩票</b></span>
+                  </div>
+                )}
                 <button className="knowledge-link" type="button" onClick={() => { playSound("card-unlock"); setKnowledgeOpen(travelReward); }}><img src={`${ASSET}/legacy/icons/knowledge_card.png`} alt="" /> 展开查看知识卡</button>
               </div>
             </div>

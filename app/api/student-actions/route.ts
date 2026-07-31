@@ -7,7 +7,9 @@ import {
   finishTravel,
   pickDailyFruit,
   startTravel,
+  swimWithTurtle,
 } from "../../../db/student-actions";
+import { DAILY_TASK_KEYS, type DailyTask } from "../../../db/daily-tasks";
 import { mutationOriginError, validMutationOrigin } from "../../../lib/request-security";
 import { getActiveStudent } from "../../auth-user";
 
@@ -22,9 +24,11 @@ export async function POST(request: Request) {
         return NextResponse.json(await pickDailyFruit(student.id));
       case "feed":
         return NextResponse.json(await feedTurtle(student.id));
+      case "swim":
+        return NextResponse.json(await swimWithTurtle(student.id));
       case "daily-task":
-        if (!["swim", "reading", "mistake"].includes(String(body.task))) throw new Error("每日任务类型无效");
-        return NextResponse.json(await completeDailyTask(student.id, body.task as "swim" | "reading" | "mistake"));
+        if (!(DAILY_TASK_KEYS as readonly string[]).includes(String(body.task))) throw new Error("每日任务类型无效");
+        return NextResponse.json(await completeDailyTask(student.id, body.task as DailyTask));
       case "hide-and-seek":
         return NextResponse.json(await completeHideAndSeek(student.id));
       case "finish-book":

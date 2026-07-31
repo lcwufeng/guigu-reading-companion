@@ -403,6 +403,19 @@ export const userDailyState = sqliteTable("user_daily_state", {
   index("user_daily_state_user_date_idx").on(table.userId, table.dateKey),
 ]);
 
+export const userDailyTasks = sqliteTable("user_daily_tasks", {
+  userId: text("user_id").notNull(),
+  dateKey: text("date_key").notNull(),
+  taskKey: text("task_key").notNull(),
+  taskOrder: integer("task_order").notNull(),
+  target: integer("target").notNull().default(1),
+  progress: integer("progress").notNull().default(0),
+  updatedAt: integer("updated_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.dateKey, table.taskKey] }),
+  index("user_daily_tasks_user_date_idx").on(table.userId, table.dateKey, table.taskOrder),
+]);
+
 export const userMinigameDaily = sqliteTable("user_minigame_daily", {
   userId: text("user_id").notNull(),
   dateKey: text("date_key").notNull(),

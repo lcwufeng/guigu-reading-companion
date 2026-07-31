@@ -1,3 +1,4 @@
+import { getDailyState } from "./daily-tasks";
 import { readyRuntimeDatabase, type RuntimeDatabase, type SqlStatement } from "./runtime-database";
 
 type LocalStateRow = { state: unknown; updatedAt: number };
@@ -126,7 +127,7 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     [userId],
   );
   const chatClearedAt = parentControls?.chat_cleared_at || 0;
-  const [readingRecords, readingRewards, travelRecords, activeTravel, mistakes, dailyRows, minigameRows, completedMinigames, chatRows] = await Promise.all([
+  const [readingRecords, readingRewards, travelRecords, activeTravel, mistakes, dailySnapshot, minigameRows, completedMinigames, chatRows] = await Promise.all([
     database.all<{ record_id: string; title: string; read_date: string; answer: string; summary: string }>(
       "SELECT record_id, title, read_date, answer, summary FROM user_reading_records WHERE user_id = ? ORDER BY created_at DESC",
       [userId],
@@ -147,11 +148,7 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
       mistake_id: string; subject: string; question: string; wrong_answer: string; correction: string; cause: string;
       status: string; mistake_date: string; review_count: number; image_url: string | null;
     }>("SELECT * FROM user_mistakes WHERE user_id = ? ORDER BY created_at DESC", [userId]),
-    database.all<{
-      date_key: string; mistake_mode: string; feed_target: number; swim_target: number; reading_target: number; mistake_target: number;
-      feed_progress: number; swim_progress: number; reading_progress: number; mistake_progress: number; reward_claimed: number;
-      fruit_picked: number; hide_completed: number;
-    }>("SELECT * FROM user_daily_state WHERE user_id = ? ORDER BY date_key DESC LIMIT 1", [userId]),
+    getDailyState(userId, now),
     database.all<{
       date_key: string; plays: number; best_score: number; total_caught: number; reward_claimed: number;
     }>("SELECT date_key, plays, best_score, total_caught, reward_claimed FROM user_minigame_daily WHERE user_id = ? AND game_id = 'fruit-catch' ORDER BY date_key DESC LIMIT 1", [userId]),
@@ -164,7 +161,6 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
       WHERE user_id = ? AND expires_at > ? AND created_at > ? ORDER BY created_at DESC LIMIT 16
     ) ORDER BY created_at ASC`, [userId, now, chatClearedAt]),
   ]);
-  const daily = dailyRows[0];
   const fruitCatch = minigameRows[0];
   return {
     name: pet.pet_name,
@@ -209,15 +205,9 @@ async function normalizedState(database: RuntimeDatabase, userId: string): Promi
     chatMessages: chatRows.map((message) => ({
       id: Number(message.message_id), role: message.role === "user" ? "user" : "turtle", text: message.message_text,
     })),
-    dailyPlan: daily ? {
-      dateKey: daily.date_key,
-      mistakeMode: daily.mistake_mode === "review" ? "review" : "add",
-      targets: { feed: daily.feed_target, swim: daily.swim_target, reading: daily.reading_target, mistake: daily.mistake_target },
-      progress: { feed: daily.feed_progress, swim: daily.swim_progress, reading: daily.reading_progress, mistake: daily.mistake_progress },
-      rewardClaimed: Boolean(daily.reward_claimed),
-    } : undefined,
-    fruitPicking: daily ? { dateKey: daily.date_key, picked: daily.fruit_picked } : undefined,
-    hideAndSeekDaily: daily ? { dateKey: daily.date_key, completed: daily.hide_completed } : undefined,
+    dailyPlan: dailySnapshot.dailyPlan,
+    fruitPicking: dailySnapshot.fruitPicking,
+    hideAndSeekDaily: dailySnapshot.hideAndSeekDaily,
     fruitCatchDaily: fruitCatch ? {
       dateKey: fruitCatch.date_key,
       plays: fruitCatch.plays,

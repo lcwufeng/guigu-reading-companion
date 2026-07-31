@@ -1,4 +1,5 @@
 import { isMiniGameId, MINI_GAME_ORDER } from "../lib/minigame-config";
+import { completeDailyTask } from "./daily-tasks";
 import { miniGameScoreStatement } from "./minigame-leaderboard";
 import { applyRewardChanges, getRewardBalances } from "./reward-wallet";
 import { readyRuntimeDatabase } from "./runtime-database";
@@ -157,10 +158,13 @@ export async function completeMiniGame(input: {
     score: input.score,
     secondaryScore: input.secondaryScore,
   })] : [])]);
+  const daily = success ? await completeDailyTask(input.userId, "games", now) : null;
   return {
     alreadyCompleted: false,
     success,
-    balances: await getRewardBalances(database, input.userId),
+    balances: daily?.balances || await getRewardBalances(database, input.userId),
+    dailyPlan: daily?.dailyPlan,
+    dailyRewardedNow: daily?.dailyRewardedNow || false,
     completedGames: await completedGames(input.userId),
     fruitCatchDaily,
   };

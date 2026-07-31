@@ -350,7 +350,7 @@ test("provides eight responsive turtle games with progressive learning challenge
   assert.match(readingApp, /"turtle-sky": "龟龟飞机大战"/);
   assert.match(readingApp, /"tortoise-race": "龟兔赛跑"/);
   assert.match(readingApp, /8 个小游戏开放啦/);
-  assert.equal((readingApp.match(/ui\/icons\/play-ticket-pixel\.png/g) || []).length, 2);
+  assert.equal((readingApp.match(/ui\/icons\/play-ticket-pixel\.png/g) || []).length, 4);
   assert.match(readingApp, /type: "activity"/);
   assert.match(styles, /\.game-park-scene \{[\s\S]*overflow-y: auto/);
   assert.match(styles, /touch-action: none/);
@@ -637,13 +637,13 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(page, /dailyPlan:/);
   assert.match(page, /createDailyPlan/);
   assert.match(page, /runStudentAction/);
-  assert.match(page, /const completesDailyReadingTask = dailyPlan\.progress\.reading < dailyPlan\.targets\.reading/);
-  assert.match(page, /action: "daily-task", task: "reading"/);
+  assert.match(page, /dailyTaskKeys = \["feed", "swim", "hide", "games", "explore", "travel", "chat", "mistake"\]/);
+  assert.match(page, /action: "daily-task", task: "chat"/);
+  assert.match(page, /完成 1 个知识单元/);
   assert.match(studentActionsRoute, /completeDailyTask/);
   assert.match(studentActionsDb, /completeDailyTask/);
-  assert.match(page, /这一章读完啦，今日伴读任务已完成/);
-  assert.match(studentActionsDb, /daily-plan/);
-  assert.match(page, /全部完成可得 3 颗星星/);
+  assert.match(schemaStatements, /user_daily_tasks/);
+  assert.match(page, /全部完成可得 3 张游玩票/);
   assert.match(page, /ui\/daily-tasks\/title\.png/);
   assert.doesNotMatch(page, /ui\/daily-tasks\/task-row\.png/);
   assert.doesNotMatch(styles, /--daily-task-row|var\(--daily-task-row\)/);
@@ -707,8 +707,8 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.chat-panel \{[\s\S]*?width: min\(1180px, calc\(100vw - clamp\(56px, 10vw, 180px\)\)\);/);
   assert.match(styles, /\.message p \{[\s\S]*?font-size: 17px;/);
   assert.match(page, /回答正确随机奖励/);
-  assert.match(page, /1 颗星星、1 张旅行票或 1 张游玩票/);
-  assert.match(rewardWallet, /deterministicReward/);
+  assert.match(page, /2 张旅行票或 2 张游玩票/);
+  assert.match(rewardWallet, /deterministicReadingReward/);
   assert.match(rewardWallet, /claimReadingReward/);
   assert.match(companionRoute, /claimReadingReward/);
   assert.match(page, /result\.reward!\.balances/);

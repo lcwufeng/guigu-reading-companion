@@ -6,6 +6,8 @@ import {
   type InterestDomainId,
 } from "../lib/exploration-catalog";
 import { evaluateExplorationAnswer, type ExplorationEvaluation } from "../lib/exploration-evaluator";
+import { completeDailyTask } from "./daily-tasks";
+import { applyRewardChanges, type RewardBalances } from "./reward-wallet";
 import { readyRuntimeDatabase, type RuntimeDatabase } from "./runtime-database";
 import { getStudentMemory, type StudentMemory } from "./student-memory";
 
@@ -36,6 +38,9 @@ export type ExplorationOverview = {
 
 export type ExplorationActionResult = ExplorationEvaluation & {
   overview?: ExplorationOverview;
+  balances?: RewardBalances;
+  dailyPlan?: Awaited<ReturnType<typeof completeDailyTask>>["dailyPlan"];
+  rewardedPlayTickets?: number;
 };
 
 type LearningRow = {
@@ -286,7 +291,20 @@ export async function submitExplorationProject(input: {
       params: [input.userId, node.takeaway, now, now],
     },
   ]);
-  return { ...evaluation, overview: await getExplorationOverview(input.userId, now) };
+  const reward = await applyRewardChanges({
+    userId: input.userId,
+    changes: { play_tickets: 2 },
+    sourceType: "exploration-unit",
+    sourceId: node.id,
+  });
+  const daily = await completeDailyTask(input.userId, "explore", now);
+  return {
+    ...evaluation,
+    overview: await getExplorationOverview(input.userId, now),
+    balances: daily.balances,
+    dailyPlan: daily.dailyPlan,
+    rewardedPlayTickets: reward.applied ? 2 : 0,
+  };
 }
 
 export async function submitExplorationReview(input: {

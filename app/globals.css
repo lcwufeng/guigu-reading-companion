@@ -11914,6 +11914,462 @@ button:disabled {
   }
 }
 
+/* Compact desktop and short-screen safety. The right rail remains available,
+   while the turtle's walking area ends before the cards begin. */
+@media (min-width: 821px) and (max-width: 1280px) {
+  .topbar {
+    gap: 8px;
+    grid-template-columns: minmax(250px, 1fr) 370px 94px;
+    padding-inline: 12px;
+  }
+
+  .brand-logo {
+    width: clamp(150px, 17vw, 218px);
+  }
+
+  .pet-name {
+    padding-inline: 10px 16px;
+    width: clamp(190px, 23vw, 280px);
+  }
+
+  .wallet {
+    gap: 2px;
+    min-width: 0;
+    padding-inline: 8px;
+    width: 370px;
+  }
+
+  .wallet span {
+    font-size: 15px;
+    gap: 3px;
+    min-width: 56px;
+    padding-inline: 3px;
+  }
+
+  .wallet .achievement-button b,
+  .wallet .leaderboard-button b {
+    display: none;
+  }
+
+  .wallet .achievement-button,
+  .wallet .leaderboard-button {
+    flex: 0 0 38px;
+    width: 38px;
+  }
+
+  .scene-action {
+    width: clamp(82px, 8.5vw, 108px);
+  }
+
+  .knowledge-expedition-entry,
+  .game-park-entry {
+    gap: 7px;
+    grid-template-columns: 44px minmax(0, 1fr) 20px;
+    min-height: 68px;
+    padding: 8px 9px;
+  }
+
+  .knowledge-expedition-icon,
+  .game-park-entry-icon {
+    height: 42px;
+    width: 42px;
+  }
+
+  .knowledge-expedition-entry strong,
+  .game-park-entry strong {
+    font-size: 19px;
+  }
+
+  .knowledge-expedition-entry em,
+  .game-park-entry em {
+    font-size: 10px;
+  }
+}
+
+@media (min-width: 821px) and (max-height: 800px) {
+  .bottom-nav {
+    height: 84px;
+  }
+
+  .nav-icon {
+    height: 44px;
+    width: 44px;
+  }
+
+  .nav-label {
+    font-size: 14px;
+  }
+
+  .daily-task-panel {
+    height: 265px;
+    padding: 48px 18px 13px;
+    right: 14px;
+    top: 92px;
+    width: 250px;
+  }
+
+  .daily-task-heading {
+    left: 24px;
+    width: 202px;
+  }
+
+  .daily-task-list > button {
+    height: 39px;
+  }
+
+  .daily-task-list strong {
+    font-size: 11px;
+  }
+
+  .home-status-panel {
+    height: 138px;
+    padding: 8px 18px 12px;
+    right: 14px;
+    top: 362px;
+    width: 250px;
+  }
+
+  .status-panel-title {
+    height: 30px;
+    margin-bottom: 2px;
+  }
+
+  .status-panel-title img {
+    height: 27px;
+    width: 27px;
+  }
+
+  .status-panel-title strong {
+    font-size: 16px;
+  }
+
+  .home-status-panel .status-pill {
+    gap: 4px;
+    grid-template-columns: 25px minmax(0, 1fr);
+    min-height: 39px;
+  }
+
+  .home-status-panel .status-pill img {
+    height: 25px;
+    width: 25px;
+  }
+
+  .home-status-panel .status-copy span {
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+
+  .home-status-panel .status-segments i {
+    height: 8px;
+  }
+
+  .home-status-panel .status-row {
+    gap: 3px 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .turtle-wrap.spot-cave-door,
+  .turtle-wrap.in-cave {
+    left: 62%;
+  }
+
+  .turtle-wrap.spot-tree-shade {
+    bottom: 114px;
+    left: 45%;
+  }
+}
+
+/* During hide-and-seek, scene cards cannot cover a hiding place. */
+.home-scene:has(.hide-game-hud) .daily-task-panel,
+.home-scene:has(.hide-game-hud) .home-status-panel {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+@media (max-width: 820px) {
+  .turtle-wrap.spot-cave-door,
+  .turtle-wrap.in-cave {
+    left: 60%;
+  }
+}
+
+/* Very short landscape screens use a shallow information rail, leaving the
+   center of the scene and the turtle unobstructed. */
+@media (max-width: 1100px) and (max-height: 520px) {
+  .scene-shell,
+  .scene {
+    min-height: 0;
+  }
+
+  .topbar {
+    gap: 5px;
+    grid-template-columns: minmax(220px, 1fr) 350px 82px;
+    height: 72px;
+    padding: 6px 8px;
+  }
+
+  .brand-logo {
+    display: none;
+  }
+
+  .pet-name {
+    height: 52px;
+    width: min(260px, 31vw);
+  }
+
+  .wallet {
+    height: 58px;
+    width: 350px;
+  }
+
+  .knowledge-expedition-entry,
+  .game-park-entry {
+    border-radius: 12px;
+    border-width: 2px;
+    gap: 6px;
+    grid-template-columns: 38px minmax(0, 1fr) 17px;
+    min-height: 54px;
+    padding: 6px 7px;
+    top: 142px;
+    width: 160px;
+  }
+
+  .knowledge-expedition-entry {
+    left: 8px;
+  }
+
+  .game-park-entry {
+    left: auto;
+    right: 8px;
+  }
+
+  .knowledge-expedition-icon,
+  .game-park-entry-icon {
+    border-width: 1px;
+    height: 36px;
+    width: 36px;
+  }
+
+  .knowledge-expedition-entry small,
+  .game-park-entry small {
+    display: none;
+  }
+
+  .knowledge-expedition-entry strong,
+  .game-park-entry strong {
+    font-size: 16px;
+  }
+
+  .knowledge-expedition-entry em,
+  .game-park-entry em {
+    font-size: 9px;
+  }
+
+  .pond-action {
+    left: 30%;
+  }
+
+  .scene-action {
+    width: 78px;
+  }
+
+  .daily-task-panel:not(.open) {
+    height: 54px;
+    padding: 0;
+    right: 8px;
+    top: 78px;
+    width: 184px;
+  }
+
+  .daily-task-panel:not(.open) .daily-task-heading {
+    cursor: pointer;
+    height: 54px;
+    left: 0;
+    top: 0;
+    width: 184px;
+  }
+
+  .daily-task-panel:not(.open) .daily-task-heading > img {
+    height: 54px;
+    object-fit: fill;
+  }
+
+  .daily-task-panel:not(.open) .daily-task-heading > span,
+  .daily-task-panel:not(.open) .daily-task-heading > svg {
+    display: block;
+    position: absolute;
+  }
+
+  .daily-task-panel:not(.open) .daily-task-heading > span {
+    right: 40px;
+    top: 18px;
+  }
+
+  .daily-task-panel:not(.open) .daily-task-heading > svg {
+    right: 17px;
+    top: 17px;
+  }
+
+  .daily-task-panel:not(.open) .daily-task-body {
+    display: none;
+  }
+
+  .daily-task-panel.open {
+    max-height: calc(100dvh - 148px);
+    overflow-y: auto;
+    right: 8px;
+    top: 78px;
+  }
+
+  .home-status-panel {
+    height: 58px;
+    left: 8px;
+    padding: 7px 12px;
+    right: 268px;
+    top: 78px;
+    width: auto;
+  }
+
+  .home-status-panel .status-panel-title {
+    display: none;
+  }
+
+  .home-status-panel .status-row {
+    display: grid;
+    gap: 7px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .home-status-panel .status-pill {
+    gap: 4px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    min-height: 42px;
+  }
+
+  .home-status-panel .status-pill img {
+    height: 24px;
+    width: 24px;
+  }
+
+  .home-status-panel .status-copy span {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+
+  .home-status-panel .status-segments i {
+    height: 7px;
+  }
+
+  .turtle-wrap,
+  .turtle-wrap.spot-tree-shade,
+  .turtle-wrap.spot-pond-edge,
+  .turtle-wrap.spot-cave-door,
+  .turtle-wrap.in-cave,
+  .turtle-wrap.in-pond {
+    bottom: 74px;
+    left: 52%;
+  }
+
+  .turtle-sprite {
+    height: 118px;
+    width: 136px;
+  }
+
+  .bottom-nav {
+    height: 66px;
+  }
+
+  .home-scene:has(.hide-game-hud) .hide-game-hud {
+    left: 8px;
+    max-width: 192px;
+    padding: 7px 8px 6px;
+    top: 78px;
+    width: 192px;
+  }
+
+  .home-scene:has(.hide-game-hud) .hide-game-instruction {
+    font-size: 11px;
+    margin-block: 4px;
+  }
+
+  .home-scene:has(.hide-game-hud) .hide-game-score {
+    font-size: 9px;
+  }
+
+  .hidden-turtle {
+    max-height: 96px;
+    width: 96px !important;
+  }
+
+  .hidden-water,
+  .hidden-lotus { bottom: 74px; top: auto; }
+  .hidden-tree { top: 76px; }
+  .hidden-behind,
+  .hidden-cave,
+  .hidden-tree-root,
+  .hidden-cave-door { top: 34%; }
+  .hidden-bush,
+  .hidden-flowers,
+  .hidden-cave-flowers,
+  .hidden-blue-flowers { top: 49%; }
+  .hidden-fruit,
+  .hidden-hedge { top: 25%; }
+  .hidden-path-rock,
+  .hidden-path-grass,
+  .hidden-boulder { top: 55%; }
+  .hidden-flower-bank,
+  .hidden-lily-pad,
+  .hidden-pond-rocks,
+  .hidden-pond-cobbles { top: 56%; }
+}
+
+@media (max-width: 420px) {
+  .scene-action {
+    width: clamp(70px, 20vw, 82px);
+  }
+
+  .knowledge-expedition-entry {
+    width: min(150px, calc(48vw - 9px));
+  }
+
+  .game-park-entry {
+    width: min(158px, calc(52vw - 9px));
+  }
+
+  .knowledge-expedition-icon,
+  .game-park-entry-icon {
+    height: 32px;
+    width: 32px;
+  }
+
+  .knowledge-expedition-entry strong,
+  .game-park-entry strong {
+    font-size: 15px;
+  }
+
+  .wallet-star,
+  .wallet-icon {
+    height: 20px;
+    width: 20px;
+  }
+
+  .wallet-ticket img {
+    height: 20px;
+    width: 25px;
+  }
+
+  .wallet-play-ticket img {
+    height: 18px;
+    width: 33px;
+  }
+
+  .nav-icon {
+    height: 32px;
+    width: 32px;
+  }
+}
+
 /* Eye-comfort paper palette for every book reader. The cream page echoes
    natural book paper, while the sage panels borrow the soft grass colors from
    the supplied rainy-garden reference without reducing text contrast. */

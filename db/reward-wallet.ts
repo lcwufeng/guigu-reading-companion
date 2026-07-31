@@ -141,10 +141,14 @@ export async function applyRewardChanges(input: {
   };
 }
 
-function deterministicReward(userId: string, questionKey: string): RewardResource {
+function stableRewardNumber(value: string) {
   let total = 0;
-  for (const character of `${userId}:${questionKey}`) total = (total * 33 + (character.codePointAt(0) || 0)) >>> 0;
-  return (["stars", "tickets", "play_tickets"] as const)[total % 3];
+  for (const character of value) total = (total * 33 + (character.codePointAt(0) || 0)) >>> 0;
+  return total;
+}
+
+function deterministicReadingReward(userId: string, questionKey: string): "tickets" | "play_tickets" {
+  return (["tickets", "play_tickets"] as const)[stableRewardNumber(`${userId}:${questionKey}`) % 2];
 }
 
 export async function claimReadingReward(userId: string, questionKey: string) {
@@ -157,10 +161,17 @@ export async function claimReadingReward(userId: string, questionKey: string) {
       "SELECT reward_key FROM user_reading_rewards WHERE user_id = ? AND reward_key = ?",
       [userId, safeKey],
     );
-    const resource = deterministicReward(userId, safeKey);
+    const resource = deterministicReadingReward(userId, safeKey);
+    if (existing) {
+      return {
+        alreadyClaimed: true,
+        resource,
+        balances: await getRewardBalances(database, userId),
+      };
+    }
     const result = await applyRewardChanges({
       userId,
-      changes: { [resource]: 1 },
+      changes: { [resource]: 2 },
       sourceType: "reading-answer",
       sourceId: safeKey,
     });
@@ -169,9 +180,54 @@ export async function claimReadingReward(userId: string, questionKey: string) {
       [userId, safeKey, Date.now()],
     );
     return {
-      alreadyClaimed: Boolean(existing) || !result.applied,
+      alreadyClaimed: !result.applied,
       resource,
       balances: result.balances,
     };
   });
+}
+
+export async function claimInteractionBonus(input: {
+  userId: string;
+  interaction: "feed" | "swim" | "hide";
+  sourceId: string;
+}) {
+  const seed = `${input.userId}:${input.interaction}:${input.sourceId}`;
+  const roll = stableRewardNumber(seed);
+  if (roll % 10 !== 0) {
+    const database = await readyRuntimeDatabase();
+    if (!database) throw new Error("reward database unavailable");
+    return {
+      awarded: false,
+      resource: null as null,
+      balances: await getRewardBalances(database, input.userId),
+    };
+  }
+  const resource = (["tickets", "play_tickets"] as const)[Math.floor(roll / 10) % 2];
+  const reward = await applyRewardChanges({
+    userId: input.userId,
+    changes: { [resource]: 1 },
+    sourceType: "pet-interaction-bonus",
+    sourceId: `${input.interaction}:${input.sourceId}`,
+  });
+  return {
+    awarded: reward.applied,
+    resource,
+    balances: reward.balances,
+  };
+}
+
+export async function claimTravelPlayTicket(userId: string, sourceId: string) {
+  if (stableRewardNumber(`${userId}:travel:${sourceId}`) % 2 !== 0) {
+    const database = await readyRuntimeDatabase();
+    if (!database) throw new Error("reward database unavailable");
+    return { awarded: false, balances: await getRewardBalances(database, userId) };
+  }
+  const reward = await applyRewardChanges({
+    userId,
+    changes: { play_tickets: 1 },
+    sourceType: "travel-random-play-ticket",
+    sourceId,
+  });
+  return { awarded: reward.applied, balances: reward.balances };
 }

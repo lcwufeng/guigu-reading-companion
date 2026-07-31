@@ -101,10 +101,10 @@ test("rewards, minigame tickets, rate limits, and production seed accounts stay 
     assert.equal(result.runCount, 1);
     assert.equal(result.rewardCount, 1);
     assert.deepEqual(result.rewardClaims.sort(), [false, true]);
-    assert.equal(result.balances.stars + result.balances.tickets + result.balances.playTickets, 16);
-    assert.ok(result.balances.stars <= 13);
-    assert.ok(result.balances.tickets <= 4);
-    assert.ok(result.balances.playTickets <= 1);
+    assert.equal(result.balances.stars + result.balances.tickets + result.balances.playTickets, 17);
+    assert.equal(result.balances.stars, 12);
+    assert.ok(result.balances.tickets <= 5);
+    assert.ok(result.balances.playTickets <= 2);
     assert.deepEqual(result.limits, [false, false, true, false]);
     assert.equal(result.seededAccount, false);
   } finally {

@@ -332,6 +332,17 @@ export const SCHEMA_STATEMENTS = [
     PRIMARY KEY (user_id, date_key)
   )`,
   "CREATE INDEX IF NOT EXISTS user_daily_state_user_date_idx ON user_daily_state(user_id, date_key DESC)",
+  `CREATE TABLE IF NOT EXISTS user_daily_tasks (
+    user_id TEXT NOT NULL,
+    date_key TEXT NOT NULL,
+    task_key TEXT NOT NULL,
+    task_order INTEGER NOT NULL,
+    target INTEGER NOT NULL DEFAULT 1,
+    progress INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, date_key, task_key)
+  )`,
+  "CREATE INDEX IF NOT EXISTS user_daily_tasks_user_date_idx ON user_daily_tasks(user_id, date_key DESC, task_order ASC)",
   `CREATE TABLE IF NOT EXISTS user_minigame_daily (
     user_id TEXT NOT NULL,
     date_key TEXT NOT NULL,

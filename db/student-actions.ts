@@ -1,8 +1,18 @@
 import classicBookManifest from "../app/classic-books-manifest.json";
-import { applyRewardChanges, getRewardBalances } from "./reward-wallet";
+import {
+  completeDailyTask,
+  getDailyState,
+  updateDailyCounter,
+} from "./daily-tasks";
+import {
+  applyRewardChanges,
+  claimInteractionBonus,
+  claimTravelPlayTicket,
+  getRewardBalances,
+} from "./reward-wallet";
 import { readyRuntimeDatabase, type RuntimeDatabase } from "./runtime-database";
 
-type DailyTask = "feed" | "swim" | "reading" | "mistake";
+export { completeDailyTask };
 
 const builtInBookIds = new Set([
   "scarecrow-zh",
@@ -24,17 +34,6 @@ function clean(value: unknown, limit: number) {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
 }
 
-function chinaDayKey(now = Date.now()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(now));
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
 function displayDate(now = Date.now()) {
   return new Intl.DateTimeFormat("zh-CN", {
     timeZone: "Asia/Shanghai",
@@ -49,123 +48,18 @@ function stableNumericId(value: string) {
   return String(1_700_000_000_000 + hash);
 }
 
-async function ensureDailyState(database: RuntimeDatabase, userId: string, dateKey: string, now: number) {
-  await database.run(
-    `INSERT OR IGNORE INTO user_daily_state
-      (user_id, date_key, mistake_mode, feed_target, swim_target, reading_target, mistake_target,
-       feed_progress, swim_progress, reading_progress, mistake_progress, reward_claimed, fruit_picked, hide_completed, updated_at)
-      VALUES (?, ?, 'add', 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, ?)`,
-    [userId, dateKey, now],
-  );
-}
-
-async function dailyState(database: RuntimeDatabase, userId: string, dateKey: string) {
-  return database.first<{
-    mistake_mode: string;
-    feed_target: number;
-    swim_target: number;
-    reading_target: number;
-    mistake_target: number;
-    feed_progress: number;
-    swim_progress: number;
-    reading_progress: number;
-    mistake_progress: number;
-    reward_claimed: number;
-    fruit_picked: number;
-    hide_completed: number;
-  }>("SELECT * FROM user_daily_state WHERE user_id = ? AND date_key = ?", [userId, dateKey]);
-}
-
-function formattedDaily(row: NonNullable<Awaited<ReturnType<typeof dailyState>>>, dateKey: string) {
-  return {
-    dailyPlan: {
-      dateKey,
-      mistakeMode: row.mistake_mode === "review" ? "review" : "add",
-      targets: {
-        feed: row.feed_target,
-        swim: row.swim_target,
-        reading: row.reading_target,
-        mistake: row.mistake_target,
-      },
-      progress: {
-        feed: row.feed_progress,
-        swim: row.swim_progress,
-        reading: row.reading_progress,
-        mistake: row.mistake_progress,
-      },
-      rewardClaimed: Boolean(row.reward_claimed),
-    },
-    fruitPicking: { dateKey, picked: row.fruit_picked },
-    hideAndSeekDaily: { dateKey, completed: row.hide_completed },
-  };
-}
-
-export async function completeDailyTask(userId: string, task: DailyTask) {
-  const database = await readyRuntimeDatabase();
-  if (!database) throw new Error("每日任务暂时不可用");
-  const now = Date.now();
-  const dateKey = chinaDayKey(now);
-  await ensureDailyState(database, userId, dateKey, now);
-  const prior = await dailyState(database, userId, dateKey);
-  if (!prior) throw new Error("每日任务暂时不可用");
-  const progressColumn = `${task}_progress`;
-  const targetColumn = `${task}_target`;
-  await database.run(
-    `UPDATE user_daily_state SET ${progressColumn} = MIN(${targetColumn}, ${progressColumn} + 1), updated_at = ?
-      WHERE user_id = ? AND date_key = ?`,
-    [now, userId, dateKey],
-  );
-  const updated = await dailyState(database, userId, dateKey);
-  if (!updated) throw new Error("每日任务暂时不可用");
-  const allComplete = updated.feed_progress >= updated.feed_target
-    && updated.swim_progress >= updated.swim_target
-    && updated.reading_progress >= updated.reading_target
-    && updated.mistake_progress >= updated.mistake_target;
-  if (allComplete && !updated.reward_claimed) {
-    await database.run(
-      "UPDATE user_daily_state SET reward_claimed = 1, updated_at = ? WHERE user_id = ? AND date_key = ? AND reward_claimed = 0",
-      [now, userId, dateKey],
-    );
-    await applyRewardChanges({
-      userId,
-      changes: { stars: 3 },
-      sourceType: "daily-plan",
-      sourceId: dateKey,
-    });
-  }
-  const finalState = await dailyState(database, userId, dateKey);
-  if (!finalState) throw new Error("每日任务暂时不可用");
-  return {
-    ...formattedDaily(finalState, dateKey),
-    balances: await getRewardBalances(database, userId),
-  };
-}
-
 export async function pickDailyFruit(userId: string) {
-  const database = await readyRuntimeDatabase();
-  if (!database) throw new Error("果树暂时还没准备好");
-  const now = Date.now();
-  const dateKey = chinaDayKey(now);
-  await ensureDailyState(database, userId, dateKey, now);
-  const prior = await dailyState(database, userId, dateKey);
-  if (!prior) throw new Error("果树暂时还没准备好");
-  if (prior.fruit_picked >= 5) {
-    return { ...formattedDaily(prior, dateKey), balances: await getRewardBalances(database, userId), picked: false };
+  const counter = await updateDailyCounter({ userId, column: "fruit_picked", limit: 5 });
+  if (!counter.changed) {
+    return { ...counter.formatted, balances: await getRewardBalances(counter.database, userId), picked: false };
   }
-  const nextPicked = prior.fruit_picked + 1;
-  await database.run(
-    "UPDATE user_daily_state SET fruit_picked = ?, updated_at = ? WHERE user_id = ? AND date_key = ?",
-    [nextPicked, now, userId, dateKey],
-  );
   const reward = await applyRewardChanges({
     userId,
     changes: { fruits: 1 },
     sourceType: "daily-fruit",
-    sourceId: `${dateKey}:${nextPicked}`,
+    sourceId: `${counter.dateKey}:${counter.count}`,
   });
-  const updated = await dailyState(database, userId, dateKey);
-  if (!updated) throw new Error("果树暂时还没准备好");
-  return { ...formattedDaily(updated, dateKey), balances: reward.balances, picked: true };
+  return { ...counter.formatted, balances: reward.balances, picked: true };
 }
 
 export async function feedTurtle(userId: string) {
@@ -173,44 +67,53 @@ export async function feedTurtle(userId: string) {
   if (!database) throw new Error("喂食记录暂时不可用");
   const before = await getRewardBalances(database, userId);
   if (before.fruits < 1) throw new Error("果篮空啦");
+  const eventId = crypto.randomUUID();
   const spend = await applyRewardChanges({
     userId,
     changes: { fruits: -1 },
     sourceType: "feed",
-    sourceId: crypto.randomUUID(),
+    sourceId: eventId,
   });
   if (!spend.applied || spend.balances.fruits !== before.fruits - 1) {
     throw new Error("果子没有扣除，请重试");
   }
   const daily = await completeDailyTask(userId, "feed");
-  return { ...daily, balances: { ...daily.balances, fruits: spend.balances.fruits } };
+  const interactionBonus = await claimInteractionBonus({ userId, interaction: "feed", sourceId: eventId });
+  return { ...daily, balances: interactionBonus.balances, interactionBonus };
 }
 
 export async function completeHideAndSeek(userId: string) {
-  const database = await readyRuntimeDatabase();
-  if (!database) throw new Error("捉迷藏记录暂时不可用");
-  const now = Date.now();
-  const dateKey = chinaDayKey(now);
-  await ensureDailyState(database, userId, dateKey, now);
-  const prior = await dailyState(database, userId, dateKey);
-  if (!prior) throw new Error("捉迷藏记录暂时不可用");
-  if (prior.hide_completed >= 5) {
-    return { ...formattedDaily(prior, dateKey), balances: await getRewardBalances(database, userId), rewarded: false };
+  const counter = await updateDailyCounter({ userId, column: "hide_completed", limit: 5 });
+  if (!counter.changed) {
+    return { ...counter.formatted, balances: await getRewardBalances(counter.database, userId), rewarded: false };
   }
-  const nextCompleted = prior.hide_completed + 1;
-  await database.run(
-    "UPDATE user_daily_state SET hide_completed = ?, updated_at = ? WHERE user_id = ? AND date_key = ?",
-    [nextCompleted, now, userId, dateKey],
-  );
   const reward = await applyRewardChanges({
     userId,
     changes: { stars: 1 },
     sourceType: "hide-and-seek",
-    sourceId: `${dateKey}:${nextCompleted}`,
+    sourceId: `${counter.dateKey}:${counter.count}`,
   });
-  const updated = await dailyState(database, userId, dateKey);
-  if (!updated) throw new Error("捉迷藏记录暂时不可用");
-  return { ...formattedDaily(updated, dateKey), balances: reward.balances, rewarded: true };
+  const daily = await completeDailyTask(userId, "hide");
+  const interactionBonus = await claimInteractionBonus({
+    userId,
+    interaction: "hide",
+    sourceId: `${counter.dateKey}:${counter.count}`,
+  });
+  return {
+    ...counter.formatted,
+    dailyPlan: daily.dailyPlan,
+    balances: interactionBonus.balances,
+    interactionBonus,
+    dailyRewardedNow: daily.dailyRewardedNow,
+    rewarded: reward.applied,
+  };
+}
+
+export async function swimWithTurtle(userId: string) {
+  const eventId = crypto.randomUUID();
+  const daily = await completeDailyTask(userId, "swim");
+  const interactionBonus = await claimInteractionBonus({ userId, interaction: "swim", sourceId: eventId });
+  return { ...daily, balances: interactionBonus.balances, interactionBonus };
 }
 
 async function validBook(database: RuntimeDatabase, bookId: string) {
@@ -254,7 +157,7 @@ export async function finishBook(input: {
     sourceType: "book-completed",
     sourceId: bookId,
   });
-  const daily = await completeDailyTask(input.userId, "reading");
+  const daily = await getDailyState(input.userId);
   return { balances: daily.balances, dailyPlan: daily.dailyPlan, rewarded: reward.applied };
 }
 
@@ -323,7 +226,7 @@ export async function finishTravel(input: {
   const sourceId = String(active.started_at);
   const reward = await applyRewardChanges({
     userId: input.userId,
-    changes: { stars: 4, fruits: 1, play_tickets: 1 },
+    changes: { stars: 4, fruits: 1 },
     sourceType: "travel-completed",
     sourceId,
   });
@@ -353,5 +256,14 @@ export async function finishTravel(input: {
     sql: "DELETE FROM user_active_travel WHERE user_id = ? AND started_at = ?",
     params: [input.userId, active.started_at],
   }]);
-  return { balances: reward.balances, recordId: sourceId };
+  const travelPlayTicket = await claimTravelPlayTicket(input.userId, sourceId);
+  const daily = await completeDailyTask(input.userId, "travel");
+  return {
+    balances: daily.balances,
+    dailyPlan: daily.dailyPlan,
+    dailyRewardedNow: daily.dailyRewardedNow,
+    recordId: sourceId,
+    travelPlayTicketAwarded: travelPlayTicket.awarded,
+    rewarded: reward.applied,
+  };
 }
