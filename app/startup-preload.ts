@@ -170,6 +170,12 @@ function delay(duration: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, duration));
 }
 
+function calculateResourcePercent(completed: number, total: number) {
+  if (total <= 0) return 0;
+  if (completed >= total) return 100;
+  return Math.min(99, Math.floor(completed / total * 100));
+}
+
 export async function preloadStartupAssets(
   onProgress: (progress: StartupPreloadProgress) => void,
   externalSignal?: AbortSignal,
@@ -204,7 +210,7 @@ export async function preloadStartupAssets(
   ];
 
   const notify = (kind: "image" | "music") => {
-    const percent = resources.length ? Math.round(completed / resources.length * 100) : 100;
+    const percent = calculateResourcePercent(completed, resources.length);
     onProgress({
       completed,
       total: resources.length,

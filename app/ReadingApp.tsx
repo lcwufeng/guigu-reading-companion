@@ -1816,11 +1816,14 @@ export default function ReadingApp({
     }, controller.signal).then((result) => {
       if (!active) return;
       const ready = result.completed === result.total && result.failed === 0 && !result.timedOut;
+      const settledPercent = ready
+        ? 100
+        : Math.min(99, Math.floor(result.completed / Math.max(1, result.total) * 100));
       setStartupLoad({
         completed: result.completed,
         total: result.total,
         failed: result.failed,
-        percent: 100,
+        percent: settledPercent,
         label: ready
           ? "主要界面图片和背景音乐准备完成"
           : result.timedOut
@@ -3190,8 +3193,10 @@ export default function ReadingApp({
   const selectedAchievement = achievementOverview?.selectedAchievementId
     ? achievementById.get(achievementOverview.selectedAchievementId) || null
     : null;
-  const startupProgress = Math.min(100, Math.round(startupLoad.percent * 0.92 + (hydrated ? 8 : 0)));
   const startupPrepared = hydrated && startupLoad.ready;
+  const startupProgress = startupPrepared
+    ? 100
+    : Math.min(99, Math.floor(startupLoad.percent * 0.92 + (hydrated ? 8 : 0)));
   if (!startupPrepared || !startupEntered) {
     const startupLabel = startupLoad.ready && !hydrated ? "正在读取你的专属学习进度" : startupLoad.label;
     return (

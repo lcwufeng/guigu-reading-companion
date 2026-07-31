@@ -63,7 +63,11 @@ test("sound settings and post-login preload are account-aware and narration-awar
   assert.match(startupPreload, /runWithConcurrency\(musicTasks, 2\)/);
   assert.match(startupPreload, /getBackgroundMusicSources\(\)/);
   assert.match(startupPreload, /prepareStartupMusic\(controller\.signal\)/);
+  assert.match(startupPreload, /completed >= total\) return 100/);
+  assert.match(startupPreload, /Math\.min\(99, Math\.floor\(completed \/ total \* 100\)\)/);
   assert.match(readingApp, /result\.completed === result\.total && result\.failed === 0 && !result\.timedOut/);
+  assert.match(readingApp, /percent: settledPercent/);
+  assert.match(readingApp, /startupPrepared\s*\?\s*100\s*:\s*Math\.min\(99, Math\.floor/);
   assert.match(readingApp, /重新加载主要资源/);
   assert.match(readingApp, /if \(view === "travel"\) return "travel"/);
   assert.match(soundSystem, /minimumEffectInterval/);
