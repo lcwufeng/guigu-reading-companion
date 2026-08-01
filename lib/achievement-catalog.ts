@@ -208,9 +208,9 @@ export const achievementCatalog: AchievementDefinition[] = [
     level: 4,
     title: "乐园全能王",
     shortDescription: "龟龟乐园的全部挑战都留下了你的名字。",
-    requirement: "通关全部 8 个小游戏",
+    requirement: "通关全部 10 个小游戏",
     metricKey: "gamesCompleted",
-    target: 8,
+    target: 10,
     badgeSrc: "/assets/achievements/park-champion.webp",
   },
   {

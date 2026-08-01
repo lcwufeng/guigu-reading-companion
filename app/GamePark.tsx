@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- The game reuses the project's local pixel-art assets. */
 "use client";
 
-import { BookOpen, ChevronLeft, ChevronRight, Clock3, CloudSun, Gamepad2, Heart, ListOrdered, Lock, Map, Medal, Plane, Search, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Clock3, Cloud, CloudSun, Gamepad2, Heart, ListOrdered, Lock, Map, Medal, Plane, Search, Shell, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
 import { lazy, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import {
   GAME_PARK_ORDER,
@@ -14,7 +14,9 @@ import {
 } from "./game-park-types";
 import { emitSoundEffect } from "./sound-system";
 const CourierGame = lazy(() => import("./CourierGame"));
+const CloudPairGame = lazy(() => import("./CloudPairGame"));
 const LotusJumpGame = lazy(() => import("./LotusJumpGame"));
+const ShellMemoryGame = lazy(() => import("./ShellMemoryGame"));
 const SpotDifferenceGame = lazy(() => import("./SpotDifferenceGame"));
 const StoryPuzzleGame = lazy(() => import("./StoryPuzzleGame"));
 const TortoiseRaceGame = lazy(() => import("./TortoiseRaceGame"));
@@ -37,6 +39,8 @@ const GAME_NAMES: Record<GameParkGameId, string> = {
   "story-puzzle": "拼故事",
   "turtle-sky": "龟龟飞机大战",
   "tortoise-race": "龟兔赛跑",
+  "shell-memory": "贝壳翻翻乐",
+  "cloud-pairs": "云朵配对",
 };
 
 function GameLeaderboardPreview({
@@ -732,14 +736,40 @@ export default function GamePark({
                 </button>
               </div>
             </article>
-          </div>
-        </section>
-
-        <section className="game-park-coming" aria-label="正在准备的小游戏">
-          <header><Sparkles aria-hidden="true" /><div><h2>更多游戏正在准备</h2><p>以后可以在同一个乐园里选择不同玩法。</p></div></header>
-          <div>
-            <article><Lock aria-hidden="true" /><strong>贝壳翻翻乐</strong><span>练一练观察和记忆</span></article>
-            <article><Lock aria-hidden="true" /><strong>云朵配对</strong><span>把有关联的图案连起来</span></article>
+            <article className={`game-park-choice shell ${isGameUnlocked("shell-memory") ? "" : "locked"}`}>
+              <div className="game-park-choice-art" aria-hidden="true">
+                <Shell />
+                <span>🐚</span><span>⭐</span><span>🦀</span>
+                <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+              </div>
+              <div>
+                <small>五关观察与记忆游戏</small>
+                <h3>贝壳翻翻乐</h3>
+                <p>先记住贝壳里的海洋图案，再翻开两个贝壳寻找相同的一对。</p>
+                <ul><li>从 3 对增加到 10 对</li><li>观察时间逐关缩短</li><li>翻错会减少爱心</li></ul>
+                <GameLeaderboardPreview board={leaderboards?.["shell-memory"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("shell-memory")} />
+                <button type="button" disabled={playTickets < 1 || !isGameUnlocked("shell-memory")} onClick={() => openTicketedGame("shell-memory")}>
+                  {gameButtonLabel("shell-memory")} {isGameUnlocked("shell-memory") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
+                </button>
+              </div>
+            </article>
+            <article className={`game-park-choice cloud ${isGameUnlocked("cloud-pairs") ? "" : "locked"}`}>
+              <div className="game-park-choice-art" aria-hidden="true">
+                <Cloud />
+                <span>☀️</span><span>☂️</span><span>💡</span>
+                <img src={`${ASSET}/characters/turtle/turtle_excited.png`} alt="" />
+              </div>
+              <div>
+                <small>五关联想与逻辑游戏</small>
+                <h3>云朵配对</h3>
+                <p>把真正有关联的两朵云配起来，从生活常识一路挑战到因果推理。</p>
+                <ul><li>天气与生活用品</li><li>用途和测量工具</li><li>挑战“因为…所以…”</li></ul>
+                <GameLeaderboardPreview board={leaderboards?.["cloud-pairs"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("cloud-pairs")} />
+                <button type="button" disabled={playTickets < 1 || !isGameUnlocked("cloud-pairs")} onClick={() => openTicketedGame("cloud-pairs")}>
+                  {gameButtonLabel("cloud-pairs")} {isGameUnlocked("cloud-pairs") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
+                </button>
+              </div>
+            </article>
           </div>
         </section>
       </section>
@@ -842,6 +872,30 @@ export default function GamePark({
         turtleName={turtleName}
         onBack={leaveChallenge}
         onComplete={(detail) => onLearningGameComplete({ game: "tortoise-race", detail }, activeRunId)}
+      />
+    );
+  }
+
+  if (activeGame === "shell-memory") {
+    return challengeFrame(
+      <ShellMemoryGame
+        key={challengeRunKey}
+        turtleName={turtleName}
+        onBack={leaveChallenge}
+        onMistake={registerMistake}
+        onComplete={(detail) => onLearningGameComplete({ game: "shell-memory", detail }, activeRunId)}
+      />
+    );
+  }
+
+  if (activeGame === "cloud-pairs") {
+    return challengeFrame(
+      <CloudPairGame
+        key={challengeRunKey}
+        turtleName={turtleName}
+        onBack={leaveChallenge}
+        onMistake={registerMistake}
+        onComplete={(detail) => onLearningGameComplete({ game: "cloud-pairs", detail }, activeRunId)}
       />
     );
   }

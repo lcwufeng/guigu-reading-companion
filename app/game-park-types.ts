@@ -17,7 +17,7 @@ export type FruitCatchResult = {
 };
 
 export type LearningMiniGameResult = {
-  game: "turtle-courier" | "weather-outfit" | "lotus-jump" | "spot-difference" | "story-puzzle" | "turtle-sky" | "tortoise-race";
+  game: "turtle-courier" | "weather-outfit" | "lotus-jump" | "spot-difference" | "story-puzzle" | "turtle-sky" | "tortoise-race" | "shell-memory" | "cloud-pairs";
   detail: string;
   score?: number;
   secondaryScore?: number;

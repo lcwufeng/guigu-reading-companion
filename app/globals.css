@@ -13263,3 +13263,171 @@ button:disabled {
     text-align: center;
   }
 }
+
+/* 贝壳翻翻乐与云朵配对：沿用乐园的像素风卡片、粗描边和高对比大字。 */
+.game-park-choice.shell { background: linear-gradient(135deg, #d9f2ef, #ffe9c9); border-color: #4e9b9b; }
+.game-park-choice.cloud { background: linear-gradient(135deg, #d9efff, #f5e8ff); border-color: #6e95c3; }
+.game-park-choice.shell .game-park-choice-art {
+  background: radial-gradient(circle at 50% 88%, #f6dda2 0 31%, transparent 32%), linear-gradient(#76c9e0 0 54%, #3b9fc3 55% 100%);
+}
+.game-park-choice.cloud .game-park-choice-art {
+  background: radial-gradient(ellipse at 25% 28%, #fff 0 14%, transparent 15%), radial-gradient(ellipse at 77% 19%, #fff 0 12%, transparent 13%), linear-gradient(#73c8ef, #d8efff);
+}
+
+.shell-memory-layout,
+.cloud-pair-layout {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  margin: 14px auto 0;
+  max-width: 1500px;
+  padding: 0 16px 22px;
+}
+
+.shell-memory-board {
+  background: linear-gradient(#70cbe1 0 47%, #2296bc 48% 67%, #e4c77c 68% 100%);
+  border: 4px solid #3b8095;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,.4), 0 9px 0 #376c79;
+  min-height: 590px;
+  overflow: hidden;
+  padding: 28px 30px 72px;
+  position: relative;
+}
+.shell-sea-decoration { inset: 0; overflow: hidden; pointer-events: none; position: absolute; }
+.shell-sea-decoration i { border: 3px solid rgba(255,255,255,.44); border-radius: 50%; height: 95px; left: 8%; position: absolute; top: 12%; width: 190px; }
+.shell-sea-decoration i:nth-child(2) { height: 70px; left: 58%; top: 32%; width: 150px; }
+.shell-sea-decoration i:nth-child(3) { height: 42px; left: 34%; top: 4%; width: 82px; }
+.shell-sea-decoration span { bottom: 17px; color: #92713c; font-size: 26px; font-weight: 950; left: 24px; position: absolute; }
+.shell-card-grid { display: grid; gap: clamp(8px, 1.2vw, 15px); margin: auto; max-width: 900px; position: relative; z-index: 2; }
+.shell-memory-card { aspect-ratio: 1.08; background: transparent; border: 0; cursor: pointer; min-height: 0; padding: 0; perspective: 700px; }
+.shell-memory-card:disabled { cursor: default; opacity: 1; }
+.shell-card-inner { display: block; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 420ms cubic-bezier(.2,.75,.25,1.25); width: 100%; }
+.shell-memory-card.revealed .shell-card-inner { transform: rotateY(180deg); }
+.shell-card-back,
+.shell-card-front {
+  align-items: center;
+  backface-visibility: hidden;
+  border: 3px solid #8a5b2c;
+  border-radius: 46% 46% 35% 35%;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.42), 0 5px 0 #70451f;
+  display: flex;
+  height: calc(100% - 5px);
+  justify-content: center;
+  position: absolute;
+  width: 100%;
+}
+.shell-card-back { background: linear-gradient(145deg, #ffe7a9, #e9a75c); color: #87532a; font-size: clamp(28px, 4.3vw, 58px); }
+.shell-card-front { background: linear-gradient(145deg, #fff9d9, #def4e7); flex-direction: column; gap: 3px; transform: rotateY(180deg); }
+.shell-card-front b { font-size: clamp(24px, 3.7vw, 50px); line-height: 1; }
+.shell-card-front small { color: #56432f; font-size: clamp(11px, 1.25vw, 17px); font-weight: 950; }
+.shell-memory-card.matched .shell-card-front { border-color: #4b985d; box-shadow: inset 0 0 0 3px rgba(255,255,255,.5), 0 5px 0 #347347, 0 0 18px #fff3a4; }
+.shell-memory-turtle { bottom: 4px; filter: drop-shadow(0 6px 3px rgba(45,63,39,.25)); height: 82px; object-fit: contain; position: absolute; right: 20px; width: 92px; }
+
+.shell-memory-task,
+.cloud-pair-task {
+  align-self: start;
+  background: linear-gradient(145deg, #fff9db, #f4e6bd);
+  border: 3px solid #bd8744;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.5), 0 7px 0 #96662f;
+  padding: 20px;
+  position: sticky;
+  top: 12px;
+}
+.shell-memory-task > small,
+.cloud-pair-task > small { color: #53803e; font-size: 17px; font-weight: 950; }
+.shell-memory-task h2,
+.cloud-pair-task h2 { color: #4d3119; font-size: 34px; margin: 4px 0 8px; }
+.shell-memory-task > p,
+.cloud-pair-task > p { color: #705538; font-size: 19px; font-weight: 780; line-height: 1.55; }
+.shell-memory-stats,
+.cloud-pair-stats { display: grid; gap: 7px; grid-template-columns: repeat(3, 1fr); margin: 13px 0; }
+.cloud-pair-stats { grid-template-columns: repeat(2, 1fr); }
+.shell-memory-stats span,
+.cloud-pair-stats span { align-items: center; background: rgba(255,255,255,.7); border: 2px solid #d7b77c; border-radius: 10px; color: #755634; display: flex; flex-direction: column; font-size: 13px; font-weight: 850; justify-content: center; min-height: 61px; text-align: center; }
+.shell-memory-stats strong,
+.cloud-pair-stats strong { color: #3f702f; font-size: 21px; }
+.shell-memory-stats svg { height: 17px; width: 17px; }
+.shell-memory-actions,
+.cloud-pair-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 13px; }
+.shell-memory-actions button,
+.cloud-pair-actions button { align-items: center; background: #fff4cf; border: 2px solid #af7e3f; border-radius: 10px; box-shadow: 0 4px 0 #926332; color: #65441f; display: flex; flex: 1 1 125px; font-size: 17px; font-weight: 950; gap: 6px; justify-content: center; min-height: 48px; padding: 8px 12px; }
+.shell-memory-actions button.primary,
+.cloud-pair-actions button.primary { background: #67aa43; border-color: #477d30; box-shadow: 0 4px 0 #376625; color: #fff; }
+.shell-memory-actions svg,
+.cloud-pair-actions svg { height: 19px; width: 19px; }
+
+.cloud-pair-board {
+  align-items: stretch;
+  background: linear-gradient(#79ccef, #dff4ff 58%, #bfe3aa 59%);
+  border: 4px solid #5f93b1;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,.45), 0 9px 0 #416f8c;
+  display: grid;
+  gap: 11px;
+  grid-template-columns: minmax(0,1fr) 88px minmax(0,1fr);
+  min-height: 590px;
+  overflow: hidden;
+  padding: 22px;
+}
+.cloud-pair-column { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cloud-pair-column h3 { color: #315c78; font-size: 20px; margin: 0 0 3px; text-align: center; }
+.cloud-pair-column > button {
+  align-items: center;
+  background: linear-gradient(145deg, #fff, #e8f5ff);
+  border: 3px solid #75a4bf;
+  border-radius: 42px;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.75), 0 4px 0 #4d7995;
+  color: #3f5061;
+  cursor: pointer;
+  display: grid;
+  flex: 1 1 58px;
+  font-weight: 900;
+  gap: 7px;
+  grid-template-columns: 45px minmax(0,1fr) 22px;
+  min-height: 58px;
+  padding: 7px 12px;
+  text-align: left;
+}
+.cloud-pair-column > button b { font-size: 29px; text-align: center; }
+.cloud-pair-column > button span { font-size: clamp(15px, 1.3vw, 19px); line-height: 1.25; }
+.cloud-pair-column > button svg { color: #fff; height: 20px; width: 20px; }
+.cloud-pair-column > button.selected { background: #fff3aa; border-color: #d18c2f; box-shadow: 0 4px 0 #9b6525, 0 0 16px #fff1a2; transform: translateY(-2px); }
+.cloud-pair-column > button.matched { background: #75b95a; border-color: #467a36; box-shadow: 0 4px 0 #38652c; color: #fff; }
+.cloud-pair-column > button.hinted { animation: cloudPairHint .7s ease-in-out infinite alternate; }
+@keyframes cloudPairHint { from { box-shadow: 0 4px 0 #4d7995; } to { box-shadow: 0 4px 0 #4d7995, 0 0 20px 7px #fff29b; } }
+.cloud-pair-path { align-items: center; color: rgba(255,255,255,.92); display: flex; flex-direction: column; justify-content: center; position: relative; }
+.cloud-pair-path > svg { height: 70px; width: 70px; }
+.cloud-pair-path > span { color: #477998; font-size: 31px; font-weight: 950; }
+.cloud-pair-path img { bottom: 3px; filter: drop-shadow(0 5px 3px rgba(43,69,45,.23)); height: 86px; object-fit: contain; position: absolute; width: 88px; }
+
+@media (max-width: 1000px) {
+  .shell-memory-layout,
+  .cloud-pair-layout { grid-template-columns: 1fr; }
+  .shell-memory-task,
+  .cloud-pair-task { position: static; }
+}
+
+@media (max-width: 820px) {
+  .shell-memory-layout,
+  .cloud-pair-layout { gap: 12px; padding: 0 7px 18px; }
+  .shell-memory-board { min-height: 0; padding: 18px 10px 58px; }
+  .shell-card-grid { gap: 7px; }
+  .shell-card-back,
+  .shell-card-front { border-width: 2px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.42), 0 3px 0 #70451f; }
+  .shell-memory-turtle { height: 62px; right: 8px; width: 72px; }
+  .shell-memory-task h2,
+  .cloud-pair-task h2 { font-size: 29px; }
+  .shell-memory-task > p,
+  .cloud-pair-task > p { font-size: 18px; }
+  .cloud-pair-board { gap: 5px; grid-template-columns: minmax(0,1fr) 38px minmax(0,1fr); min-height: 0; padding: 12px 7px; }
+  .cloud-pair-column { gap: 8px; }
+  .cloud-pair-column h3 { font-size: 16px; }
+  .cloud-pair-column > button { border-width: 2px; gap: 4px; grid-template-columns: 31px minmax(0,1fr) 17px; min-height: 58px; padding: 6px 7px; }
+  .cloud-pair-column > button b { font-size: 23px; }
+  .cloud-pair-column > button span { font-size: 14px; }
+  .cloud-pair-path > svg { height: 35px; width: 35px; }
+  .cloud-pair-path > span { font-size: 21px; }
+  .cloud-pair-path img { display: none; }
+}

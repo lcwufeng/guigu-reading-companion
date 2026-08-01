@@ -7,6 +7,8 @@ export const MINI_GAME_ORDER = [
   "story-puzzle",
   "turtle-sky",
   "tortoise-race",
+  "shell-memory",
+  "cloud-pairs",
 ] as const;
 
 export type MiniGameId = typeof MINI_GAME_ORDER[number];
@@ -82,6 +84,22 @@ export const MINI_GAME_RANKING_RULES: Record<MiniGameId, MiniGameRankingRule> = 
     metric: "time",
     metricLabel: "最快到达",
     ruleText: "龟龟获胜后，按从进入比赛到到达终点的用时从短到长排列。",
+    secondaryDirection: null,
+    secondaryLabel: null,
+  },
+  "shell-memory": {
+    gameName: "贝壳翻翻乐",
+    metric: "time",
+    metricLabel: "最快通关",
+    ruleText: "完成全部五关后，按找齐所有贝壳配对的总用时从短到长排列。",
+    secondaryDirection: null,
+    secondaryLabel: null,
+  },
+  "cloud-pairs": {
+    gameName: "云朵配对",
+    metric: "time",
+    metricLabel: "最快通关",
+    ruleText: "完成全部五关后，按找出所有关联配对的总用时从短到长排列。",
     secondaryDirection: null,
     secondaryLabel: null,
   },

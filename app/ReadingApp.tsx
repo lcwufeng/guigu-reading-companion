@@ -1642,6 +1642,8 @@ export default function ReadingApp({
       "story-puzzle": "拼故事",
       "turtle-sky": "龟龟飞机大战",
       "tortoise-race": "龟兔赛跑",
+      "shell-memory": "贝壳翻翻乐",
+      "cloud-pairs": "云朵配对",
     }[result.game];
     try {
       const response = await fetch(`${BASE_PATH}/api/minigames`, {
@@ -1688,6 +1690,8 @@ export default function ReadingApp({
       "story-puzzle": "拼故事",
       "turtle-sky": "龟龟飞机大战",
       "tortoise-race": "龟兔赛跑",
+      "shell-memory": "贝壳翻翻乐",
+      "cloud-pairs": "云朵配对",
     }[gameId];
     try {
       const response = await fetch(`${BASE_PATH}/api/minigames`, {
@@ -3538,7 +3542,7 @@ export default function ReadingApp({
                 <span>
                   <small>轻松玩一小会儿</small>
                   <strong>龟龟乐园</strong>
-                  <em>8 个小游戏开放啦</em>
+                  <em>10 个小游戏开放啦</em>
                 </span>
                 <ChevronRight aria-hidden="true" />
               </button>

@@ -330,6 +330,8 @@ async function saveNormalizedState(
     "story-puzzle",
     "turtle-sky",
     "tortoise-race",
+    "shell-memory",
+    "cloud-pairs",
   ]);
   if (trustedImport) {
     for (const rawGameId of list(state.completedMiniGames).slice(0, validMinigames.size)) {
