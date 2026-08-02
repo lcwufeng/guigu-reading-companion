@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
@@ -31,6 +32,7 @@ final class UpdateManager {
     private static final String UPDATE_MANIFEST = "https://guiguibandu.online/android/latest.json";
     private final Activity activity;
     private final DownloadManager downloads;
+    private final SharedPreferences preferences;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private long activeDownload = -1;
     private Uri pendingInstallUri;
@@ -48,9 +50,13 @@ final class UpdateManager {
     UpdateManager(Activity activity) {
         this.activity = activity;
         downloads = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+        preferences = activity.getSharedPreferences("app_updates", Context.MODE_PRIVATE);
+        activeDownload = preferences.getLong("download_id", -1);
+        expectedSha256 = preferences.getString("sha256", "");
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         if (Build.VERSION.SDK_INT >= 33) activity.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
         else activity.registerReceiver(receiver, filter);
+        if (activeDownload >= 0) resumeCompletedDownload();
     }
 
     void checkForUpdates(boolean userInitiated) {
@@ -99,7 +105,21 @@ final class UpdateManager {
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
         request.setDestinationInExternalFilesDir(activity, "updates", "guiguibandu-" + versionName + ".apk");
         activeDownload = downloads.enqueue(request);
+        preferences.edit().putLong("download_id", activeDownload).putString("sha256", expectedSha256).apply();
         Toast.makeText(activity, "已开始下载，可以继续使用龟龟伴读", Toast.LENGTH_LONG).show();
+    }
+
+    private void resumeCompletedDownload() {
+        DownloadManager.Query query = new DownloadManager.Query().setFilterById(activeDownload);
+        try (Cursor cursor = downloads.query(query)) {
+            if (!cursor.moveToFirst()) {
+                clearDownloadState();
+                return;
+            }
+            int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+            if (status == DownloadManager.STATUS_SUCCESSFUL) verifyAndInstall(activeDownload);
+            else if (status == DownloadManager.STATUS_FAILED) clearDownloadState();
+        }
     }
 
     private void verifyAndInstall(long downloadId) {
@@ -108,6 +128,7 @@ final class UpdateManager {
             if (!cursor.moveToFirst()) return;
             int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
             if (status != DownloadManager.STATUS_SUCCESSFUL) {
+                clearDownloadState();
                 Toast.makeText(activity, "更新包下载失败，请重新尝试", Toast.LENGTH_LONG).show();
                 return;
             }
@@ -121,6 +142,7 @@ final class UpdateManager {
                 }
                 activity.runOnUiThread(() -> install(uri));
             } catch (Exception error) {
+                clearDownloadState();
                 activity.runOnUiThread(() -> Toast.makeText(activity, "更新包安全校验失败，已停止安装", Toast.LENGTH_LONG).show());
             }
         });
@@ -143,6 +165,7 @@ final class UpdateManager {
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
         activity.startActivity(install);
         pendingInstallUri = null;
+        clearDownloadState();
     }
 
     void resumePendingInstall() {
@@ -175,5 +198,11 @@ final class UpdateManager {
     void close() {
         try { activity.unregisterReceiver(receiver); } catch (IllegalArgumentException ignored) { }
         executor.shutdownNow();
+    }
+
+    private void clearDownloadState() {
+        activeDownload = -1;
+        expectedSha256 = "";
+        preferences.edit().remove("download_id").remove("sha256").apply();
     }
 }

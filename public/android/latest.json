@@ -2,7 +2,7 @@
   "versionCode": 1,
   "versionName": "1.0.0",
   "apkUrl": "https://guiguibandu.online/android/guiguibandu-1.0.0.apk",
-  "sha256": "75bc0bb2593dabfe0cc69e08774b5759868e2d4af26089513d5b208fd60c0a1e",
+  "sha256": "54aa2276d47409be297de6255f86771cb18476bec4034e6972d4f727699a98d1",
   "releaseNotes": "首个安卓平板版本：支持完整的龟龟伴读功能，并可在应用菜单中检查和安装更新。",
   "publishedAt": "2026-08-02T09:30:00+08:00"
 }
