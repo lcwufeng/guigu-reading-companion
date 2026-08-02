@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Compass,
+  Download,
   Edit3,
   Gamepad2,
   Lightbulb,
@@ -64,6 +65,25 @@ import {
 import { preloadStartupAssets } from "./startup-preload";
 
 type View = "home" | "library" | "mistakes" | "chat" | "travel" | "journal" | "leaderboard" | "achievements" | "explore" | "games";
+
+declare global {
+  interface Window {
+    GuiguAndroid?: {
+      checkForUpdates: () => void;
+      getVersionName: () => string;
+    };
+  }
+}
+
+const subscribeAndroidBridge = () => () => {};
+const getAndroidVersion = () => {
+  try {
+    return window.GuiguAndroid?.getVersionName() || null;
+  } catch {
+    return "Android";
+  }
+};
+const getServerAndroidVersion = () => null;
 
 function soundSceneForView(view: View): SoundScene {
   if (view === "library") return "library";
@@ -1256,6 +1276,7 @@ export default function ReadingApp({
   const [startupEntered, setStartupEntered] = useState(false);
   const [startupEntering, setStartupEntering] = useState(false);
   const [soundPanelOpen, setSoundPanelOpen] = useState(false);
+  const androidVersion = useSyncExternalStore(subscribeAndroidBridge, getAndroidVersion, getServerAndroidVersion);
   const [busy, setBusy] = useState<BusyAction>(null);
   const [actionProgress, setActionProgress] = useState(0);
   const [turtleSprite, setTurtleSprite] = useState<string | null>(null);
@@ -1404,6 +1425,7 @@ export default function ReadingApp({
   }, []);
 
   const soundScene = soundSceneForView(view);
+
   const playSound = useCallback((effect: SoundEffectId) => {
     getSoundEngine().playEffect(effect);
   }, []);
@@ -3495,6 +3517,17 @@ export default function ReadingApp({
                 >
                   播放试听音
                 </button>
+                {androidVersion && (
+                  <section className="android-update-entry" aria-label="应用更新">
+                    <div>
+                      <Download aria-hidden="true" />
+                      <span><b>应用更新</b><small>当前版本 {androidVersion}</small></span>
+                    </div>
+                    <button type="button" onClick={() => window.GuiguAndroid?.checkForUpdates()}>
+                      检查更新
+                    </button>
+                  </section>
+                )}
               </section>
             )}
           </div>

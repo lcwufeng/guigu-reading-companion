@@ -45,3 +45,10 @@ next-env.d.ts
 /work/
 /tmp/
 __pycache__/
+
+# Android build outputs and private release signing material
+/android-tablet/.gradle/
+/android-tablet/app/build/
+/android-tablet/signing.properties
+/android-tablet/signing/
+/artifacts/android/*.apk

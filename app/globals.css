@@ -11844,6 +11844,58 @@ button:disabled {
   opacity: 0.55;
 }
 
+.android-update-entry {
+  align-items: center;
+  border-top: 2px dashed rgba(148, 103, 38, 0.28);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 13px;
+}
+
+.android-update-entry > div {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.android-update-entry > div > svg {
+  color: #4b9d43;
+  flex: 0 0 auto;
+  height: 24px;
+  width: 24px;
+}
+
+.android-update-entry span {
+  display: grid;
+  gap: 2px;
+}
+
+.android-update-entry b {
+  font-size: 16px;
+}
+
+.android-update-entry small {
+  color: #7b684e;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.android-update-entry > button {
+  background: linear-gradient(180deg, #ffce4a, #eca927);
+  border: 2px solid #9b6723;
+  border-radius: 10px;
+  box-shadow: 0 3px 0 #7d4d20;
+  color: #54330f;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 7px 10px;
+}
+
 @media (max-width: 820px) {
   .topbar {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) 82px;
