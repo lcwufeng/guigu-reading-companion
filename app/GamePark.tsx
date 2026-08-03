@@ -29,6 +29,7 @@ const ROUND_DURATION_MS = 30_000;
 const TICK_MS = 50;
 const SPAWN_INTERVAL_MS = 620;
 export const FRUIT_CATCH_TARGET_SCORE = 12;
+const DEFAULT_CHALLENGE_HEARTS = 5;
 
 const GAME_NAMES: Record<GameParkGameId, string> = {
   "fruit-catch": "龟龟接果子",
@@ -260,7 +261,7 @@ export default function GamePark({
   const [run, setRun] = useState<FruitCatchRun>(() => initialRun());
   const [earnedRewardThisRound, setEarnedRewardThisRound] = useState(false);
   const [ticketNotice, setTicketNotice] = useState("");
-  const [challengeHearts, setChallengeHearts] = useState(3);
+  const [challengeHearts, setChallengeHearts] = useState(DEFAULT_CHALLENGE_HEARTS);
   const [challengeFailed, setChallengeFailed] = useState(false);
   const [challengeRunKey, setChallengeRunKey] = useState(0);
   const [activeRunId, setActiveRunId] = useState("");
@@ -272,7 +273,7 @@ export default function GamePark({
   const [leaderboardGame, setLeaderboardGame] = useState<GameParkGameId | null>(null);
   const fieldRef = useRef<HTMLDivElement | null>(null);
   const reportedResultRef = useRef(false);
-  const challengeHeartsRef = useRef(3);
+  const challengeHeartsRef = useRef(DEFAULT_CHALLENGE_HEARTS);
   const ticketStartingRef = useRef(false);
   const lastCatchPulseRef = useRef(0);
 
@@ -339,8 +340,8 @@ export default function GamePark({
   };
 
   const resetChallenge = () => {
-    challengeHeartsRef.current = 3;
-    setChallengeHearts(3);
+    challengeHeartsRef.current = DEFAULT_CHALLENGE_HEARTS;
+    setChallengeHearts(DEFAULT_CHALLENGE_HEARTS);
     setChallengeFailed(false);
     setHeartNotice("");
   };
@@ -524,11 +525,11 @@ export default function GamePark({
   const challengeFrame = (content: ReactNode) => (
     <div className="game-challenge-shell">
       <div className={`game-challenge-health ${challengeHearts === 0 ? "empty" : ""}`} aria-live="polite">
-        <span><Heart aria-hidden="true" /> 1 张游玩票的生命</span>
+        <span><Heart aria-hidden="true" /> {activeGame === "shell-memory" ? "本关翻错不扣爱心" : `1 张游玩票有 ${DEFAULT_CHALLENGE_HEARTS} 颗爱心`}</span>
         <strong aria-label={`还剩${challengeHearts}颗爱心`}>
-          {[0, 1, 2].map((index) => <Heart key={index} className={index < challengeHearts ? "filled" : ""} aria-hidden="true" />)}
+          {Array.from({ length: DEFAULT_CHALLENGE_HEARTS }, (_, index) => <Heart key={index} className={index < challengeHearts ? "filled" : ""} aria-hidden="true" />)}
         </strong>
-        <small>{challengeHearts > 0 ? "选错一次少 1 颗" : "再选错一次会失败"}</small>
+        <small>{activeGame === "shell-memory" ? "多试几次，记住图案位置就好" : challengeHearts > 0 ? "选错一次少 1 颗" : "再选错一次会失败"}</small>
       </div>
       {heartNotice && !challengeFailed && <div className="game-heart-notice" role="status">{heartNotice}</div>}
       {!challengeFailed && content}
@@ -538,7 +539,7 @@ export default function GamePark({
           <div>
             <small>本次挑战结束</small>
             <h2>爱心用完后又选错了一次</h2>
-            <p>没关系，刚才的尝试已经帮助你发现容易出错的地方。再使用 1 张游玩票，就会重新得到 3 颗爱心。</p>
+            <p>没关系，刚才的尝试已经帮助你发现容易出错的地方。再使用 1 张游玩票，就会重新得到 {DEFAULT_CHALLENGE_HEARTS} 颗爱心。</p>
             <div>
               <button type="button" disabled={playTickets < 1} onClick={retryFailedChallenge}>
                 {playTickets < 1 ? "游玩票不足" : "使用 1 张票重新挑战"}
@@ -746,7 +747,7 @@ export default function GamePark({
                 <small>五关观察与记忆游戏</small>
                 <h3>贝壳翻翻乐</h3>
                 <p>先记住贝壳里的海洋图案，再翻开两个贝壳寻找相同的一对。</p>
-                <ul><li>从 3 对增加到 10 对</li><li>观察时间逐关缩短</li><li>翻错会减少爱心</li></ul>
+                <ul><li>从 3 对增加到 10 对</li><li>观察时间逐关缩短</li><li>翻错不扣爱心，可以慢慢想</li></ul>
                 <GameLeaderboardPreview board={leaderboards?.["shell-memory"] || null} loading={leaderboardsLoading} onOpen={() => setLeaderboardGame("shell-memory")} />
                 <button type="button" disabled={playTickets < 1 || !isGameUnlocked("shell-memory")} onClick={() => openTicketedGame("shell-memory")}>
                   {gameButtonLabel("shell-memory")} {isGameUnlocked("shell-memory") ? <ChevronRight aria-hidden="true" /> : <Lock aria-hidden="true" />}
@@ -853,6 +854,7 @@ export default function GamePark({
         key={challengeRunKey}
         turtleName={turtleName}
         hearts={challengeHearts}
+        maxHearts={DEFAULT_CHALLENGE_HEARTS}
         onBack={leaveChallenge}
         onMistake={registerMistake}
         onComplete={(detail, performance) => onLearningGameComplete({
@@ -882,7 +884,6 @@ export default function GamePark({
         key={challengeRunKey}
         turtleName={turtleName}
         onBack={leaveChallenge}
-        onMistake={registerMistake}
         onComplete={(detail) => onLearningGameComplete({ game: "shell-memory", detail }, activeRunId)}
       />
     );

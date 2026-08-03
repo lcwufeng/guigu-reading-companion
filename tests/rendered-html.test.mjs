@@ -316,6 +316,8 @@ test("provides ten responsive turtle games with progressive learning challenges 
   assert.match(gamePark, /playTickets < 1/);
   assert.match(gamePark, /GAME_PARK_ORDER/);
   assert.match(gamePark, /completedGames/);
+  assert.match(gamePark, /DEFAULT_CHALLENGE_HEARTS = 5/);
+  assert.match(gamePark, /Array\.from\(\{ length: DEFAULT_CHALLENGE_HEARTS \}/);
   assert.match(gamePark, /challengeHeartsRef\.current > 0/);
   assert.match(gamePark, /再选错一次会失败/);
   assert.match(gamePark, /使用 1 张票重新挑战/);
@@ -370,7 +372,8 @@ test("provides ten responsive turtle games with progressive learning challenges 
   assert.equal((shellGame.match(/id: "(?:three-pairs|four-pairs|six-pairs|eight-pairs|ten-pairs)"/g) || []).length, 5);
   assert.match(shellGame, /previewMs: 1_900/);
   assert.match(shellGame, /level\.symbols\.length/);
-  assert.match(shellGame, /onMistake\(\)/);
+  assert.doesNotMatch(shellGame, /onMistake\(\)/);
+  assert.match(shellGame, /翻错不扣爱心/);
   assert.match(shellGame, /完成贝壳翻翻乐5关/);
   assert.equal((cloudGame.match(/id: "(?:weather-tools|animal-homes|things-and-uses|measure-world|cause-and-result)"/g) || []).length, 5);
   assert.match(cloudGame, /因为……所以……/);

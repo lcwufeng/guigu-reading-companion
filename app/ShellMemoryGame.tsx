@@ -59,12 +59,10 @@ function makeDeck(level: ShellLevel) {
 export default function ShellMemoryGame({
   turtleName,
   onBack,
-  onMistake,
   onComplete,
 }: {
   turtleName: string;
   onBack: () => void;
-  onMistake: () => void;
   onComplete: (detail: string) => void;
 }) {
   const [levelIndex, setLevelIndex] = useState(0);
@@ -122,9 +120,8 @@ export default function ShellMemoryGame({
         setMatched(nextMatched);
         setFeedback(nextMatched.length === level.symbols.length ? "这一关的贝壳全部配对成功！" : `找到一对“${card.label}”！继续找下一对。`);
       } else {
-        onMistake();
         setWrongMatches((current) => current + 1);
-        setFeedback("这两个图案不一样，记住它们的位置再试一次。");
+        setFeedback("这两个图案不一样，不过翻错不扣爱心。记住它们的位置再试一次。");
       }
       setSelected([]);
       setResolving(false);

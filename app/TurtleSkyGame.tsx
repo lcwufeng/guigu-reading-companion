@@ -68,12 +68,14 @@ function createFlightObject(index: number, levelIndex: number): FlightObject {
 export default function TurtleSkyGame({
   turtleName,
   hearts,
+  maxHearts,
   onBack,
   onMistake,
   onComplete,
 }: {
   turtleName: string;
   hearts: number;
+  maxHearts: number;
   onBack: () => void;
   onMistake: () => void;
   onComplete: (detail: string, performance: { score: number; cloudHits: number }) => void;
@@ -265,12 +267,12 @@ export default function TurtleSkyGame({
             <p>不用点击方向按钮：鼠标移到哪条航线，龟龟就飞到哪里；手机可以直接拖动。</p>
             <div className="flight-stats" aria-live="polite">
               <span><Star aria-hidden="true" /><b>星光分数</b><strong>{run.score}/{mission.target}</strong></span>
-              <span><Heart aria-hidden="true" /><b>飞行爱心</b><strong>{hearts}/3</strong></span>
+              <span><Heart aria-hidden="true" /><b>飞行爱心</b><strong>{hearts}/{maxHearts}</strong></span>
               <span><Sparkles aria-hidden="true" /><b>已收集</b><strong>{run.collected}</strong></span>
               <span><Cloud aria-hidden="true" /><b>剩余波次</b><strong>{Math.max(0, mission.waves - run.spawned)}</strong></span>
             </div>
             <div className="flight-pointer-guide"><MousePointer2 aria-hidden="true" /><span><strong>鼠标跟随控制</strong><small>直接上下移动鼠标，龟龟会自动跟随。</small></span></div>
-            <div className="learning-game-feedback hint"><Sparkles aria-hidden="true" /><p>金色星星值 2 分。碰到乌云会少 1 颗爱心；三颗爱心用完后，再碰一次才会失败。</p></div>
+            <div className="learning-game-feedback hint"><Sparkles aria-hidden="true" /><p>金色星星值 2 分。碰到乌云会少 1 颗爱心；五颗爱心用完后，再碰一次才会失败。</p></div>
           </aside>
         </div>
       ) : (
