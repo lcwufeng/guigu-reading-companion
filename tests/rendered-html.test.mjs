@@ -181,6 +181,10 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(styles, /\.library-mode-reader \.chapter-drawer \{[\s\S]*?var\(--reader-sage\)/);
   assert.match(styles, /\.library-mode-reader \.reader-side-panel \{[\s\S]*?linear-gradient/);
   assert.match(styles, /\.library-mode-reader \.original-book-text p::selection/);
+  assert.match(styles, /Reader-first layout: keep the page dominant/);
+  assert.match(styles, /@media \(max-width: 1280px\), \(max-height: 700px\)/);
+  assert.match(styles, /\.library-mode-reader \.chapter-drawer,\s*\.library-mode-reader \.reader-side-panel \{\s*display: none;/);
+  assert.match(styles, /\.library-mode-reader \.complete-reader \.complete-reading-paper \{[\s\S]*?flex: 1 1 100%/);
 });
 
 test("provides a separate eight-domain knowledge expedition with evidence gates and spaced review", async () => {
