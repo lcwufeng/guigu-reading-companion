@@ -169,6 +169,10 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(readingApp, /六年级/);
   assert.match(readingApp, /setLibraryMode\("reader"\)/);
   assert.match(readingApp, /返回书架/);
+  assert.match(readingApp, /book-opening-overlay/);
+  assert.match(readingApp, /const immersiveReader = view === "library" && libraryMode === "reader"/);
+  assert.match(readingApp, /\{!immersiveReader && \(\s*<header className="topbar">/);
+  assert.match(readingApp, /\{!immersiveReader && <nav className="bottom-nav"/);
   assert.match(styles, /text-indent: 2em/);
   assert.match(styles, /book-inline-illustrations/);
   assert.match(styles, /library-shelf-screen/);
@@ -185,6 +189,8 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(styles, /@media \(max-width: 1280px\), \(max-height: 700px\)/);
   assert.match(styles, /\.library-mode-reader \.chapter-drawer,\s*\.library-mode-reader \.reader-side-panel \{\s*display: none;/);
   assert.match(styles, /\.library-mode-reader \.complete-reader \.complete-reading-paper \{[\s\S]*?flex: 1 1 100%/);
+  assert.match(styles, /@keyframes bookCoverOpen/);
+  assert.match(styles, /\.immersive-reader \.library-mode-reader \.complete-reader/);
 });
 
 test("provides a separate eight-domain knowledge expedition with evidence gates and spaced review", async () => {

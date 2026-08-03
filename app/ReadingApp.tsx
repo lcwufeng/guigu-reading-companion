@@ -1273,6 +1273,7 @@ export default function ReadingApp({
 }) {
   const [view, setView] = useState<View>("home");
   const [libraryMode, setLibraryMode] = useState<LibraryMode>("shelf");
+  const [bookOpening, setBookOpening] = useState<Book | null>(null);
   const [selectedGrade, setSelectedGrade] = useState<GradeLevel>(3);
   const [explorationDomains, setExplorationDomains] = useState<InterestDomain[]>([]);
   const [game, setGame] = useState<GameState>(initialState);
@@ -1386,6 +1387,7 @@ export default function ReadingApp({
   const voiceAbortRef = useRef<AbortController | null>(null);
   const accountStateLoadedRef = useRef(false);
   const restoredBookRef = useRef<Record<string, boolean>>({});
+  const bookOpeningTimerRef = useRef<number | null>(null);
   const readerTextRef = useRef<HTMLDivElement | null>(null);
   const bookAudioRef = useRef<HTMLAudioElement | null>(null);
   const bookAudioPageStartRef = useRef(0);
@@ -1395,6 +1397,10 @@ export default function ReadingApp({
   const travelCompletingRef = useRef(false);
   const achievementInitialSyncRef = useRef(false);
   const soundPanelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => () => {
+    if (bookOpeningTimerRef.current !== null) window.clearTimeout(bookOpeningTimerRef.current);
+  }, []);
 
   const mood = useMemo(
     () => clamp(0.35 * (100 - game.hunger) + 0.3 * game.cleanliness + 0.35 * (100 - game.boredom)),
@@ -2579,8 +2585,11 @@ export default function ReadingApp({
   };
 
   const chooseBook = (book: Book) => {
+    if (bookOpening) return;
     stopBookAudio();
-    setLibraryMode("reader");
+    if (bookOpeningTimerRef.current !== null) window.clearTimeout(bookOpeningTimerRef.current);
+    setBookOpening(book);
+    playSound("page-turn");
     setSelectedGrade(book.grade);
     setSelectedBook(book);
     setBookLoading(Boolean(book.source && !loadedBooks[book.id]));
@@ -2595,10 +2604,21 @@ export default function ReadingApp({
     setReaderSideTab("companion");
     setChapterListOpen(false);
     restoredBookRef.current[book.id] = false;
+
+    const enterReader = () => {
+      setLibraryMode("reader");
+      setBookOpening(null);
+      bookOpeningTimerRef.current = null;
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) enterReader();
+    else bookOpeningTimerRef.current = window.setTimeout(enterReader, 920);
   };
 
   const returnToLibraryShelf = () => {
     stopBookAudio();
+    if (bookOpeningTimerRef.current !== null) window.clearTimeout(bookOpeningTimerRef.current);
+    bookOpeningTimerRef.current = null;
+    setBookOpening(null);
     setLibraryMode("shelf");
     setChapterListOpen(false);
     setChapterQuestionOpen(false);
@@ -3346,6 +3366,7 @@ export default function ReadingApp({
 
   const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
   const navigationLocked = !!busy || !!hideTarget || !!traveling || miniGamePlaying;
+  const immersiveReader = view === "library" && libraryMode === "reader";
   const completedExplorationNodes = new Set(explorationOverview?.completedNodeIds || []);
   const dueExplorationNodes = new Set(explorationOverview?.dueReviewNodeIds || []);
   const masteredExplorationCount = Object.values(explorationOverview?.nodeProgress || {}).filter((progress) => progress.state === "mastered").length;
@@ -3452,7 +3473,7 @@ export default function ReadingApp({
   }
   return (
     <main
-      className={`app view-${view}`}
+      className={`app view-${view}${immersiveReader ? " immersive-reader" : ""}`}
       style={{
         "--home-background": `url("${ASSET}/optimized/backgrounds/main_home.webp")`,
         "--library-background": `url("${ASSET}/optimized/backgrounds/reading_room.webp")`,
@@ -3465,6 +3486,25 @@ export default function ReadingApp({
         "--daily-task-panel": `url("${ASSET}/ui/daily-tasks/panel.png")`,
       } as React.CSSProperties}
     >
+      {bookOpening && (
+        <div className="book-opening-overlay" role="status" aria-live="polite" aria-label={`正在翻开《${bookOpening.title}》`}>
+          <div className="book-opening-book" aria-hidden="true">
+            <div className="book-opening-pages">
+              <span><BookOpen /><i /></span>
+              <span><i /><i /><i /></span>
+            </div>
+            <div className={`book-opening-cover ${bookOpening.coverClass}`}>
+              <small>{bookOpening.category}</small>
+              <b>{bookOpening.title}</b>
+              <i>{bookOpening.author}</i>
+            </div>
+            <span className="book-opening-spine" />
+          </div>
+          <p>正在翻开《{bookOpening.title}》</p>
+        </div>
+      )}
+
+      {!immersiveReader && (
       <header className="topbar">
         <div className="identity-cluster">
           <img className="brand-logo" src={`${ASSET}/ui/supplied/brand/logo-20260715.png`} alt="龟龟伴读" />
@@ -3617,6 +3657,7 @@ export default function ReadingApp({
           </button>
         </div>
       </header>
+      )}
 
       <section className="scene-shell">
         {view === "home" && (
@@ -4434,7 +4475,7 @@ export default function ReadingApp({
                             ? `继续读 · 第 ${savedProgress.chapter + 1} 章`
                             : "开始阅读";
                         return (
-                          <button className="library-book-card" key={book.id} type="button" onClick={() => chooseBook(book)}>
+                          <button className="library-book-card" key={book.id} type="button" disabled={Boolean(bookOpening)} onClick={() => chooseBook(book)}>
                             <span className={`book-cover ${book.coverClass}`} aria-hidden="true"><b>{book.coverMark}</b><i>{book.author}</i></span>
                             <span className="library-book-copy">
                               <small>{book.category}</small>
@@ -4932,14 +4973,14 @@ export default function ReadingApp({
         )}
       </section>
 
-      <nav className="bottom-nav" aria-label="主要功能">
+      {!immersiveReader && <nav className="bottom-nav" aria-label="主要功能">
         <NavButton active={view === "home"} disabled={navigationLocked && !busy && !hideTarget} label="学习屋" art={`${ASSET}/ui/nav-v2/learning-house.png`} onClick={() => navigateTo("home")} />
         <NavButton active={view === "library"} disabled={navigationLocked} label="书房" art={`${ASSET}/ui/nav-v2/library.png`} onClick={() => navigateTo("library")} />
         <NavButton active={view === "mistakes"} disabled={navigationLocked} label="错题屋" art={`${ASSET}/ui/nav-v2/mistakes.png`} onClick={() => navigateTo("mistakes")} />
         <NavButton active={view === "chat"} disabled={navigationLocked} label="聊天" art={`${ASSET}/ui/nav-v2/chat.png`} onClick={() => navigateTo("chat")} />
         <NavButton active={view === "travel"} disabled={navigationLocked && !traveling} label="旅行" art={`${ASSET}/ui/nav-v2/travel.png`} onClick={() => navigateTo("travel")} />
         <NavButton active={view === "journal"} disabled={navigationLocked} label="手帐" art={`${ASSET}/ui/nav-v2/journal.png`} onClick={() => navigateTo("journal")} />
-      </nav>
+      </nav>}
 
       {toast && <div className={`toast ${view === "chat" ? "chat-toast" : ""}`} role="status"><Sparkles /> {toast}</div>}
 
