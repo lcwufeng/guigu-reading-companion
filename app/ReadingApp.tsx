@@ -1322,6 +1322,7 @@ export default function ReadingApp({
   const [answeredChapterQuestions, setAnsweredChapterQuestions] = useState<string[]>([]);
   const [readerSideTab, setReaderSideTab] = useState<"companion" | "knowledge">("companion");
   const [chapterListOpen, setChapterListOpen] = useState(false);
+  const [readerKnowledgeOpen, setReaderKnowledgeOpen] = useState(false);
   const [chapterQuestionOpen, setChapterQuestionOpen] = useState(false);
   const [readingAnswer, setReadingAnswer] = useState("");
   const [readingFeedback, setReadingFeedback] = useState("");
@@ -1608,6 +1609,7 @@ export default function ReadingApp({
     if (nextView === "library") {
       setLibraryMode("shelf");
       setChapterListOpen(false);
+      setReaderKnowledgeOpen(false);
       setChapterQuestionOpen(false);
     }
     if (nextView === "leaderboard") void loadLeaderboard();
@@ -2603,6 +2605,7 @@ export default function ReadingApp({
     setChapterQuestionOpen(false);
     setReaderSideTab("companion");
     setChapterListOpen(false);
+    setReaderKnowledgeOpen(false);
     restoredBookRef.current[book.id] = false;
 
     const enterReader = () => {
@@ -2621,6 +2624,7 @@ export default function ReadingApp({
     setBookOpening(null);
     setLibraryMode("shelf");
     setChapterListOpen(false);
+    setReaderKnowledgeOpen(false);
     setChapterQuestionOpen(false);
   };
 
@@ -4495,10 +4499,57 @@ export default function ReadingApp({
               </div>
             ) : (
               <>
-                <header className="library-reader-header">
-                  <button type="button" onClick={returnToLibraryShelf}><ChevronLeft /> 返回书架</button>
-                  <div><small>{selectedBook.grade} 年级 · 正在阅读</small><strong>《{selectedBook.title}》</strong></div>
-                  <span>{selectedBook.author}</span>
+                <header className="library-reader-header reader-top-bar">
+                  <div className="reader-top-book">
+                    <button type="button" onClick={returnToLibraryShelf}><ChevronLeft /> <span>返回书架</span></button>
+                    <div><small>{selectedBook.grade} 年级 · 正在阅读</small><strong>《{selectedBook.title}》</strong></div>
+                  </div>
+                  {activeChapter && activePage ? (
+                    <div className="reader-top-meta">
+                      <span className="reading-page-meta">第 {overallPageNumber} / {totalBookPages} 页</span>
+                      <div className="reading-font-controls" role="group" aria-label="选择原文字号">
+                        <span>字号</span>
+                        {readingFontOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            aria-pressed={game.readingFontSize === option.value}
+                            title={option.hint}
+                            onClick={() => setGame((current) => ({ ...current, readingFontSize: option.value }))}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : <span className="reader-top-author">{selectedBook.author}</span>}
+                  <div className="reader-top-actions">
+                    <button
+                      className={chapterListOpen ? "active" : ""}
+                      type="button"
+                      aria-expanded={chapterListOpen}
+                      aria-controls="reader-chapter-panel"
+                      onClick={() => {
+                        setReaderKnowledgeOpen(false);
+                        setChapterListOpen((open) => !open);
+                      }}
+                    >
+                      <BookOpen /> 章节
+                    </button>
+                    <button
+                      className={readerKnowledgeOpen ? "active" : ""}
+                      type="button"
+                      aria-expanded={readerKnowledgeOpen}
+                      aria-controls="reader-knowledge-panel"
+                      onClick={() => {
+                        setChapterListOpen(false);
+                        setReaderSideTab("knowledge");
+                        setReaderKnowledgeOpen((open) => !open);
+                      }}
+                    >
+                      <Lightbulb /> 补充知识
+                    </button>
+                  </div>
                 </header>
 
                 <div className="reading-workspace complete-reader">
@@ -4516,8 +4567,20 @@ export default function ReadingApp({
                 </div>
               ) : activeChapter && activePage ? (
                 <>
-                  <nav className={`chapter-drawer ${chapterListOpen ? "open" : ""}`} aria-label="章节目录">
-                    <button className="chapter-drawer-toggle" type="button" onClick={() => setChapterListOpen((open) => !open)}><BookOpen /> 目录 <span>{selectedChapter + 1}/{selectedChapters.length}</span></button>
+                  {(chapterListOpen || readerKnowledgeOpen) && (
+                    <button
+                      className="reader-panel-backdrop"
+                      type="button"
+                      aria-label="关闭阅读辅助面板"
+                      onClick={() => {
+                        setChapterListOpen(false);
+                        setReaderKnowledgeOpen(false);
+                      }}
+                    />
+                  )}
+
+                  {chapterListOpen && <nav id="reader-chapter-panel" className="chapter-drawer open reader-floating-panel" aria-label="章节目录">
+                    <button className="chapter-drawer-toggle" type="button" onClick={() => setChapterListOpen(false)}><BookOpen /> 章节目录 <span>{selectedChapter + 1}/{selectedChapters.length}</span><X /></button>
                     <div className="chapter-list-scroll">
                       {selectedChapters.map((chapter, index) => (
                         <button key={chapter.id} type="button" className={index === selectedChapter ? "active" : ""} onClick={() => chooseChapter(index)}>
@@ -4525,27 +4588,9 @@ export default function ReadingApp({
                         </button>
                       ))}
                     </div>
-                  </nav>
+                  </nav>}
 
                   <article className={`reading-paper complete-reading-paper reading-font-${game.readingFontSize}`}>
-                    <div className="reading-meta">
-                      <span className="content-type-label original">原文</span>
-                      <span className="reading-page-meta">{selectedBook.source?.language} · 第 {overallPageNumber} / {totalBookPages} 页</span>
-                      <div className="reading-font-controls" role="group" aria-label="选择原文字号">
-                        <span>字号</span>
-                        {readingFontOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            aria-pressed={game.readingFontSize === option.value}
-                            title={option.hint}
-                            onClick={() => setGame((current) => ({ ...current, readingFontSize: option.value }))}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
                     <div className="reading-progress"><i style={{ width: `${overallProgress}%` }} /></div>
                     <small className="chapter-position">第 {selectedChapter + 1} 章 · 本章 {bookPage + 1}/{activePages.length} 页</small>
                     <h2>{activePage.heading}</h2>
@@ -4562,29 +4607,45 @@ export default function ReadingApp({
                       ) : null}
                       {activePage.body.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>)}
                     </div>
-                    <div className={`book-audio-bar phase-${currentBookAudioPhase}`} aria-label="原文朗读控制">
-                      <button
-                        className="book-audio-toggle"
-                        type="button"
-                        onClick={() => void toggleBookAudio()}
-                        disabled={currentBookAudioPhase === "loading" || currentBookAudioPhase === "unavailable" || !currentBookAudio}
-                      >
-                        {currentBookAudioPhase === "playing" ? <Pause /> : <Play />}
-                        <span>{currentBookAudioPhase === "playing" ? "暂停朗读" : currentBookAudioPhase === "paused" ? "继续听" : "听这一页"}</span>
-                      </button>
-                      <span className="book-audio-status">
-                        <Volume2 />
-                        {currentBookAudioPhase === "loading"
-                          ? "正在检查预生成音频…"
-                          : currentBookAudioPhase === "unavailable"
-                            ? "本章温柔女声正在提前生成"
-                            : `${currentBookAudio?.voiceLabel || "温柔女声"} · 已提前录制`}
-                      </span>
-                      <div className="book-audio-rates" role="group" aria-label="选择朗读速度">
-                        {[0.8, 1, 1.2].map((rate) => (
-                          <button key={rate} type="button" aria-pressed={bookAudioRate === rate} onClick={() => updateBookAudioRate(rate)}>{rate}×</button>
-                        ))}
+                    <div className={`book-audio-bar reader-bottom-bar phase-${currentBookAudioPhase}`} aria-label="阅读与朗读控制">
+                      <button className="icon-button" type="button" onClick={previousBookPage} disabled={selectedChapter === 0 && bookPage === 0} title="上一页" aria-label="上一页"><ChevronLeft /></button>
+                      <div className="reader-bottom-audio">
+                        <button
+                          className="book-audio-toggle"
+                          type="button"
+                          onClick={() => void toggleBookAudio()}
+                          disabled={currentBookAudioPhase === "loading" || currentBookAudioPhase === "unavailable" || !currentBookAudio}
+                        >
+                          {currentBookAudioPhase === "playing" ? <Pause /> : <Play />}
+                          <span>{currentBookAudioPhase === "playing" ? "暂停朗读" : currentBookAudioPhase === "paused" ? "继续听" : "听这一页"}</span>
+                        </button>
+                        <span className="book-audio-status">
+                          <Volume2 />
+                          {currentBookAudioPhase === "loading"
+                            ? "正在检查音频…"
+                            : currentBookAudioPhase === "unavailable"
+                              ? "温柔女声正在生成"
+                              : currentBookAudio?.voiceLabel || "温柔女声"}
+                        </span>
+                        <div className="book-audio-rates" role="group" aria-label="选择朗读速度">
+                          {[0.8, 1, 1.2].map((rate) => (
+                            <button key={rate} type="button" aria-pressed={bookAudioRate === rate} onClick={() => updateBookAudioRate(rate)}>{rate}×</button>
+                          ))}
+                        </div>
                       </div>
+                      <span className="reader-bottom-status">{currentChapterQuestionAnswered ? "本章思考已完成" : "进度已自动保存"}</span>
+                      <button
+                        className={`next-button ${bookPage === activePages.length - 1 && currentChapterQuestionAnswered ? "completed" : ""}`}
+                        type="button"
+                        onClick={nextBookPage}
+                      >
+                        {bookPage === activePages.length - 1 && currentChapterQuestionAnswered
+                          ? completedChapterButtonLabel
+                          : selectedChapter === selectedChapters.length - 1 && bookPage === activePages.length - 1
+                            ? "读完全书"
+                            : bookPage === activePages.length - 1 ? "读完本章" : "下一页"}
+                        {bookPage === activePages.length - 1 && currentChapterQuestionAnswered ? <Check /> : <ChevronRight />}
+                      </button>
                       {currentBookAudio && (
                         <audio
                           ref={bookAudioRef}
@@ -4598,25 +4659,10 @@ export default function ReadingApp({
                         />
                       )}
                     </div>
-                    <div className="reading-controls">
-                      <button className="icon-button" type="button" onClick={previousBookPage} disabled={selectedChapter === 0 && bookPage === 0} title="上一页" aria-label="上一页"><ChevronLeft /></button>
-                      <span>{currentChapterQuestionAnswered ? "龟龟把这一章的思考收好啦" : "进度已自动保存"}</span>
-                      <button
-                        className={`next-button ${bookPage === activePages.length - 1 && currentChapterQuestionAnswered ? "completed" : ""}`}
-                        type="button"
-                        onClick={nextBookPage}
-                      >
-                        {bookPage === activePages.length - 1 && currentChapterQuestionAnswered
-                          ? completedChapterButtonLabel
-                          : selectedChapter === selectedChapters.length - 1 && bookPage === activePages.length - 1
-                            ? "读完全书"
-                            : bookPage === activePages.length - 1 ? "读完本章" : "下一页"}
-                        {bookPage === activePages.length - 1 && currentChapterQuestionAnswered ? <Check /> : <ChevronRight />}
-                      </button>
-                    </div>
                   </article>
 
-                  <aside className="reader-side-panel" aria-label="伴读和知识补充">
+                  {readerKnowledgeOpen && <aside id="reader-knowledge-panel" className="reader-side-panel open reader-floating-panel" aria-label="伴读和知识补充">
+                    <div className="reader-panel-heading"><strong>阅读补充</strong><button type="button" onClick={() => setReaderKnowledgeOpen(false)} aria-label="关闭补充知识"><X /></button></div>
                     <div className="reader-side-tabs" role="tablist">
                       <button type="button" role="tab" aria-selected={readerSideTab === "companion"} onClick={() => setReaderSideTab("companion")}>伴读</button>
                       <button type="button" role="tab" aria-selected={readerSideTab === "knowledge"} onClick={() => setReaderSideTab("knowledge")}>知识补充</button>
@@ -4641,7 +4687,7 @@ export default function ReadingApp({
                         )}
                       </div>
                     )}
-                  </aside>
+                  </aside>}
                 </>
               ) : null}
                 </div>

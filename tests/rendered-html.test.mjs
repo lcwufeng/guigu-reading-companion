@@ -173,6 +173,12 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(readingApp, /const immersiveReader = view === "library" && libraryMode === "reader"/);
   assert.match(readingApp, /\{!immersiveReader && \(\s*<header className="topbar">/);
   assert.match(readingApp, /\{!immersiveReader && <nav className="bottom-nav"/);
+  assert.match(readingApp, /className="library-reader-header reader-top-bar"/);
+  assert.match(readingApp, /className=\{`book-audio-bar reader-bottom-bar/);
+  assert.match(readingApp, /aria-controls="reader-chapter-panel"/);
+  assert.match(readingApp, /aria-controls="reader-knowledge-panel"/);
+  assert.match(readingApp, /className="reader-panel-backdrop"/);
+  assert.doesNotMatch(readingApp, /<div className="reading-meta">/);
   assert.match(styles, /text-indent: 2em/);
   assert.match(styles, /book-inline-illustrations/);
   assert.match(styles, /library-shelf-screen/);
@@ -191,6 +197,9 @@ test("imports the complete graded ebook shelf with chapters, paragraphs, illustr
   assert.match(styles, /\.library-mode-reader \.complete-reader \.complete-reading-paper \{[\s\S]*?flex: 1 1 100%/);
   assert.match(styles, /@keyframes bookCoverOpen/);
   assert.match(styles, /\.immersive-reader \.library-mode-reader \.complete-reader/);
+  assert.match(styles, /Unified reader chrome: one compact bar above the page and one below it/);
+  assert.match(styles, /\.reader-bottom-bar\.book-audio-bar/);
+  assert.match(styles, /\.reader-floating-panel/);
 });
 
 test("provides a separate eight-domain knowledge expedition with evidence gates and spaced review", async () => {

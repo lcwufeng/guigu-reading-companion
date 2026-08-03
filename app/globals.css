@@ -13744,3 +13744,284 @@ button:disabled {
     top: calc(max(5px, env(safe-area-inset-top)) + 53px);
   }
 }
+
+/* Unified reader chrome: one compact bar above the page and one below it.
+   Chapters and supplemental knowledge stay out of the text column until the
+   student explicitly opens either floating panel. */
+.immersive-reader .reader-top-bar {
+  align-items: center;
+  display: grid;
+  gap: clamp(8px, 1vw, 16px);
+  grid-template-columns: minmax(210px, 1fr) auto auto;
+  min-height: 62px;
+  padding: 7px 10px;
+}
+
+.reader-top-book,
+.reader-top-meta,
+.reader-top-actions,
+.reader-bottom-audio {
+  align-items: center;
+  display: flex;
+  min-width: 0;
+}
+
+.reader-top-book { gap: 10px; }
+.reader-top-book > div { min-width: 0; text-align: left; }
+.reader-top-book > button { flex: 0 0 auto; }
+.reader-top-book strong { font-size: clamp(16px, 1.25vw, 21px); }
+
+.reader-top-meta {
+  gap: 10px;
+  justify-content: center;
+}
+
+.reader-top-meta .reading-page-meta {
+  color: var(--reader-muted);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.reader-top-meta .reading-font-controls button {
+  background: #e7ead7;
+  border: 1px solid #b9c5a8;
+  border-radius: 7px;
+  box-shadow: none;
+  color: #515b49;
+  font-size: 13px;
+  min-height: 32px;
+  min-width: 36px;
+  padding: 4px 8px;
+}
+
+.reader-top-meta .reading-font-controls button[aria-pressed="true"] {
+  background: var(--reader-green-dark);
+  border-color: var(--reader-green-dark);
+  color: #fffdf3;
+}
+
+.reader-top-actions { gap: 7px; justify-content: flex-end; }
+
+.immersive-reader .reader-top-actions > button {
+  background: #edf0da;
+  border: 1px solid #aab996;
+  box-shadow: none;
+  color: #40523d;
+  font-size: 14px;
+  gap: 6px;
+  min-height: 40px;
+  padding: 7px 11px;
+  white-space: nowrap;
+}
+
+.immersive-reader .reader-top-actions > button:hover,
+.immersive-reader .reader-top-actions > button.active {
+  background: var(--reader-green);
+  border-color: var(--reader-green-dark);
+  color: #fff;
+}
+
+.reader-top-actions svg { height: 18px; width: 18px; }
+.reader-top-author { color: var(--reader-muted); font-size: 14px; }
+
+.immersive-reader .library-mode-reader .complete-reader {
+  top: clamp(78px, 11dvh, 92px);
+}
+
+.immersive-reader .complete-reader .complete-reading-paper {
+  flex: 1 1 100%;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  width: 100%;
+}
+
+.immersive-reader .complete-reading-paper > .reading-progress {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.reader-panel-backdrop {
+  background: rgba(37, 49, 31, 0.28);
+  border: 0;
+  inset: 0;
+  padding: 0;
+  position: absolute;
+  z-index: 20;
+}
+
+.immersive-reader .library-mode-reader .complete-reader .reader-floating-panel {
+  bottom: 8px;
+  display: flex;
+  height: auto;
+  max-width: min(430px, calc(100% - 20px));
+  position: absolute;
+  top: 8px;
+  transform: none;
+  width: clamp(290px, 31vw, 410px);
+  z-index: 22;
+}
+
+.immersive-reader .library-mode-reader .complete-reader .chapter-drawer.reader-floating-panel {
+  flex-basis: auto;
+  left: 8px;
+  right: auto;
+}
+
+.immersive-reader .library-mode-reader .complete-reader .reader-side-panel.reader-floating-panel {
+  flex-basis: auto;
+  flex-direction: column;
+  left: auto;
+  overflow-y: auto;
+  right: 8px;
+}
+
+.reader-floating-panel .chapter-drawer-toggle {
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.reader-floating-panel .chapter-drawer-toggle > svg:last-child {
+  height: 19px;
+  margin-left: 2px;
+  width: 19px;
+}
+
+.reader-panel-heading {
+  align-items: center;
+  background: var(--reader-green-dark);
+  color: #fffdf1;
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: space-between;
+  min-height: 50px;
+  padding: 9px 11px 9px 16px;
+}
+
+.reader-panel-heading strong { font-size: 17px; }
+.reader-panel-heading button {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.14);
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  width: 34px;
+}
+.reader-panel-heading svg { height: 20px; width: 20px; }
+
+.reader-bottom-bar.book-audio-bar {
+  align-items: center;
+  display: grid;
+  gap: clamp(7px, 0.8vw, 13px);
+  grid-template-columns: 44px minmax(250px, auto) minmax(110px, 1fr) auto;
+  margin-top: 10px;
+  min-height: 58px;
+  padding: 7px 9px;
+}
+
+.reader-bottom-bar > .icon-button {
+  height: 40px;
+  width: 40px;
+}
+
+.reader-bottom-audio { gap: 7px; }
+.reader-bottom-bar .book-audio-toggle { min-width: 110px; }
+.reader-bottom-bar .book-audio-status { white-space: nowrap; }
+
+.reader-bottom-status {
+  color: var(--reader-muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.reader-bottom-bar .next-button {
+  border-radius: 9px;
+  font-size: 14px;
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .immersive-reader .reader-top-bar {
+    gap: 7px;
+    grid-template-columns: minmax(170px, 1fr) auto auto;
+  }
+
+  .reader-top-meta .reading-page-meta,
+  .reader-top-meta .reading-font-controls > span,
+  .reader-bottom-status,
+  .reader-bottom-bar .book-audio-status {
+    display: none;
+  }
+
+  .reader-bottom-bar.book-audio-bar {
+    grid-template-columns: 42px minmax(220px, 1fr) auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .immersive-reader .reader-top-bar {
+    gap: 5px;
+    grid-template-columns: minmax(120px, 1fr) auto auto;
+    min-height: 50px;
+    padding: 4px 6px;
+  }
+
+  .reader-top-book { gap: 5px; }
+  .reader-top-book > button span,
+  .reader-top-book small { display: none; }
+  .reader-top-book strong { font-size: 14px; }
+
+  .reader-top-meta .reading-font-controls { gap: 2px; }
+  .reader-top-meta .reading-font-controls button {
+    font-size: 11px;
+    min-height: 31px;
+    min-width: 29px;
+    padding: 3px 5px;
+  }
+
+  .immersive-reader .reader-top-actions > button {
+    font-size: 12px;
+    gap: 3px;
+    min-height: 34px;
+    padding: 5px 7px;
+  }
+  .reader-top-actions svg { height: 15px; width: 15px; }
+
+  .immersive-reader .library-mode-reader .complete-reader {
+    top: calc(max(5px, env(safe-area-inset-top)) + 57px);
+  }
+
+  .reader-bottom-bar.book-audio-bar {
+    gap: 5px;
+    grid-template-columns: 38px minmax(100px, 1fr) auto;
+    min-height: 50px;
+    padding: 5px;
+  }
+
+  .reader-bottom-bar > .icon-button { height: 36px; width: 36px; }
+  .reader-bottom-bar .book-audio-rates { display: none; }
+  .reader-bottom-bar .book-audio-toggle {
+    font-size: 12px;
+    min-height: 36px;
+    min-width: 98px;
+    padding: 5px 8px;
+  }
+  .reader-bottom-bar .next-button { font-size: 12px; min-height: 36px; padding: 6px 9px; }
+
+  .immersive-reader .library-mode-reader .complete-reader .reader-floating-panel {
+    bottom: 5px;
+    max-width: calc(100% - 10px);
+    top: 5px;
+    width: min(380px, calc(100% - 10px));
+  }
+  .immersive-reader .library-mode-reader .complete-reader .chapter-drawer.reader-floating-panel { left: 5px; }
+  .immersive-reader .library-mode-reader .complete-reader .reader-side-panel.reader-floating-panel { right: 5px; }
+}
