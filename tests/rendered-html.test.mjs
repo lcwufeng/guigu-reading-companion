@@ -966,6 +966,12 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(modelConfig, /volc\.bigasr\.sauc\.duration/);
   assert.match(speechClient, /@vite-ignore/);
   assert.doesNotMatch(speechClient, /import WebSocket from "ws"/);
+  assert.match(page, /new MediaRecorder\(stream/);
+  assert.match(page, /audio\/webm;codecs=opus/);
+  assert.match(page, /context\.state === "suspended"/);
+  assert.match(page, /await context\.resume\(\)/);
+  assert.match(page, /wav\.peak < 0\.0003/);
+  assert.match(page, /没有录到声音，请检查麦克风是否静音或选错设备/);
   assert.match(serverBundle, /openspeech\.bytedance\.com\/api\/v3\/sauc\/bigmodel_nostream/);
   assert.doesNotMatch(serverBundle, /ws does not work in the browser|node_modules\/ws\/browser\.js/);
   assert.match(mistakeScanRoute, /analyzeMistakeImage/);

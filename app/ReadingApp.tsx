@@ -395,8 +395,10 @@ type VoiceSession = {
   context: AudioContext;
   source: MediaStreamAudioSourceNode;
   analyser: AnalyserNode;
-  processor: ScriptProcessorNode;
-  silentGain: GainNode;
+  processor: ScriptProcessorNode | null;
+  silentGain: GainNode | null;
+  recorder: MediaRecorder | null;
+  recordedChunks: Blob[];
   chunks: Float32Array[];
   sampleRate: number;
   startedAt: number;
@@ -950,6 +952,13 @@ function encodeWav(chunks: Float32Array[], inputRate: number) {
     output[index] = merged[left] * (1 - mix) + merged[right] * mix;
   }
 
+  let peak = 0;
+  for (const sample of output) peak = Math.max(peak, Math.abs(sample));
+  // Some microphones expose a very quiet signal after browser noise reduction.
+  // Normalize speech conservatively, while keeping true silence as silence so
+  // the UI can explain that the microphone did not capture a voice.
+  const gain = peak >= 0.0003 ? Math.min(5, 0.9 / peak) : 1;
+
   const buffer = new ArrayBuffer(44 + output.length * 2);
   const view = new DataView(buffer);
   const write = (offset: number, value: string) => {
@@ -969,10 +978,16 @@ function encodeWav(chunks: Float32Array[], inputRate: number) {
   write(36, "data");
   view.setUint32(40, output.length * 2, true);
   for (let index = 0; index < output.length; index += 1) {
-    const sample = Math.max(-1, Math.min(1, output[index]));
+    const sample = Math.max(-1, Math.min(1, output[index] * gain));
     view.setInt16(44 + index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
   }
-  return new Blob([buffer], { type: "audio/wav" });
+  return { blob: new Blob([buffer], { type: "audio/wav" }), peak };
+}
+
+function supportedRecorderMimeType() {
+  if (typeof MediaRecorder === "undefined") return "";
+  return ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]
+    .find((type) => MediaRecorder.isTypeSupported(type)) || "";
 }
 
 function formatDate() {
@@ -2824,10 +2839,11 @@ export default function ReadingApp({
     window.cancelAnimationFrame(session.animationFrame);
     window.clearInterval(session.clockTimer);
     window.clearTimeout(session.maxTimer);
-    session.processor.disconnect();
+    if (session.recorder && session.recorder.state !== "inactive") session.recorder.stop();
+    session.processor?.disconnect();
     session.analyser.disconnect();
     session.source.disconnect();
-    session.silentGain.disconnect();
+    session.silentGain?.disconnect();
     session.stream.getTracks().forEach((track) => track.stop());
     void session.context.close();
     voiceSessionRef.current = null;
@@ -2844,9 +2860,20 @@ export default function ReadingApp({
   }, [releaseVoiceSession]);
 
   const finishVoiceInput = useCallback(async () => {
-    const session = releaseVoiceSession();
+    const session = voiceSessionRef.current;
     if (!session) return;
-    if (Date.now() - session.startedAt < 600 || !session.chunks.length) {
+    voiceSessionRef.current = null;
+    window.cancelAnimationFrame(session.animationFrame);
+    window.clearInterval(session.clockTimer);
+    window.clearTimeout(session.maxTimer);
+    if (Date.now() - session.startedAt < 600) {
+      if (session.recorder && session.recorder.state !== "inactive") session.recorder.stop();
+      session.processor?.disconnect();
+      session.analyser.disconnect();
+      session.source.disconnect();
+      session.silentGain?.disconnect();
+      session.stream.getTracks().forEach((track) => track.stop());
+      void session.context.close();
       setVoicePhase("idle");
       showToast("说得太短啦，请再试一次");
       return;
@@ -2857,11 +2884,33 @@ export default function ReadingApp({
     const controller = new AbortController();
     voiceAbortRef.current = controller;
     try {
-      const audio = encodeWav(session.chunks, session.sampleRate);
+      let wav: ReturnType<typeof encodeWav>;
+      if (session.recorder) {
+        if (session.recorder.state !== "inactive") {
+          await new Promise<void>((resolve, reject) => {
+            session.recorder!.addEventListener("stop", () => resolve(), { once: true });
+            session.recorder!.addEventListener("error", () => reject(new Error("录音文件生成失败")), { once: true });
+            session.recorder!.stop();
+          });
+        }
+        const recording = new Blob(session.recordedChunks, { type: session.recorder.mimeType || "audio/webm" });
+        if (recording.size < 128) throw new Error("没有录到声音，请确认麦克风后再试");
+        const decoded = await session.context.decodeAudioData(await recording.arrayBuffer());
+        const mono = new Float32Array(decoded.length);
+        for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) {
+          const samples = decoded.getChannelData(channel);
+          for (let index = 0; index < decoded.length; index += 1) mono[index] += samples[index] / decoded.numberOfChannels;
+        }
+        wav = encodeWav([mono], decoded.sampleRate);
+      } else {
+        if (!session.chunks.length) throw new Error("没有录到声音，请确认麦克风后再试");
+        wav = encodeWav(session.chunks, session.sampleRate);
+      }
+      if (wav.peak < 0.0003) throw new Error("没有录到声音，请检查麦克风是否静音或选错设备");
       const response = await fetch(`${BASE_PATH}/api/speech`, {
         method: "POST",
         headers: { "Content-Type": "audio/wav" },
-        body: audio,
+        body: wav.blob,
         signal: controller.signal,
       });
       const data = (await response.json()) as { transcript?: string; error?: string };
@@ -2879,16 +2928,25 @@ export default function ReadingApp({
       }
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
-        showToast(error instanceof Error && error.message.includes("没有听清楚") ? error.message : "语音识别暂时不可用，可以改用文字输入");
+        const message = error instanceof Error ? error.message : "";
+        showToast(message.includes("没有听清楚") || message.includes("没有录到声音")
+          ? message
+          : "语音识别暂时不可用，可以改用文字输入");
       }
     } finally {
+      session.processor?.disconnect();
+      session.analyser.disconnect();
+      session.source.disconnect();
+      session.silentGain?.disconnect();
+      session.stream.getTracks().forEach((track) => track.stop());
+      void session.context.close();
       if (voiceAbortRef.current === controller) {
         voiceAbortRef.current = null;
         setVoicePhase("idle");
         setVoiceSeconds(0);
       }
     }
-  }, [game.name, releaseVoiceSession, showToast]);
+  }, [game.name, showToast]);
 
   useEffect(() => {
     autoFinishVoiceRef.current = () => void finishVoiceInput();
@@ -2909,20 +2967,41 @@ export default function ReadingApp({
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
-      const context = new AudioContext();
+      const context = new AudioContext({ latencyHint: "interactive" });
+      if (context.state === "suspended") await context.resume();
       const source = context.createMediaStreamSource(stream);
       const analyser = context.createAnalyser();
-      const processor = context.createScriptProcessor(4096, 1, 1);
-      const silentGain = context.createGain();
+      let processor: ScriptProcessorNode | null = null;
+      let silentGain: GainNode | null = null;
+      let recorder: MediaRecorder | null = null;
+      const recordedChunks: Blob[] = [];
       const chunks: Float32Array[] = [];
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.72;
-      silentGain.gain.value = 0;
-      processor.onaudioprocess = (event) => chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
       source.connect(analyser);
-      analyser.connect(processor);
-      processor.connect(silentGain);
-      silentGain.connect(context.destination);
+      if (typeof MediaRecorder !== "undefined") {
+        try {
+          const mimeType = supportedRecorderMimeType();
+          recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+          recorder.addEventListener("dataavailable", (event) => {
+            if (event.data.size) recordedChunks.push(event.data);
+          });
+          recorder.start(250);
+        } catch {
+          recorder = null;
+        }
+      }
+      if (!recorder) {
+        processor = context.createScriptProcessor(4096, 1, 1);
+        silentGain = context.createGain();
+        // A tiny non-zero monitor gain prevents Chromium from optimizing the
+        // legacy fallback graph into silence; it remains inaudible to users.
+        silentGain.gain.value = 0.00001;
+        processor.onaudioprocess = (event) => chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+        source.connect(processor);
+        processor.connect(silentGain);
+        silentGain.connect(context.destination);
+      }
 
       const session: VoiceSession = {
         target,
@@ -2932,6 +3011,8 @@ export default function ReadingApp({
         analyser,
         processor,
         silentGain,
+        recorder,
+        recordedChunks,
         chunks,
         sampleRate: context.sampleRate,
         startedAt: Date.now(),
