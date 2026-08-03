@@ -5139,7 +5139,8 @@ button:disabled {
   align-items: center;
   background: transparent;
   border: 0;
-  bottom: 7%;
+  bottom: 8%;
+  box-sizing: border-box;
   color: #2d6628;
   cursor: pointer;
   display: flex;
@@ -5147,10 +5148,13 @@ button:disabled {
   font-weight: 900;
   height: 39px;
   justify-content: center;
-  left: 10%;
+  left: 50%;
+  max-width: 230px;
   padding: 0;
   position: absolute;
-  width: 64%;
+  transform: translateX(-50%);
+  width: 72%;
+  z-index: 4;
 }
 
 .journal-card-action > img {

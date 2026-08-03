@@ -868,6 +868,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /font-family: "Microsoft YaHei", "PingFang SC", "Heiti SC", Arial, sans-serif;/);
   assert.match(styles, /\.journal-reading-copy p \{[\s\S]*?font-size: 18px;/);
   assert.match(styles, /\.journal-card-copy p \{[\s\S]*?font-size: 17px;/);
+  assert.match(styles, /\.journal-card-action \{[\s\S]*?left: 50%;[\s\S]*?transform: translateX\(-50%\);/);
   assert.match(page, /knowledge-card-background\.webp/);
   assert.match(styles, /border-image-source: var\(--knowledge-card-background\)/);
   assert.match(styles, /\.knowledge-copy > p \{[\s\S]*?font-size: 19px;/);
