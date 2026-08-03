@@ -1890,7 +1890,7 @@ export default function ReadingApp({
     let active = true;
     const controller = new AbortController();
     void preloadStartupAssets((progress) => {
-      if (!active) return;
+      if (!active || progress.phase !== "initial") return;
       setStartupLoad((current) => ({
         ...current,
         completed: progress.completed,
@@ -1901,7 +1901,7 @@ export default function ReadingApp({
       }));
     }, controller.signal).then((result) => {
       if (!active) return;
-      const ready = result.completed === result.total && result.failed === 0 && !result.timedOut;
+      const ready = result.ready;
       const settledPercent = ready
         ? 100
         : Math.min(99, Math.floor(result.completed / Math.max(1, result.total) * 100));
@@ -1911,9 +1911,9 @@ export default function ReadingApp({
         failed: result.failed,
         percent: settledPercent,
         label: ready
-          ? "主要界面图片和背景音乐准备完成"
+          ? "学习屋首页和背景音乐准备完成，其他内容正在后台加载"
           : result.timedOut
-            ? "加载时间过长，请检查网络后重试"
+            ? "首屏加载超过5分钟，请检查网络后重试"
             : result.failed
               ? `${result.failed} 项资源未能完整加载，请重试`
               : "资源还没有准备完整，请重试",
@@ -3389,7 +3389,7 @@ export default function ReadingApp({
   const startupPrepared = hydrated && startupLoad.ready;
   const startupProgress = startupPrepared
     ? 100
-    : Math.min(99, Math.floor(startupLoad.percent * 0.92 + (hydrated ? 8 : 0)));
+    : startupLoad.percent;
   if (!startupPrepared || !startupEntered) {
     const startupLabel = startupLoad.ready && !hydrated ? "正在读取你的专属学习进度" : startupLoad.label;
     return (
@@ -3462,13 +3462,13 @@ export default function ReadingApp({
               </button>
               <small>
                 {startupLoad.timedOut
-                  ? "网络较慢，本次没有放行进入；重新加载会复用已经缓存好的图片。"
+                  ? "网络较慢，首屏资源在5分钟内未准备好；已加载的图片会保留缓存。"
                   : `${startupLoad.failed || 1} 项主要资源尚未完成，加载成功后才能进入。`}
               </small>
             </>
           ) : (
             <small>
-              正在准备学习屋、错题屋、书房、旅行、手帐的界面图片和背景音乐。
+              正在准备学习屋首页和背景音乐；进入后，书房、错题屋、旅行和手帐等资源会继续在后台加载。
             </small>
           )}
         </section>

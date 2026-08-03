@@ -1,20 +1,29 @@
 "use client";
 
-import { getBackgroundMusicSources, prepareStartupMusic } from "./sound-system";
+import { getBackgroundMusicSources, getHomeMusicSources, prepareStartupMusic } from "./sound-system";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const ASSET = `${BASE_PATH}/assets`;
-const STARTUP_TIMEOUT_MS = 600_000;
+const STARTUP_TIMEOUT_MS = 300_000;
 const MINIMUM_VISIBLE_MS = 900;
 const IMAGE_RETRY_COUNT = 2;
 const IMAGE_CONCURRENCY = 8;
 const STARTUP_ASSET_MANIFEST = `${ASSET}/startup-assets-manifest.json`;
 
-export const FALLBACK_STARTUP_IMAGE_SOURCES = [
+// These are the assets visible immediately after the student enters: the
+// learning house, its status bar, the action icons, navigation and main turtle.
+// The remaining rooms are warmed in the background after this first screen opens.
+export const FIRST_SCREEN_IMAGE_SOURCES = [
   `${ASSET}/optimized/backgrounds/main_home.webp`,
   `${ASSET}/ui/supplied/brand/logo-20260715.png`,
   `${ASSET}/characters/turtle/turtle_idle_front.png`,
   `${ASSET}/characters/turtle/turtle_idle_standing.png`,
+  `${ASSET}/characters/turtle/turtle_hungry.png`,
+  `${ASSET}/characters/turtle/turtle_dirty.png`,
+  `${ASSET}/characters/turtle/turtle_bored_sitting.png`,
+  `${ASSET}/characters/turtle/turtle_low_mood.png`,
+  `${ASSET}/characters/turtle/turtle_thinking.png`,
+  `${ASSET}/characters/turtle/turtle_waving.png`,
   `${ASSET}/ui/home-refresh/frames/top-frame.png`,
   `${ASSET}/ui/home-refresh/status/panel.png`,
   `${ASSET}/ui/home-refresh/status/turtle-head.png`,
@@ -47,12 +56,20 @@ type StartupAssetManifest = {
   images: string[];
 };
 
+type StartupResource = {
+  source: string;
+  kind: "image" | "music";
+};
+
+type PreloadPhase = "initial" | "background";
+
 export type StartupPreloadProgress = {
   completed: number;
   total: number;
   failed: number;
   percent: number;
   kind: "image" | "music";
+  phase: PreloadPhase;
   label: string;
 };
 
@@ -61,7 +78,10 @@ export type StartupPreloadResult = {
   total: number;
   failed: number;
   timedOut: boolean;
+  ready: boolean;
 };
+
+type PreloadSummary = Pick<StartupPreloadResult, "completed" | "total" | "failed">;
 
 function waitForImage(source: string, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
@@ -96,9 +116,7 @@ function waitForImage(source: string, signal: AbortSignal) {
         finish(new Error(`Image could not be decoded: ${source}`));
       }
     };
-    image.onerror = () => {
-      finish(new Error(`Image unavailable: ${source}`));
-    };
+    image.onerror = () => finish(new Error(`Image unavailable: ${source}`));
     signal.addEventListener("abort", abort, { once: true });
     image.decoding = "async";
     image.src = source;
@@ -114,7 +132,7 @@ async function waitForImageWithRetry(source: string, signal: AbortSignal) {
       return;
     } catch (error) {
       lastError = error;
-      if (signal.aborted || error instanceof DOMException && error.name === "AbortError") throw error;
+      if (signal.aborted || isAbortError(error)) throw error;
       if (attempt < IMAGE_RETRY_COUNT) await delay(250 * (attempt + 1));
     }
   }
@@ -137,7 +155,7 @@ async function getPrimaryInterfaceImageSources(signal: AbortSignal) {
     .filter((path): path is string => typeof path === "string" && !path.startsWith("/") && !path.includes(".."))
     .map((path) => `${ASSET}/${path}`);
   if (images.length !== manifest.images.length) throw new Error("Primary interface asset manifest contains unsafe paths");
-  return [...new Set([...FALLBACK_STARTUP_IMAGE_SOURCES, ...images])];
+  return [...new Set(images)];
 }
 
 async function fullyFetchMusic(source: string, signal: AbortSignal) {
@@ -170,10 +188,111 @@ function delay(duration: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, duration));
 }
 
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 function calculateResourcePercent(completed: number, total: number) {
   if (total <= 0) return 0;
   if (completed >= total) return 100;
   return Math.min(99, Math.floor(completed / total * 100));
+}
+
+function labelFor(phase: PreloadPhase, kind: "image" | "music") {
+  if (phase === "initial") return kind === "music" ? "正在准备学习屋首页音乐" : "正在加载学习屋首页";
+  return kind === "music" ? "正在后台准备其他场景音乐" : "正在后台加载其他界面图片";
+}
+
+async function preloadResources(
+  resources: StartupResource[],
+  phase: PreloadPhase,
+  onProgress: (progress: StartupPreloadProgress) => void,
+  signal: AbortSignal,
+  prepareHomeMusic = false,
+): Promise<PreloadSummary> {
+  let completed = 0;
+  let failed = 0;
+  const notify = (kind: "image" | "music") => {
+    onProgress({
+      completed,
+      total: resources.length,
+      failed,
+      percent: calculateResourcePercent(completed, resources.length),
+      kind,
+      phase,
+      label: labelFor(phase, kind),
+    });
+  };
+  const finish = (kind: "image" | "music", success: boolean) => {
+    // A timeout freezes the displayed first-screen progress. Aborted work is
+    // deliberately not counted as loaded, so it can never jump to 100%.
+    if (signal.aborted) return;
+    if (success) completed += 1;
+    else failed += 1;
+    notify(kind);
+  };
+
+  const imageTasks = resources
+    .filter((resource) => resource.kind === "image")
+    .map((resource) => async () => {
+      try {
+        await waitForImageWithRetry(resource.source, signal);
+        finish("image", true);
+      } catch (error) {
+        if (!isAbortError(error)) finish("image", false);
+      }
+    });
+  const musicTasks = resources
+    .filter((resource) => resource.kind === "music")
+    .map((resource) => async () => {
+      try {
+        const [, prepared] = await Promise.all([
+          fullyFetchMusic(resource.source, signal),
+          prepareHomeMusic ? prepareStartupMusic(signal) : Promise.resolve(true),
+        ]);
+        if (!prepared) throw new Error("Home music could not be prepared");
+        finish("music", true);
+      } catch (error) {
+        if (!isAbortError(error)) finish("music", false);
+      }
+    });
+
+  notify("image");
+  await Promise.all([
+    runWithConcurrency(imageTasks, IMAGE_CONCURRENCY),
+    runWithConcurrency(musicTasks, 2),
+  ]);
+  return { completed, total: resources.length, failed };
+}
+
+async function preloadBackgroundAssets(
+  firstScreenSources: readonly string[],
+  firstScreenMusic: readonly string[],
+  onProgress: (progress: StartupPreloadProgress) => void,
+  externalSignal?: AbortSignal,
+) {
+  const controller = new AbortController();
+  const abortFromOutside = () => controller.abort();
+  if (externalSignal?.aborted) controller.abort();
+  else externalSignal?.addEventListener("abort", abortFromOutside, { once: true });
+  try {
+    const [allImages, allMusic] = await Promise.all([
+      getPrimaryInterfaceImageSources(controller.signal),
+      Promise.resolve(getBackgroundMusicSources()),
+    ]);
+    if (controller.signal.aborted) return;
+    const firstScreenSet = new Set(firstScreenSources);
+    const firstMusicSet = new Set(firstScreenMusic);
+    const resources: StartupResource[] = [
+      ...allImages.filter((source) => !firstScreenSet.has(source)).map((source) => ({ source, kind: "image" as const })),
+      ...allMusic.filter((source) => !firstMusicSet.has(source)).map((source) => ({ source, kind: "music" as const })),
+    ];
+    await preloadResources(resources, "background", onProgress, controller.signal);
+  } catch {
+    // Background warming is opportunistic: the current screen is already ready.
+  } finally {
+    externalSignal?.removeEventListener("abort", abortFromOutside);
+  }
 }
 
 export async function preloadStartupAssets(
@@ -185,82 +304,33 @@ export async function preloadStartupAssets(
   if (externalSignal?.aborted) controller.abort();
   else externalSignal?.addEventListener("abort", abortFromOutside, { once: true });
   const startedAt = performance.now();
-  let completed = 0;
-  let failed = 0;
   let timedOut = false;
-  let settled = false;
   const timeout = window.setTimeout(() => {
-    if (settled) return;
     timedOut = true;
     controller.abort();
   }, STARTUP_TIMEOUT_MS);
-  let imageSources: string[];
-  try {
-    imageSources = await getPrimaryInterfaceImageSources(controller.signal);
-  } catch (error) {
-    settled = true;
-    window.clearTimeout(timeout);
-    externalSignal?.removeEventListener("abort", abortFromOutside);
-    throw error;
-  }
-  const musicSources = getBackgroundMusicSources();
-  const resources = [
-    ...imageSources.map((source) => ({ source, kind: "image" as const })),
-    ...musicSources.map((source) => ({ source, kind: "music" as const })),
+
+  const firstScreenSources = [...new Set(FIRST_SCREEN_IMAGE_SOURCES)];
+  const firstScreenMusic = getHomeMusicSources();
+  const resources: StartupResource[] = [
+    ...firstScreenSources.map((source) => ({ source, kind: "image" as const })),
+    ...firstScreenMusic.map((source) => ({ source, kind: "music" as const })),
   ];
 
-  const notify = (kind: "image" | "music") => {
-    const percent = calculateResourcePercent(completed, resources.length);
-    onProgress({
-      completed,
-      total: resources.length,
-      failed,
-      percent,
-      kind,
-      label: kind === "music" ? "正在准备全部背景音乐" : "正在加载主要界面图片",
-    });
-  };
-
-  const imageTasks = resources
-    .filter((resource) => resource.kind === "image")
-    .map((resource) => async () => {
-      try {
-        await waitForImageWithRetry(resource.source, controller.signal);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) failed += 1;
-      } finally {
-        completed += 1;
-        notify("image");
-      }
-    });
-  const musicTasks = resources
-    .filter((resource) => resource.kind === "music")
-    .map((resource) => async () => {
-      try {
-        await fullyFetchMusic(resource.source, controller.signal);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) failed += 1;
-      } finally {
-        completed += 1;
-        notify("music");
-      }
-    });
-
-  notify("image");
-  await Promise.all([
-    runWithConcurrency(imageTasks, IMAGE_CONCURRENCY),
-    runWithConcurrency(musicTasks, 2),
-    prepareStartupMusic(controller.signal).catch(() => false),
-  ]);
-  settled = true;
-  window.clearTimeout(timeout);
-  externalSignal?.removeEventListener("abort", abortFromOutside);
-  await delay(Math.max(0, MINIMUM_VISIBLE_MS - (performance.now() - startedAt)));
-
-  return {
-    completed: Math.min(completed, resources.length),
-    total: resources.length,
-    failed,
-    timedOut,
-  };
+  try {
+    const summary = await preloadResources(resources, "initial", onProgress, controller.signal, true);
+    const ready = !timedOut && !controller.signal.aborted && summary.completed === summary.total && summary.failed === 0;
+    if (ready) {
+      // Do not hold the student on the loading screen for rooms they have not
+      // opened yet. Their images and music keep warming after entry.
+      window.setTimeout(() => {
+        if (!externalSignal?.aborted) void preloadBackgroundAssets(firstScreenSources, firstScreenMusic, onProgress, externalSignal);
+      }, 0);
+    }
+    await delay(Math.max(0, MINIMUM_VISIBLE_MS - (performance.now() - startedAt)));
+    return { ...summary, timedOut, ready };
+  } finally {
+    window.clearTimeout(timeout);
+    externalSignal?.removeEventListener("abort", abortFromOutside);
+  }
 }

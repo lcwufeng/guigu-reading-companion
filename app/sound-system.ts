@@ -68,6 +68,10 @@ export function getBackgroundMusicSources() {
   return [...new Set(Object.values(musicByScene).flatMap((tracks) => tracks.map((track) => track.src)))];
 }
 
+export function getHomeMusicSources() {
+  return [...new Set(musicByScene.home.map((track) => track.src))];
+}
+
 const effectSources: Record<SoundEffectId, string> = {
   "ui-tap": audioSource("/audio/sfx/ui-tap.mp3"),
   "reward-star": audioSource("/audio/sfx/reward-star.mp3"),
