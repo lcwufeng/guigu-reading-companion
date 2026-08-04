@@ -13754,6 +13754,7 @@ button:disabled {
    student explicitly opens either floating panel. */
 .immersive-reader .reader-top-bar {
   align-items: center;
+  border-radius: 16px;
   display: grid;
   gap: clamp(8px, 1vw, 16px);
   grid-template-columns: minmax(190px, 0.82fr) minmax(320px, 1.18fr) auto;
@@ -13775,65 +13776,127 @@ button:disabled {
 .reader-top-book > button { flex: 0 0 auto; }
 .reader-top-book strong { font-size: clamp(16px, 1.25vw, 21px); }
 
+.immersive-reader .reader-top-book > button {
+  background: rgba(239, 242, 220, 0.96);
+  border: 1px solid #aab996;
+  color: #40523d;
+  box-shadow: none;
+}
+
+.immersive-reader .reader-top-book > button:hover {
+  background: var(--reader-green);
+  border-color: var(--reader-green-dark);
+  color: #fff;
+}
+
 .reader-top-meta {
+  flex: 1 1 auto;
   gap: clamp(7px, 0.8vw, 12px);
   justify-content: center;
 }
 
 .reader-chapter-summary {
   align-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 254, 242, 0.98), rgba(234, 239, 214, 0.94));
+  border: 1px solid rgba(119, 137, 91, 0.45);
+  border-radius: 13px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 3px 10px rgba(69, 87, 51, 0.09);
   display: grid;
-  gap: 3px 7px;
-  grid-template-columns: auto minmax(54px, 1fr) auto;
+  flex: 1 1 260px;
+  gap: 9px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-width: 0;
+  padding: 6px 10px 6px 7px;
+}
+
+.reader-chapter-index {
+  align-items: center;
+  align-self: stretch;
+  background: linear-gradient(145deg, #6f9559, #4f7548);
+  border: 1px solid #456b3e;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  color: #fffdf1;
+  display: flex;
+  font-size: 12px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.reader-chapter-copy {
   min-width: 0;
 }
 
-.reader-chapter-summary > strong {
+.reader-chapter-copy > strong {
   color: var(--reader-ink);
-  font-size: clamp(13px, 1.05vw, 16px);
+  display: block;
+  font-size: clamp(14px, 1.08vw, 17px);
   font-weight: 900;
-  grid-column: 1 / -1;
-  line-height: 1.15;
+  line-height: 1.18;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.reader-chapter-summary > span,
-.reader-chapter-summary > small {
+.reader-chapter-progress-line {
+  align-items: center;
+  display: grid;
+  gap: 7px;
+  grid-template-columns: minmax(48px, 1fr) auto auto;
+  margin-top: 5px;
+  min-width: 0;
+}
+
+.reader-chapter-progress-line > span,
+.reader-chapter-progress-line > small {
   color: var(--reader-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1.15;
   white-space: nowrap;
 }
 
-.reader-chapter-summary > small {
-  font-size: 12px;
-  text-align: right;
+.reader-chapter-progress-line > small {
+  border-left: 1px solid rgba(105, 119, 83, 0.28);
+  font-size: 11px;
+  padding-left: 7px;
 }
 
 .reader-top-progress {
-  background: #d4ddc4;
+  background: rgba(165, 181, 139, 0.38);
   border-radius: 999px;
   display: block;
-  height: 5px;
-  min-width: 54px;
+  height: 6px;
+  min-width: 48px;
   overflow: hidden;
 }
 
 .reader-top-progress > b {
-  background: var(--reader-green);
+  background: linear-gradient(90deg, #709a57, #e0b74b);
   border-radius: inherit;
   display: block;
   height: 100%;
   transition: width 180ms ease;
 }
 
+.reader-top-meta .reading-font-controls {
+  background: rgba(244, 244, 226, 0.9);
+  border: 1px solid rgba(146, 160, 119, 0.42);
+  border-radius: 10px;
+  flex: 0 0 auto;
+  padding: 3px;
+}
+
 .reader-top-meta .reading-font-controls button {
-  background: #e7ead7;
-  border: 1px solid #b9c5a8;
-  border-radius: 7px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
   box-shadow: none;
   color: #515b49;
   font-size: 13px;
@@ -13848,11 +13911,19 @@ button:disabled {
   color: #fffdf3;
 }
 
-.reader-top-actions { gap: 7px; justify-content: flex-end; }
+.reader-top-actions {
+  background: rgba(244, 244, 226, 0.88);
+  border: 1px solid rgba(146, 160, 119, 0.42);
+  border-radius: 11px;
+  gap: 3px;
+  justify-content: flex-end;
+  padding: 3px;
+}
 
 .immersive-reader .reader-top-actions > button {
-  background: #edf0da;
-  border: 1px solid #aab996;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
   box-shadow: none;
   color: #40523d;
   font-size: 14px;
@@ -14032,22 +14103,31 @@ button:disabled {
 
   .reader-chapter-summary {
     flex: 1 1 auto;
-    gap: 2px 4px;
+    gap: 5px;
     grid-template-columns: auto minmax(0, 1fr);
+    padding: 3px 5px 3px 3px;
   }
 
-  .reader-chapter-summary > strong { font-size: 12px; }
-  .reader-chapter-summary > span { font-size: 0; }
-  .reader-chapter-summary > span::after {
-    content: attr(data-mobile);
-    font-size: 10px;
+  .reader-chapter-index {
+    border-radius: 7px;
+    font-size: 9px;
+    min-height: 32px;
+    padding: 0 6px;
   }
-  .reader-chapter-summary > small {
-    font-size: 10px;
-    min-width: 0;
+
+  .reader-chapter-copy > strong { font-size: 11px; }
+  .reader-chapter-progress-line {
+    gap: 4px;
+    grid-template-columns: auto auto;
+    margin-top: 3px;
+  }
+  .reader-chapter-progress-line > span,
+  .reader-chapter-progress-line > small {
+    font-size: 9px;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .reader-chapter-progress-line > small { padding-left: 4px; }
   .reader-top-progress { display: none; }
 
   .reader-top-meta .reading-font-controls { gap: 2px; }

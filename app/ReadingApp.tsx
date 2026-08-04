@@ -2506,6 +2506,7 @@ export default function ReadingApp({
     .reduce((total, chapter) => total + (chapter.pageCount ?? chapter.pages.length), 0);
   const overallPageNumber = totalBookPages ? pagesBeforeChapter + bookPage + 1 : 0;
   const overallProgress = totalBookPages ? (overallPageNumber / totalBookPages) * 100 : 0;
+  const overallProgressLabel = overallProgress.toFixed(2);
   const activeChapterPrompt = activeChapter
     ? chapterPrompts[selectedBook.id]?.[activeChapter.title] || buildChapterPrompt(activeChapter.title)
     : null;
@@ -4506,11 +4507,16 @@ export default function ReadingApp({
                   </div>
                   {activeChapter && activePage ? (
                     <div className="reader-top-meta">
-                      <div className="reader-chapter-summary" aria-label={`当前阅读：${activeChapter.title}，全书进度 ${overallProgress}% ，第 ${selectedChapter + 1} 章，本章第 ${bookPage + 1} 页，共 ${activePages.length} 页`}>
-                        <strong title={activeChapter.title}>{activeChapter.title}</strong>
-                        <span data-mobile={`已读 ${overallProgress}%`}>阅读进度 {overallProgress}%</span>
-                        <i className="reader-top-progress" aria-hidden="true"><b style={{ width: `${overallProgress}%` }} /></i>
-                        <small>第 {selectedChapter + 1} 章 · 本章 {bookPage + 1}/{activePages.length} 页</small>
+                      <div className="reader-chapter-summary" aria-label={`当前阅读：${activeChapter.title}，全书进度 ${overallProgressLabel}% ，第 ${selectedChapter + 1} 章，本章第 ${bookPage + 1} 页，共 ${activePages.length} 页`}>
+                        <span className="reader-chapter-index">第 {selectedChapter + 1} 章</span>
+                        <div className="reader-chapter-copy">
+                          <strong title={activeChapter.title}>{activeChapter.title}</strong>
+                          <div className="reader-chapter-progress-line">
+                            <i className="reader-top-progress" aria-hidden="true"><b style={{ width: `${overallProgress}%` }} /></i>
+                            <span>全书 {overallProgressLabel}%</span>
+                            <small>本章 {bookPage + 1}/{activePages.length} 页</small>
+                          </div>
+                        </div>
                       </div>
                       <div className="reading-font-controls" role="group" aria-label="选择原文字号">
                         <span>字号</span>
