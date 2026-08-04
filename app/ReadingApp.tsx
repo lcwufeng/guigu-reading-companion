@@ -4506,7 +4506,12 @@ export default function ReadingApp({
                   </div>
                   {activeChapter && activePage ? (
                     <div className="reader-top-meta">
-                      <span className="reading-page-meta">第 {overallPageNumber} / {totalBookPages} 页</span>
+                      <div className="reader-chapter-summary" aria-label={`当前阅读：${activeChapter.title}，全书进度 ${overallProgress}% ，第 ${selectedChapter + 1} 章，本章第 ${bookPage + 1} 页，共 ${activePages.length} 页`}>
+                        <strong title={activeChapter.title}>{activeChapter.title}</strong>
+                        <span data-mobile={`已读 ${overallProgress}%`}>阅读进度 {overallProgress}%</span>
+                        <i className="reader-top-progress" aria-hidden="true"><b style={{ width: `${overallProgress}%` }} /></i>
+                        <small>第 {selectedChapter + 1} 章 · 本章 {bookPage + 1}/{activePages.length} 页</small>
+                      </div>
                       <div className="reading-font-controls" role="group" aria-label="选择原文字号">
                         <span>字号</span>
                         {readingFontOptions.map((option) => (
@@ -4591,9 +4596,7 @@ export default function ReadingApp({
                   </nav>}
 
                   <article className={`reading-paper complete-reading-paper reading-font-${game.readingFontSize}`}>
-                    <div className="reading-progress"><i style={{ width: `${overallProgress}%` }} /></div>
-                    <small className="chapter-position">第 {selectedChapter + 1} 章 · 本章 {bookPage + 1}/{activePages.length} 页</small>
-                    <h2>{activePage.heading}</h2>
+                    {activePage.heading.trim() !== activeChapter.title.trim() && <h2>{activePage.heading}</h2>}
                     <div className="original-book-text" ref={readerTextRef}>
                       {activePage.images?.length ? (
                         <div className="book-inline-illustrations" aria-label="原书插图">

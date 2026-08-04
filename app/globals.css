@@ -13756,8 +13756,8 @@ button:disabled {
   align-items: center;
   display: grid;
   gap: clamp(8px, 1vw, 16px);
-  grid-template-columns: minmax(210px, 1fr) auto auto;
-  min-height: 62px;
+  grid-template-columns: minmax(190px, 0.82fr) minmax(320px, 1.18fr) auto;
+  min-height: 60px;
   padding: 7px 10px;
 }
 
@@ -13776,15 +13776,58 @@ button:disabled {
 .reader-top-book strong { font-size: clamp(16px, 1.25vw, 21px); }
 
 .reader-top-meta {
-  gap: 10px;
+  gap: clamp(7px, 0.8vw, 12px);
   justify-content: center;
 }
 
-.reader-top-meta .reading-page-meta {
-  color: var(--reader-muted);
-  font-size: 13px;
-  font-weight: 800;
+.reader-chapter-summary {
+  align-items: center;
+  display: grid;
+  gap: 3px 7px;
+  grid-template-columns: auto minmax(54px, 1fr) auto;
+  min-width: 0;
+}
+
+.reader-chapter-summary > strong {
+  color: var(--reader-ink);
+  font-size: clamp(13px, 1.05vw, 16px);
+  font-weight: 900;
+  grid-column: 1 / -1;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.reader-chapter-summary > span,
+.reader-chapter-summary > small {
+  color: var(--reader-muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.reader-chapter-summary > small {
+  font-size: 12px;
+  text-align: right;
+}
+
+.reader-top-progress {
+  background: #d4ddc4;
+  border-radius: 999px;
+  display: block;
+  height: 5px;
+  min-width: 54px;
+  overflow: hidden;
+}
+
+.reader-top-progress > b {
+  background: var(--reader-green);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  transition: width 180ms ease;
 }
 
 .reader-top-meta .reading-font-controls button {
@@ -13830,7 +13873,7 @@ button:disabled {
 .reader-top-author { color: var(--reader-muted); font-size: 14px; }
 
 .immersive-reader .library-mode-reader .complete-reader {
-  top: clamp(78px, 11dvh, 92px);
+  top: clamp(72px, 10dvh, 82px);
 }
 
 .immersive-reader .complete-reader .complete-reading-paper {
@@ -13838,12 +13881,12 @@ button:disabled {
   height: 100%;
   max-height: none;
   min-height: 0;
+  padding-top: 16px;
   width: 100%;
 }
 
-.immersive-reader .complete-reading-paper > .reading-progress {
-  flex: 0 0 auto;
-  margin-top: 0;
+.immersive-reader .complete-reading-paper h2 {
+  margin-top: 6px;
 }
 
 .reader-panel-backdrop {
@@ -13955,10 +13998,9 @@ button:disabled {
 @media (max-width: 1100px) {
   .immersive-reader .reader-top-bar {
     gap: 7px;
-    grid-template-columns: minmax(170px, 1fr) auto auto;
+    grid-template-columns: minmax(140px, 0.7fr) minmax(235px, 1.3fr) auto;
   }
 
-  .reader-top-meta .reading-page-meta,
   .reader-top-meta .reading-font-controls > span,
   .reader-bottom-status,
   .reader-bottom-bar .book-audio-status {
@@ -13973,15 +14015,40 @@ button:disabled {
 @media (max-width: 760px) {
   .immersive-reader .reader-top-bar {
     gap: 5px;
-    grid-template-columns: minmax(120px, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     min-height: 50px;
     padding: 4px 6px;
   }
 
   .reader-top-book { gap: 5px; }
-  .reader-top-book > button span,
-  .reader-top-book small { display: none; }
-  .reader-top-book strong { font-size: 14px; }
+  .reader-top-book > div { display: none; }
+  .reader-top-book > button span { display: none; }
+
+  .reader-top-meta {
+    gap: 4px;
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .reader-chapter-summary {
+    flex: 1 1 auto;
+    gap: 2px 4px;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .reader-chapter-summary > strong { font-size: 12px; }
+  .reader-chapter-summary > span { font-size: 0; }
+  .reader-chapter-summary > span::after {
+    content: attr(data-mobile);
+    font-size: 10px;
+  }
+  .reader-chapter-summary > small {
+    font-size: 10px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .reader-top-progress { display: none; }
 
   .reader-top-meta .reading-font-controls { gap: 2px; }
   .reader-top-meta .reading-font-controls button {
@@ -13992,10 +14059,12 @@ button:disabled {
   }
 
   .immersive-reader .reader-top-actions > button {
-    font-size: 12px;
-    gap: 3px;
+    font-size: 0;
+    gap: 0;
+    justify-content: center;
     min-height: 34px;
-    padding: 5px 7px;
+    padding: 5px;
+    width: 34px;
   }
   .reader-top-actions svg { height: 15px; width: 15px; }
 
