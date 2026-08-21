@@ -711,8 +711,15 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
   assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock", "tree-root", "flower-bank", "lily-pad", "cave-door", "cave-flowers", "blue-flowers", "hedge", "path-grass", "pond-cobbles", "boulder"\]/);
-  assert.match(page, /landHomeSpots: HomeSpot\[\] = \["center", "tree-shade", "cave-door"\]/);
-  assert.doesNotMatch(page, /HomeSpot = [^;]*pond-edge/);
+  assert.match(page, /landHomeSpots: HomeSpot\[\] = \["center", "pond-edge", "tree-shade", "cave-door"\]/);
+  assert.match(page, /TurtleAmbientMode = "idle" \| "walking" \| "looking" \| "waving" \| "resting" \| "petted" \| "tickled"/);
+  assert.match(page, /TURTLE_WALK_DURATION_MS = 2_300/);
+  assert.match(page, /respondToTurtleTouch/);
+  assert.match(page, /`摸摸\$\{game\.name\}`/);
+  assert.match(styles, /\.turtle-wrap\.ambient-walking \{[\s\S]*?transition-duration: 2300ms/);
+  assert.match(styles, /@keyframes turtleAliveBreath/);
+  assert.match(styles, /@keyframes turtleWalkingBob/);
+  assert.match(styles, /@keyframes turtlePetted/);
   assert.match(styles, /width: clamp\(106px, 10\.5vw, 165px\)/);
   assert.match(styles, /height: clamp\(155px, 25vh, 270px\)/);
   assert.match(styles, /\.turtle-wrap \{[\s\S]*?left: 50%;/);
