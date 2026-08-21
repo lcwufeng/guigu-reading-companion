@@ -11,6 +11,11 @@ const replacedByWebp = [
   "ui/journal/background.png",
   "ui/journal/knowledge-card-background.png",
   "ui/journal/books",
+  "ui/journal/parchment-panel.png",
+  "ui/journal/green-button.png",
+  "ui/supplied/nav",
+  "ui/supplied/brand/logo.png",
+  "legacy/brand",
 ];
 
 for (const relativePath of replacedByWebp) {
