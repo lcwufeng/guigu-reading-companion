@@ -5,7 +5,7 @@ import { ChevronLeft, Clock3, MousePointerClick, Play, RotateCcw, Sparkles, Trop
 import { useEffect, useRef, useState } from "react";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_idle_standing.png`;
+const TURTLE = `${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-travel-hd.webp`;
 const RACE_TICK_MS = 50;
 const RABBIT_STEP = 0.13;
 
@@ -363,7 +363,7 @@ export default function TortoiseRaceGame({
           {run.phase === "finished" && (
             <div className={`race-overlay race-result ${turtleWon ? "success" : "retry"}`} role="dialog" aria-label="比赛结果">
               <img
-                src={`${BASE_PATH}/assets/characters/turtle/${turtleWon ? "turtle_happy_hearts.png" : "turtle_thinking.png"}`}
+                src={`${BASE_PATH}/assets/characters/turtle/${turtleWon ? "actions/turtle-companion-celebrating-hd.webp" : "actions/turtle-companion-listening-hd.webp"}`}
                 alt=""
               />
               <div>

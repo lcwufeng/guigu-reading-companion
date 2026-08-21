@@ -5,7 +5,7 @@ import { Check, ChevronLeft, Lightbulb, PackageCheck, RotateCcw, Route, Undo2 } 
 import { useMemo, useRef, useState } from "react";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_idle_standing.png`;
+const TURTLE = `${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-travel-hd.webp`;
 
 type StopId =
   | "post"
@@ -393,7 +393,7 @@ export default function CourierGame({
         </div>
       ) : (
         <div className="learning-game-finish">
-          <img src={`${BASE_PATH}/assets/characters/turtle/turtle_happy_hearts.png`} alt={`${turtleName}完成快递任务`} />
+          <img src={`${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt={`${turtleName}完成快递任务`} />
           <div><small>{missions.length} 条最短路线全部找到</small><h2>{turtleName}成为金牌快递员啦！</h2><p>你已经会比较距离、安排顺序，还能规划送完返回的完整路线。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div>
         </div>
       )}

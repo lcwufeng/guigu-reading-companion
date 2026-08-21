@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { emitSoundEffect } from "./sound-system";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_idle_front.png`;
+const TURTLE = `${BASE_PATH}/assets/characters/turtle/home/turtle-home-idle-hd.webp`;
 
 type ShellSymbol = { key: string; emoji: string; label: string };
 type ShellLevel = {
@@ -206,7 +206,7 @@ export default function ShellMemoryGame({
           </aside>
         </div>
       ) : (
-        <div className="learning-game-finish"><img src={`${BASE_PATH}/assets/characters/turtle/turtle_happy_hearts.png`} alt={`${turtleName}完成贝壳翻翻乐`} /><div><small>五片贝壳滩全部通过</small><h2>{turtleName}和你成为记忆小达人啦！</h2><p>从三对到十对图案，你会观察位置、记住线索，也会在翻错后调整方法。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div></div>
+        <div className="learning-game-finish"><img src={`${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt={`${turtleName}完成贝壳翻翻乐`} /><div><small>五片贝壳滩全部通过</small><h2>{turtleName}和你成为记忆小达人啦！</h2><p>从三对到十对图案，你会观察位置、记住线索，也会在翻错后调整方法。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div></div>
       )}
     </section>
   );

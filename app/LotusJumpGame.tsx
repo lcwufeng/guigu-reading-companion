@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { emitSoundEffect } from "./sound-system";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_idle_standing.png`;
+const TURTLE = `${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-travel-hd.webp`;
 
 type Pad = {
   id: string;
@@ -260,7 +260,7 @@ export default function LotusJumpGame({
         </div>
       ) : (
         <div className="learning-game-finish">
-          <img src={`${BASE_PATH}/assets/characters/turtle/turtle_happy_hearts.png`} alt={`${turtleName}完成荷叶跳跳`} />
+          <img src={`${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt={`${turtleName}完成荷叶跳跳`} />
           <div><small>{levels.length} 片规律池全部通过</small><h2>{turtleName}成为荷叶规律小达人啦！</h2><p>你会先观察数字，再按规律选择下一步，难题也能一步一步解决。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div>
         </div>
       )}

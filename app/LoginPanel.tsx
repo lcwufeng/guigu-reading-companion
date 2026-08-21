@@ -47,7 +47,7 @@ export default function LoginPanel({ mode, displayName = "" }: { mode: "login" |
     <main className="login-screen" style={{ backgroundImage: `url("${BASE_PATH}/assets/optimized/ui/login/background.webp")` }}>
       <section className="login-card" aria-labelledby="login-title">
         <img className="login-logo" src={`${BASE_PATH}/assets/ui/supplied/brand/logo-20260715.png`} alt="龟龟伴读" />
-        <img className="login-turtle" src={`${BASE_PATH}/assets/characters/turtle/${mode === "reset" ? "turtle_thinking.png" : "turtle_waving.png"}`} alt="欢迎你的龟龟" />
+        <img className="login-turtle" src={`${BASE_PATH}/assets/characters/turtle/${mode === "reset" ? "actions/turtle-companion-listening-hd.webp" : "actions/turtle-companion-waving-hd.webp"}`} alt="欢迎你的龟龟" />
         <div className="login-copy">
           <span><Sparkles aria-hidden="true" /> {mode === "reset" ? `欢迎你，${displayName}` : "内测学习屋"}</span>
           <h1 id="login-title">{mode === "reset" ? "第一次登录，请设置新密码" : "登录后，龟龟才能认出你"}</h1>

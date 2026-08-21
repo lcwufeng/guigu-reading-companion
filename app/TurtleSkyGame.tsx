@@ -5,7 +5,7 @@ import { Check, ChevronLeft, Cloud, Heart, MousePointer2, Plane, Play, RotateCcw
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_excited.png`;
+const TURTLE = `${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-travel-hd.webp`;
 const TICK_MS = 50;
 
 type FlightObject = {
@@ -248,7 +248,7 @@ export default function TurtleSkyGame({
 
             {run.phase === "finished" && (
               <div className={`flight-overlay result ${success ? "success" : "retry"}`} role="dialog" aria-label="飞行任务结果">
-                <img src={`${BASE_PATH}/assets/characters/turtle/${success ? "turtle_happy_hearts.png" : "turtle_thinking.png"}`} alt="" />
+                <img src={`${BASE_PATH}/assets/characters/turtle/${success ? "actions/turtle-companion-celebrating-hd.webp" : "actions/turtle-companion-listening-hd.webp"}`} alt="" />
                 <div>
                   <small>{success ? "飞行任务完成！" : "别着急，再飞一次"}</small>
                   <h2>{run.score} 分 · {hearts} 颗爱心</h2>
@@ -277,7 +277,7 @@ export default function TurtleSkyGame({
         </div>
       ) : (
         <div className="learning-game-finish">
-          <img src={`${BASE_PATH}/assets/characters/turtle/turtle_happy_hearts.png`} alt={`${turtleName}完成飞行挑战`} />
+          <img src={`${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt={`${turtleName}完成飞行挑战`} />
           <div><small>{missions.length} 条航线全部完成</small><h2>{turtleName}和你成为星空小飞行员啦！</h2><p>你会观察目标、判断方向，也能在速度变快时保持专注。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div>
         </div>
       )}

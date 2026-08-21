@@ -5,7 +5,7 @@ import { Backpack, Check, ChevronLeft, Lightbulb, RotateCcw, ShieldCheck, Sparkl
 import { useRef, useState } from "react";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_idle_front.png`;
+const TURTLE = `${BASE_PATH}/assets/characters/turtle/home/turtle-home-idle-hd.webp`;
 
 type OutfitItemId =
   | "sunhat"
@@ -259,7 +259,7 @@ export default function WeatherOutfitGame({
         </div>
       ) : (
         <div className="learning-game-finish">
-          <img src={`${BASE_PATH}/assets/characters/turtle/turtle_happy_hearts.png`} alt={`${turtleName}完成天气穿搭`} />
+          <img src={`${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt={`${turtleName}完成天气穿搭`} />
           <div><small>四种天气全部准备正确</small><h2>{turtleName}会看天气做准备啦！</h2><p>你不只选了衣服，还根据温度、降雨、路面和行程准备了旅行用品。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div>
         </div>
       )}

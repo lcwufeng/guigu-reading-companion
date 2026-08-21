@@ -306,8 +306,8 @@ test("provides ten responsive turtle games with progressive learning challenges 
   assert.match(gamePark, /"cloud-pairs"/);
   assert.match(gamePark, /ROUND_DURATION_MS = 30_000/);
   assert.match(gamePark, /FRUIT_CATCH_TARGET_SCORE = 12/);
-  assert.match(gamePark, /turtle_idle_standing\.png/);
-  assert.match(gamePark, /turtle_excited\.png/);
+  assert.match(gamePark, /turtle-companion-travel-hd\.webp/);
+  assert.match(gamePark, /turtle-companion-celebrating-hd\.webp/);
   assert.match(gamePark, /onPointerMove=\{moveFromPointer\}/);
   assert.match(gamePark, /event\.key === "ArrowLeft"/);
   assert.match(gamePark, /今天首次过关，获得 1 颗星星/);
@@ -329,33 +329,33 @@ test("provides ten responsive turtle games with progressive learning challenges 
   assert.match(courierGame, /ordered\?: boolean/);
   assert.match(courierGame, /returnToPost\?: boolean/);
   assert.match(courierGame, /完成\$\{missions\.length\}个由易到难的快递任务/);
-  assert.match(courierGame, /turtle_idle_standing\.png/);
+  assert.match(courierGame, /turtle-companion-travel-hd\.webp/);
   assert.match(weatherGame, /衣服和旅行用品/);
   assert.equal((weatherGame.match(/id: "(?:sunny-park|rainy-library|cold-hill|cloudy-trail)"/g) || []).length, 4);
   assert.match(weatherGame, /challenge\.required/);
   assert.match(weatherGame, /challenge\.avoid/);
-  assert.match(weatherGame, /turtle_idle_front\.png/);
+  assert.match(weatherGame, /turtle-home-idle-hd\.webp/);
   assert.equal((lotusGame.match(/id: "(?:count-1-4|even-2-8|odd-plus-two|multiples-three|expression-results|growing-pattern)"/g) || []).length, 6);
   assert.match(lotusGame, /pad\.order !== expectedOrder/);
   assert.match(lotusGame, /每个数都是前两个数相加/);
-  assert.match(lotusGame, /turtle_idle_standing\.png/);
+  assert.match(lotusGame, /turtle-companion-travel-hd\.webp/);
   assert.match(lotusGame, /龟龟提示/);
   assert.equal((differenceGame.match(/id: "(?:pond-morning|picnic-day|forest-trail|seaside-camp)"/g) || []).length, 4);
   assert.equal((differenceGame.match(/different: true/g) || []).length, 18);
   assert.match(differenceGame, /feature\.different/);
   assert.match(differenceGame, /颜色、数量和形状/);
-  assert.match(differenceGame, /turtle_idle_front\.png/);
+  assert.match(differenceGame, /turtle-home-idle-hd\.webp/);
   assert.match(differenceGame, /龟龟提示/);
   assert.equal((storyGame.match(/id: "(?:seed-wakes|rainy-umbrella|lost-bookmark|forest-rescue|starlight-post)"/g) || []).length, 5);
   assert.match(storyGame, /起因、经过、转折和结果/);
-  assert.match(storyGame, /turtle_reading\.png/);
+  assert.match(storyGame, /turtle-companion-reading-hd\.webp/);
   assert.match(storyGame, /龟龟提示/);
   assert.equal((flightGame.match(/id: "(?:sunny-training|cloud-valley|wind-corridor)"/g) || []).length, 3);
   assert.match(flightGame, /event\.key === "ArrowUp"/);
   assert.match(flightGame, /onPointerMove=\{moveFromPointer\}/);
   assert.match(flightGame, /Math\.floor\(pointerY \/ bounds\.height \* 3\)/);
   assert.match(flightGame, /避开乌云/);
-  assert.match(flightGame, /turtle_excited\.png/);
+  assert.match(flightGame, /turtle-companion-travel-hd\.webp/);
   assert.match(flightGame, /鼠标跟随控制/);
   assert.match(raceGame, /RABBIT_STEP = 0\.13/);
   assert.equal((raceGame.match(/id: "(?:flower-meadow|pond-bridge|orchard-bends|hill-switchback|firefly-forest|rainbow-cloud)"/g) || []).length, 6);
@@ -367,7 +367,7 @@ test("provides ten responsive turtle games with progressive learning challenges 
   assert.match(raceGame, /点击越快，龟龟爬得越快/);
   assert.match(raceGame, /龟龟和灰兔都在起点准备/);
   assert.match(raceGame, /onClick=\{tapTurtle\}/);
-  assert.match(raceGame, /turtle_idle_standing\.png/);
+  assert.match(raceGame, /turtle-companion-travel-hd\.webp/);
   assert.match(raceGame, /不会重复消耗游玩票/);
   assert.equal((shellGame.match(/id: "(?:three-pairs|four-pairs|six-pairs|eight-pairs|ten-pairs)"/g) || []).length, 5);
   assert.match(shellGame, /previewMs: 1_900/);
@@ -840,6 +840,9 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.turtle-wrap\.in-pond \.turtle-sprite \{[\s\S]*?width: clamp\(220px, 25vw, 360px\)/);
   assert.match(styles, /\.turtle-wrap\.is-swimming \.turtle-water-ripples/);
   assert.match(styles, /@keyframes turtleRippleExpand/);
+  assert.match(styles, /@keyframes companionTravelerStride/);
+  assert.match(styles, /@keyframes companionCelebrateIn/);
+  assert.match(styles, /img\[src\*="\/assets\/characters\/turtle\/"\]/);
   assert.match(styles, /@keyframes turtlePeek/);
   assert.match(styles, /\.reading-font-medium \.original-book-text p \{ font-size: 18px; \}/);
   assert.match(styles, /\.reading-font-large \.original-book-text p \{ font-size: 20px; \}/);
@@ -1080,6 +1083,13 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/optimized/backgrounds/reading_room.webp",
     "../public/assets/optimized/backgrounds/travel_map.webp",
     "../public/assets/characters/turtle/turtle_idle_front.png",
+    "../public/assets/characters/turtle/home/turtle-home-idle-hd.webp",
+    "../public/assets/characters/turtle/home/turtle-home-swimming-hd.webp",
+    "../public/assets/characters/turtle/actions/turtle-companion-waving-hd.webp",
+    "../public/assets/characters/turtle/actions/turtle-companion-reading-hd.webp",
+    "../public/assets/characters/turtle/actions/turtle-companion-listening-hd.webp",
+    "../public/assets/characters/turtle/actions/turtle-companion-celebrating-hd.webp",
+    "../public/assets/characters/turtle/actions/turtle-companion-travel-hd.webp",
     "../public/assets/icons/status/status_mood.png",
     "../public/assets/legacy/brand/guigu_logo.png",
     "../public/assets/legacy/travel/location_beach.png",

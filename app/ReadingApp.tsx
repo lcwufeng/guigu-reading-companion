@@ -2575,7 +2575,7 @@ export default function ReadingApp({
       setHideRound(0);
       setHideSeconds(HIDE_ROUND_SECONDS);
       setHideFound(null);
-      setTurtleSprite("turtle_excited.png");
+      setTurtleSprite("actions/turtle-companion-celebrating-hd.webp");
       void runStudentAction({ action: "hide-and-seek" }).then((data) => {
         setGame((current) => ({
           ...current,
@@ -3527,7 +3527,7 @@ export default function ReadingApp({
             <i className="startup-path path-one" />
             <i className="startup-path path-two" />
             <i className="startup-path path-three" />
-            <img src={`${ASSET}/characters/turtle/turtle_idle_standing.png`} alt="" />
+            <img src={`${ASSET}/characters/turtle/home/turtle-home-idle-hd.webp`} alt="" />
           </div>
           <h1>{startupPrepared ? "今天的小屋准备好啦" : "龟龟正在准备今天的小屋"}</h1>
           <p>{startupPrepared ? "点一下，和龟龟一起开始今天的学习吧！" : startupLabel}</p>
@@ -3644,7 +3644,7 @@ export default function ReadingApp({
             title="修改名字"
           >
             <span className="avatar-dot">
-              <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+              <img src={`${ASSET}/characters/turtle/home/turtle-home-idle-hd.webp`} alt="" />
             </span>
             <span>
               <small>我的伙伴</small>
@@ -4050,7 +4050,7 @@ export default function ReadingApp({
                       <strong>{dueExplorationNodes.size}</strong>
                       <span>今天待复习</span>
                     </div>
-                    <img src={`${ASSET}/characters/turtle/turtle_travel_start.png`} alt="龟龟背着书包准备知识探险" />
+                    <img src={`${ASSET}/characters/turtle/actions/turtle-companion-travel-hd.webp`} alt="龟龟背着书包准备知识探险" />
                   </section>
 
                   <section className="explore-recommendations" aria-labelledby="explore-recommendation-title">
@@ -4813,7 +4813,7 @@ export default function ReadingApp({
                       </div>
                     ) : (
                       <div className="reading-companion-card embedded">
-                        <div className="companion-card-heading"><img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪读的龟龟" /><div><small>伴读区 · 非原文</small><strong>{game.name}陪你读</strong></div></div>
+                        <div className="companion-card-heading"><img src={`${ASSET}/characters/turtle/actions/turtle-companion-reading-hd.webp`} alt="陪读的龟龟" /><div><small>伴读区 · 非原文</small><strong>{game.name}陪你读</strong></div></div>
                         <div className="companion-reward-rule"><Sparkles /><span>回答正确随机奖励 <strong>2 张旅行票或 2 张游玩票</strong></span></div>
                         <h3>这一章，龟龟陪你留心</h3>
                         {activeChapterPrompt ? <p className="reading-guide"><Lightbulb /> {activeChapterPrompt.guide}</p> : null}
@@ -4831,7 +4831,7 @@ export default function ReadingApp({
 
                 <img
                   className="reading-turtle"
-                  src={`${ASSET}/characters/turtle/${activePage && bookPage === activePages.length - 1 ? "turtle_reading_question.png" : "turtle_reading.png"}`}
+                  src={`${ASSET}/characters/turtle/actions/turtle-companion-reading-hd.webp`}
                   alt={`${game.name}正在陪你读书`}
                 />
               </>
@@ -4910,7 +4910,7 @@ export default function ReadingApp({
           <section className="scene chat-scene">
             <div className="chat-panel">
               <header className="chat-panel-header">
-                <img src={`${ASSET}/characters/turtle/turtle_waving.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/actions/turtle-companion-waving-hd.webp`} alt="" />
                 <div><small>今日悄悄话 · 我的陪伴伙伴</small><strong>{game.name}</strong></div>
                 <span><i /> 在线陪你聊</span>
               </header>
@@ -4927,7 +4927,7 @@ export default function ReadingApp({
                 {game.chatMessages.map((message) => (
                   <div key={message.id} className={`message ${message.role}`}>
                     {message.role === "turtle" && (
-                      <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+                      <img src={`${ASSET}/characters/turtle/home/turtle-home-idle-hd.webp`} alt="" />
                     )}
                     <div className="message-content">
                       {message.role === "turtle" && <small>{game.name}</small>}
@@ -4937,7 +4937,7 @@ export default function ReadingApp({
                 ))}
                 {chatThinking && (
                   <div className="message turtle thinking-message">
-                    <img src={`${ASSET}/characters/turtle/turtle_thinking.png`} alt="" />
+                    <img src={`${ASSET}/characters/turtle/actions/turtle-companion-listening-hd.webp`} alt="" />
                     <div className="message-content"><small>{game.name}正在想</small><p><span /><span /><span /></p></div>
                   </div>
                 )}
@@ -5012,7 +5012,7 @@ export default function ReadingApp({
 
             {traveling && (
               <div className="traveling-banner" role="status">
-                <img src={`${ASSET}/characters/turtle/turtle_travel_start.png`} alt="出发旅行的龟龟" />
+                <img src={`${ASSET}/characters/turtle/actions/turtle-companion-travel-hd.webp`} alt="出发旅行的龟龟" />
                 <div>
                   <strong>正在前往{traveling.name}</strong>
                   <span>沿途的新发现正在装进行囊…</span>
@@ -5171,7 +5171,7 @@ export default function ReadingApp({
         <div className="voice-listening-backdrop" role="presentation">
           <section className="voice-listening-panel" role="dialog" aria-modal="true" aria-labelledby="voice-panel-title">
             <button className="voice-panel-close" type="button" onClick={cancelVoiceInput} aria-label="取消语音输入"><X /></button>
-            <img src={`${ASSET}/characters/turtle/turtle_thinking.png`} alt="认真倾听的龟龟" />
+            <img src={`${ASSET}/characters/turtle/actions/turtle-companion-listening-hd.webp`} alt="认真倾听的龟龟" />
             <div className={`voice-orb ${voicePhase}`} style={{ "--voice-level": voiceLevel } as React.CSSProperties}>
               {voicePhase === "recording" ? <Mic /> : <Sparkles />}
             </div>
@@ -5200,7 +5200,7 @@ export default function ReadingApp({
         <div className="modal-backdrop chapter-question-backdrop" role="presentation">
           <section className="modal question-modal chapter-question-modal" role="dialog" aria-modal="true" aria-labelledby="chapter-question-title">
             <div className="chapter-question-heading">
-              <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="正在提问的龟龟" />
+              <img src={`${ASSET}/characters/turtle/actions/turtle-companion-reading-hd.webp`} alt="正在提问的龟龟" />
               <div>
                 <span className="modal-kicker">读完第 {selectedChapter + 1} 章 · 《{activeChapter.title}》</span>
                 <h2 id="chapter-question-title">龟龟的问题</h2>
@@ -5275,7 +5275,7 @@ export default function ReadingApp({
         <div className="modal-backdrop" role="presentation" onMouseDown={() => setEditingName(false)}>
           <section className="modal name-modal" role="dialog" aria-modal="true" aria-labelledby="name-title" onMouseDown={(event) => event.stopPropagation()}>
             <button className="modal-close" type="button" onClick={() => setEditingName(false)} aria-label="关闭"><X /></button>
-            <img src={`${ASSET}/characters/turtle/turtle_waving.png`} alt="挥手的龟龟" />
+            <img src={`${ASSET}/characters/turtle/actions/turtle-companion-waving-hd.webp`} alt="挥手的龟龟" />
             <h2 id="name-title">给伙伴起个名字</h2>
             <p>最多输入 8 个字，以后它会用这个名字陪着你。</p>
             <div className="name-entry">
@@ -5290,7 +5290,7 @@ export default function ReadingApp({
         <div className="modal-backdrop" role="presentation" onMouseDown={closeMistakeForm}>
           <section className={`modal mistake-form-modal mistake-capture-modal${mistakeDraft ? " has-draft" : ""}`} role="dialog" aria-modal="true" aria-labelledby="mistake-form-title" onMouseDown={(event) => event.stopPropagation()}>
             <button className="modal-close" type="button" disabled={mistakeScanning || mistakeSaving} onClick={closeMistakeForm} aria-label="关闭"><X /></button>
-            {!mistakeDraft && <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="帮你整理错题的龟龟" />}
+            {!mistakeDraft && <img src={`${ASSET}/characters/turtle/actions/turtle-companion-reading-hd.webp`} alt="帮你整理错题的龟龟" />}
             <span className="modal-kicker">龟龟错题屋</span>
             <h2 id="mistake-form-title">{mistakeDraft ? "和龟龟一起核对一下" : "拍下错题，龟龟来整理"}</h2>
             <p>{mistakeDraft ? "识别结果可以修改。确认无误后，才会收进你的错题本。" : "龟龟会整理题目、原答案、正确思路和可能的错因。"}</p>
@@ -5330,7 +5330,7 @@ export default function ReadingApp({
           <section className="modal mistake-review-modal" role="dialog" aria-modal="true" aria-labelledby="mistake-review-title">
             <button className="modal-close" type="button" disabled={reviewScanning} onClick={closeMistakeReview} aria-label="关闭"><X /></button>
             <div className="mistake-review-heading">
-              <img src={`${ASSET}/characters/turtle/turtle_reading_question.png`} alt="陪你复习的龟龟" />
+              <img src={`${ASSET}/characters/turtle/actions/turtle-companion-reading-hd.webp`} alt="陪你复习的龟龟" />
               <div><span className="modal-kicker">{reviewMistake.subject} · 第 {reviewMistake.reviewCount + (reviewOutcome?.saved ? 0 : 1)} 次挑战</span><h2 id="mistake-review-title">在纸上重新做一遍</h2></div>
             </div>
             {reviewMistake.imageData && <img className="review-question-photo" src={reviewMistake.imageData} alt="错题照片" />}
@@ -5380,7 +5380,7 @@ export default function ReadingApp({
           <section className="modal summary-modal" role="dialog" aria-modal="true" aria-labelledby="summary-title">
             <button className="modal-close" type="button" onClick={resetReading} aria-label="关闭"><X /></button>
             <div className="summary-celebration">
-              <img src={`${ASSET}/characters/turtle/turtle_happy_hearts.png`} alt="开心的龟龟" />
+              <img src={`${ASSET}/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt="开心的龟龟" />
               <div><span className="modal-kicker">阅读完成 · +3 星星 · +1 旅行票 · +1 游玩票</span><h2 id="summary-title">今天的阅读小结</h2></div>
             </div>
             <div className="summary-block"><small>今天读了</small><strong>《{selectedBook.title}》</strong></div>
@@ -5397,7 +5397,7 @@ export default function ReadingApp({
           <section className="modal reward-modal" role="dialog" aria-modal="true" aria-labelledby="reward-title">
             <button className="modal-close" type="button" onClick={() => setTravelReward(null)} aria-label="关闭"><X /></button>
             <header className="travel-reward-heading">
-              <img className="returning-turtle" src={`${ASSET}/characters/turtle/turtle_travel_return.png`} alt="旅行回来的龟龟" />
+              <img className="returning-turtle" src={`${ASSET}/characters/turtle/actions/turtle-companion-travel-hd.webp`} alt="旅行回来的龟龟" />
               <div>
                 <span className="modal-kicker">旅行平安归来 · +4 星星{travelReward.playTicketAwarded ? " · 幸运带回 1 张游玩票" : ""}</span>
                 <h2 id="reward-title">从{travelReward.destination.name}带回了新发现</h2>

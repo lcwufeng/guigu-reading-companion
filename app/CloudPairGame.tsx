@@ -220,7 +220,7 @@ export default function CloudPairGame({
               <h3>从这里选择</h3>
               {leftCards.map((pair) => <button type="button" className={`${selectedLeft === pair.key ? "selected" : ""} ${matchedSet.has(pair.key) ? "matched" : ""} ${hintedKey === pair.key ? "hinted" : ""}`} key={`left-${pair.key}`} disabled={resolving || matchedSet.has(pair.key)} onClick={() => chooseLeft(pair.key)}><b>{pair.left.emoji}</b><span>{pair.left.label}</span>{matchedSet.has(pair.key) && <Check />}</button>)}
             </div>
-            <div className="cloud-pair-path" aria-hidden="true"><Cloud /><span>⇄</span><img src={`${BASE_PATH}/assets/characters/turtle/turtle_excited.png`} alt="" /></div>
+            <div className="cloud-pair-path" aria-hidden="true"><Cloud /><span>⇄</span><img src={`${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-listening-hd.webp`} alt="" /></div>
             <div className="cloud-pair-column">
               <h3>找到关联</h3>
               {rightCards.map((pair) => <button type="button" className={`${selectedRight === pair.key ? "selected" : ""} ${matchedSet.has(pair.key) ? "matched" : ""} ${hintedKey === pair.key ? "hinted" : ""}`} key={`right-${pair.key}`} disabled={resolving || matchedSet.has(pair.key)} onClick={() => chooseRight(pair.key)}><b>{pair.right.emoji}</b><span>{pair.right.label}</span>{matchedSet.has(pair.key) && <Check />}</button>)}
@@ -239,7 +239,7 @@ export default function CloudPairGame({
           </aside>
         </div>
       ) : (
-        <div className="learning-game-finish"><img src={`${BASE_PATH}/assets/characters/turtle/turtle_happy_hearts.png`} alt={`${turtleName}完成云朵配对`} /><div><small>五片联想天空全部通过</small><h2>{turtleName}和你成为逻辑配对大师啦！</h2><p>你已经会从外形线索走向用途、测量和因果关系，能说清楚两件事为什么有关联。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div></div>
+        <div className="learning-game-finish"><img src={`${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt={`${turtleName}完成云朵配对`} /><div><small>五片联想天空全部通过</small><h2>{turtleName}和你成为逻辑配对大师啦！</h2><p>你已经会从外形线索走向用途、测量和因果关系，能说清楚两件事为什么有关联。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div></div>
       )}
     </section>
   );

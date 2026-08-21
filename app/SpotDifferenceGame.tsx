@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { emitSoundEffect } from "./sound-system";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_idle_front.png`;
+const TURTLE = `${BASE_PATH}/assets/characters/turtle/home/turtle-home-idle-hd.webp`;
 
 type SceneFeature = {
   id: string;
@@ -254,7 +254,7 @@ export default function SpotDifferenceGame({
         </>
       ) : (
         <div className="learning-game-finish">
-          <img src={`${BASE_PATH}/assets/characters/turtle/turtle_happy_hearts.png`} alt={`${turtleName}完成找不同`} />
+          <img src={`${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt={`${turtleName}完成找不同`} />
           <div><small>{levels.length} 幅场景全部观察完成</small><h2>{turtleName}找到所有不同啦！</h2><p>你会比较颜色、数量、形状和位置，观察力已经越来越敏锐。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div>
         </div>
       )}

@@ -5,7 +5,7 @@ import { BookOpen, Check, ChevronLeft, Lightbulb, RotateCcw, Sparkles, Undo2 } f
 import { useRef, useState } from "react";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const TURTLE = `${BASE_PATH}/assets/characters/turtle/turtle_reading.png`;
+const TURTLE = `${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-reading-hd.webp`;
 
 type StoryCard = {
   id: string;
@@ -244,7 +244,7 @@ export default function StoryPuzzleGame({
         </div>
       ) : (
         <div className="learning-game-finish">
-          <img src={`${BASE_PATH}/assets/characters/turtle/turtle_happy_hearts.png`} alt={`${turtleName}完成拼故事`} />
+          <img src={`${BASE_PATH}/assets/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt={`${turtleName}完成拼故事`} />
           <div><small>{levels.length} 个故事全部拼完整</small><h2>{turtleName}和你成为故事小导演啦！</h2><p>你会根据前因后果整理情节，也知道一个完整故事需要起因、经过和结果。</p><button type="button" onClick={onBack}>返回龟龟乐园</button></div>
         </div>
       )}

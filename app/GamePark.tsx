@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- The game reuses the project's local pixel-art assets. */
+/* eslint-disable @next/next/no-img-element -- The game reuses the project's local character and scene assets. */
 "use client";
 
 import { BookOpen, ChevronLeft, ChevronRight, Clock3, Cloud, CloudSun, Gamepad2, Heart, ListOrdered, Lock, Map, Medal, Plane, Search, Shell, Sparkles, Star, Trophy, Waves, X } from "lucide-react";
@@ -160,7 +160,7 @@ function GameLeaderboardDialog({
               </ol>
             ) : (
               <div className="game-rank-dialog-empty">
-                <img src={`${ASSET}/characters/turtle/turtle_excited.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt="" />
                 <strong>第一名正在等你</strong>
                 <span>完成一次挑战，成绩就会自动出现在这里。</span>
               </div>
@@ -535,7 +535,7 @@ export default function GamePark({
       {!challengeFailed && content}
       {challengeFailed && (
         <section className="game-challenge-failed" role="dialog" aria-label="本次挑战失败">
-          <img src={`${ASSET}/characters/turtle/turtle_thinking.png`} alt={`${turtleName}准备重新挑战`} />
+          <img src={`${ASSET}/characters/turtle/actions/turtle-companion-listening-hd.webp`} alt={`${turtleName}准备重新挑战`} />
           <div>
             <small>本次挑战结束</small>
             <h2>爱心用完后又选错了一次</h2>
@@ -582,7 +582,7 @@ export default function GamePark({
           <div className="game-park-hero-art" aria-hidden="true">
             <span className="fruit-orbit fruit-orbit-one"><img src={`${ASSET}/objects/fruit_red.png`} alt="" /></span>
             <span className="fruit-orbit fruit-orbit-two"><img src={`${ASSET}/objects/fruit_blue.png`} alt="" /></span>
-            <img className="game-park-turtle" src={`${ASSET}/characters/turtle/turtle_excited.png`} alt="" />
+            <img className="game-park-turtle" src={`${ASSET}/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt="" />
             <img className="game-park-basket" src={`${ASSET}/objects/fruit_basket.png`} alt="" />
           </div>
           <div className="game-park-featured-copy">
@@ -622,7 +622,7 @@ export default function GamePark({
               <div className="game-park-choice-art" aria-hidden="true">
                 <Map />
                 <span>📦</span><span>🏫</span><span>🏥</span>
-                <img src={`${ASSET}/characters/turtle/turtle_travel_start.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/actions/turtle-companion-travel-hd.webp`} alt="" />
               </div>
               <div>
                 <small>路线规划游戏</small>
@@ -639,7 +639,7 @@ export default function GamePark({
               <div className="game-park-choice-art" aria-hidden="true">
                 <CloudSun />
                 <span>☀️</span><span>🌧️</span><span>❄️</span>
-                <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/home/turtle-home-idle-hd.webp`} alt="" />
               </div>
               <div>
                 <small>生活判断游戏</small>
@@ -656,7 +656,7 @@ export default function GamePark({
               <div className="game-park-choice-art" aria-hidden="true">
                 <Waves />
                 <span>1</span><span>3</span><span>5</span>
-                <img src={`${ASSET}/characters/turtle/turtle_idle_standing.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/actions/turtle-companion-travel-hd.webp`} alt="" />
               </div>
               <div>
                 <small>数字规律游戏</small>
@@ -673,7 +673,7 @@ export default function GamePark({
               <div className="game-park-choice-art" aria-hidden="true">
                 <Search />
                 <span>🌸</span><span>🌼</span><span>🔎</span>
-                <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/home/turtle-home-idle-hd.webp`} alt="" />
               </div>
               <div>
                 <small>观察比较游戏</small>
@@ -690,7 +690,7 @@ export default function GamePark({
               <div className="game-park-choice-art" aria-hidden="true">
                 <BookOpen />
                 <span>①</span><span>②</span><span>③</span>
-                <img src={`${ASSET}/characters/turtle/turtle_reading.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/actions/turtle-companion-reading-hd.webp`} alt="" />
               </div>
               <div>
                 <small>阅读表达游戏</small>
@@ -707,7 +707,7 @@ export default function GamePark({
               <div className="game-park-choice-art" aria-hidden="true">
                 <Plane />
                 <span>⭐</span><span>☁️</span><span>💛</span>
-                <img src={`${ASSET}/characters/turtle/turtle_excited.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/actions/turtle-companion-travel-hd.webp`} alt="" />
               </div>
               <div>
                 <small>反应与方向游戏</small>
@@ -724,7 +724,7 @@ export default function GamePark({
               <div className="game-park-choice-art" aria-hidden="true">
                 <Trophy />
                 <span>🏁</span><span>🐇</span><span>加速！</span>
-                <img src={`${ASSET}/characters/turtle/turtle_idle_standing.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/actions/turtle-companion-travel-hd.webp`} alt="" />
               </div>
               <div>
                 <small>六关手速与坚持游戏</small>
@@ -741,7 +741,7 @@ export default function GamePark({
               <div className="game-park-choice-art" aria-hidden="true">
                 <Shell />
                 <span>🐚</span><span>⭐</span><span>🦀</span>
-                <img src={`${ASSET}/characters/turtle/turtle_idle_front.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/home/turtle-home-idle-hd.webp`} alt="" />
               </div>
               <div>
                 <small>五关观察与记忆游戏</small>
@@ -758,7 +758,7 @@ export default function GamePark({
               <div className="game-park-choice-art" aria-hidden="true">
                 <Cloud />
                 <span>☀️</span><span>☂️</span><span>💡</span>
-                <img src={`${ASSET}/characters/turtle/turtle_excited.png`} alt="" />
+                <img src={`${ASSET}/characters/turtle/actions/turtle-companion-listening-hd.webp`} alt="" />
               </div>
               <div>
                 <small>五关联想与逻辑游戏</small>
@@ -958,14 +958,14 @@ export default function GamePark({
         })}
 
         <div className="fruit-catch-player" style={{ left: `${run.playerX}%` }} aria-hidden="true">
-          <img className="fruit-catch-turtle" src={`${ASSET}/characters/turtle/turtle_idle_standing.png`} alt="" />
+          <img className="fruit-catch-turtle" src={`${ASSET}/characters/turtle/home/turtle-home-idle-hd.webp`} alt="" />
           <img className="fruit-catch-basket" src={`${ASSET}/objects/fruit_basket.png`} alt="" />
           {run.combo >= 3 && <span>连击 × {run.combo}</span>}
         </div>
 
         {run.phase === "intro" && (
           <div className="fruit-catch-overlay fruit-catch-intro">
-            <img src={`${ASSET}/characters/turtle/turtle_excited.png`} alt={`${turtleName}准备接果子`} />
+            <img src={`${ASSET}/characters/turtle/actions/turtle-companion-celebrating-hd.webp`} alt={`${turtleName}准备接果子`} />
             <div>
               <small>准备好了吗？</small>
               <h2>接到 {FRUIT_CATCH_TARGET_SCORE} 分就过关</h2>
@@ -982,7 +982,7 @@ export default function GamePark({
         {run.phase === "finished" && (
           <div className={`fruit-catch-overlay fruit-catch-result ${result.success ? "success" : "retry"}`} role="dialog" aria-label="本局游戏结果">
             <img
-              src={`${ASSET}/characters/turtle/${result.success ? "turtle_happy_hearts.png" : "turtle_thinking.png"}`}
+              src={`${ASSET}/characters/turtle/${result.success ? "actions/turtle-companion-celebrating-hd.webp" : "actions/turtle-companion-listening-hd.webp"}`}
               alt={result.success ? `${turtleName}开心庆祝` : `${turtleName}准备再试一次`}
             />
             <div>

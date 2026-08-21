@@ -1,8 +1,13 @@
 {
   "version": 1,
-  "imageCount": 166,
-  "totalBytes": 46086470,
+  "imageCount": 171,
+  "totalBytes": 48227556,
   "images": [
+    "characters/turtle/actions/turtle-companion-celebrating-hd.webp",
+    "characters/turtle/actions/turtle-companion-listening-hd.webp",
+    "characters/turtle/actions/turtle-companion-reading-hd.webp",
+    "characters/turtle/actions/turtle-companion-travel-hd.webp",
+    "characters/turtle/actions/turtle-companion-waving-hd.webp",
     "characters/turtle/hide-generated/turtle-hide-blue-flowers-20260716.png",
     "characters/turtle/hide-generated/turtle-hide-boulder-20260716.png",
     "characters/turtle/hide-generated/turtle-hide-bush-20260716.png",
