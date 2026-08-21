@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "imageCount": 164,
-  "totalBytes": 45399786,
+  "imageCount": 166,
+  "totalBytes": 46086470,
   "images": [
     "characters/turtle/hide-generated/turtle-hide-blue-flowers-20260716.png",
     "characters/turtle/hide-generated/turtle-hide-boulder-20260716.png",
@@ -19,6 +19,8 @@
     "characters/turtle/hide-generated/turtle-hide-pond-cobbles-20260716.png",
     "characters/turtle/hide-generated/turtle-hide-pond-rocks-20260716.png",
     "characters/turtle/hide-generated/turtle-hide-tree-root-20260716.png",
+    "characters/turtle/home/turtle-home-idle-hd.webp",
+    "characters/turtle/home/turtle-home-swimming-hd.webp",
     "characters/turtle/turtle_bathing.png",
     "characters/turtle/turtle_bored_sitting.png",
     "characters/turtle/turtle_clean_sparkle.png",

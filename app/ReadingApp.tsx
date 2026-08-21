@@ -848,14 +848,16 @@ const destinations: Destination[] = [
 const hidePlaces = ["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock", "tree-root", "flower-bank", "lily-pad", "cave-door", "cave-flowers", "blue-flowers", "hedge", "path-grass", "pond-cobbles", "boulder"] as const;
 type HidePlace = (typeof hidePlaces)[number];
 type HomeSpot = "center" | "pond-edge" | "tree-shade" | "cave-door";
-type TurtleAmbientMode = "idle" | "walking" | "looking" | "waving" | "resting" | "petted" | "tickled";
+type TurtleAmbientMode = "idle" | "walking" | "swimming" | "looking" | "waving" | "resting" | "petted" | "tickled";
 type TurtleDirection = "left" | "right";
 const HIDE_TOTAL_ROUNDS = 5;
 const HIDE_ROUND_SECONDS = 25;
 const DAILY_HIDE_AND_SEEK_LIMIT = 5;
-const TURTLE_WALK_DURATION_MS = 2_300;
+const TURTLE_WALK_DURATION_MS = 2_800;
+const TURTLE_HOME_IDLE_SPRITE = "home/turtle-home-idle-hd.webp";
+const TURTLE_HOME_SWIM_SPRITE = "home/turtle-home-swimming-hd.webp";
 
-const landHomeSpots: HomeSpot[] = ["center", "pond-edge", "tree-shade", "cave-door"];
+const homeSpots: HomeSpot[] = ["center", "pond-edge", "tree-shade", "cave-door"];
 const homeSpotHorizontalPosition: Record<HomeSpot, number> = {
   center: 50,
   "pond-edge": 27,
@@ -865,7 +867,7 @@ const homeSpotHorizontalPosition: Record<HomeSpot, number> = {
 
 const homeSpotArrival: Record<HomeSpot, { mode: TurtleAmbientMode; speech: string }> = {
   center: { mode: "waving", speech: "我回来陪你啦！" },
-  "pond-edge": { mode: "looking", speech: "池塘里有小鱼游过去了！" },
+  "pond-edge": { mode: "swimming", speech: "扑通！我来和小鱼一起游啦～" },
   "tree-shade": { mode: "looking", speech: "果子闻起来香香的。" },
   "cave-door": { mode: "resting", speech: "在小屋门口歇一会儿。" },
 };
@@ -1450,27 +1452,10 @@ export default function ReadingApp({
     [dailyPlan],
   );
 
-  const ambientSprite = useMemo(() => {
-    if (game.hunger > 72) return "turtle_hungry.png";
-    if (game.cleanliness < 38) return "turtle_dirty.png";
-    if (game.boredom > 70) return "turtle_bored_sitting.png";
-    if (mood < 55) return "turtle_low_mood.png";
-    if (homeSpot === "tree-shade") return "turtle_thinking.png";
-    if (homeSpot === "cave-door") return "turtle_waving.png";
-    return "turtle_idle_front.png";
-  }, [game.boredom, game.cleanliness, game.hunger, homeSpot, mood]);
-
   const ambientActionSprite = useMemo(() => {
-    if (turtleAmbientMode === "petted") return "turtle_happy_hearts.png";
-    if (turtleAmbientMode === "tickled") return "turtle_excited.png";
-    if (turtleAmbientMode === "walking") return "turtle_idle_standing.png";
-    const needsAttention = game.hunger > 72 || game.cleanliness < 38 || game.boredom > 70 || mood < 55;
-    if (needsAttention) return ambientSprite;
-    if (turtleAmbientMode === "looking") return "turtle_thinking.png";
-    if (turtleAmbientMode === "waving") return "turtle_waving.png";
-    if (turtleAmbientMode === "resting") return "turtle_bored_sitting.png";
-    return ambientSprite;
-  }, [ambientSprite, game.boredom, game.cleanliness, game.hunger, mood, turtleAmbientMode]);
+    if (turtleAmbientMode === "swimming") return TURTLE_HOME_SWIM_SPRITE;
+    return TURTLE_HOME_IDLE_SPRITE;
+  }, [turtleAmbientMode]);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -2222,6 +2207,8 @@ export default function ReadingApp({
       ? 5_500 + Math.random() * 5_500
       : turtleAmbientMode === "walking"
         ? TURTLE_WALK_DURATION_MS
+        : turtleAmbientMode === "swimming"
+          ? 6_500 + Math.random() * 3_500
         : turtleAmbientMode === "petted" || turtleAmbientMode === "tickled"
           ? 2_200
           : 3_400;
@@ -2234,14 +2221,28 @@ export default function ReadingApp({
         return;
       }
 
+      if (turtleAmbientMode === "swimming") {
+        const destinations = homeSpots.filter((spot) => spot !== "pond-edge");
+        const destination = destinations[Math.floor(Math.random() * destinations.length)] || "center";
+        setTurtleDirection(homeSpotHorizontalPosition[destination] < homeSpotHorizontalPosition[homeSpot] ? "left" : "right");
+        setTurtleAmbientSpeech(destination === "tree-shade"
+          ? "游好啦，我去树下甩甩水～"
+          : destination === "cave-door"
+            ? "游好啦，我回小屋歇一会儿～"
+            : "游好啦，我回来陪你～");
+        setTurtleAmbientMode("walking");
+        setHomeSpot(destination);
+        return;
+      }
+
       if (turtleAmbientMode !== "idle") {
-        setTurtleAmbientMode("idle");
+        setTurtleAmbientMode(homeSpot === "pond-edge" ? "swimming" : "idle");
         setTurtleAmbientSpeech("");
         return;
       }
 
       if (Math.random() < 0.62) {
-        const destinations = landHomeSpots.filter((spot) => spot !== homeSpot);
+        const destinations = homeSpots.filter((spot) => spot !== homeSpot);
         const destination = destinations[Math.floor(Math.random() * destinations.length)] || "center";
         setTurtleDirection(homeSpotHorizontalPosition[destination] < homeSpotHorizontalPosition[homeSpot] ? "left" : "right");
         setTurtleAmbientSpeech(destination === "pond-edge"
@@ -2424,7 +2425,7 @@ export default function ReadingApp({
     runTimedAction(
       "feeding",
       1800,
-      "turtle_eating_fruit.png",
+      TURTLE_HOME_IDLE_SPRITE,
       () => {
         void runStudentAction({ action: "feed" }).then((data) => {
           setGame((current) => ({
@@ -2434,13 +2435,14 @@ export default function ReadingApp({
             hunger: clamp(current.hunger - 22),
             boredom: clamp(current.boredom - 3),
           }));
-          setTurtleSprite("turtle_satisfied.png");
+          setTurtleSprite(null);
+          setTurtleAmbientMode("petted");
+          setTurtleAmbientSpeech("真好吃，谢谢你陪我～");
           const bonus = data.interactionBonus?.awarded
             ? data.interactionBonus.resource === "play_tickets" ? "，还幸运获得 1 张游玩票！" : "，还幸运获得 1 张旅行票！"
             : "";
           showToast(`${game.name}吃下${fruit}，肚子满足啦${bonus}`);
           void remember({ type: "activity", activity: "摘果喂食", detail: `给龟龟喂了${fruit}` });
-          window.setTimeout(() => setTurtleSprite(null), 1800);
         }).catch((error) => {
           setTurtleSprite(null);
           showToast(error instanceof Error ? error.message : "喂食记录暂时没有保存");
@@ -2452,10 +2454,14 @@ export default function ReadingApp({
 
   const startSwim = () => {
     playSound("water-splash");
+    setHomeSpot("pond-edge");
+    setTurtleDirection("left");
+    setTurtleAmbientMode("swimming");
+    setTurtleAmbientSpeech("扑通！水里凉凉的～");
     runTimedAction(
       "swimming",
       5200,
-      "turtle_swimming.png",
+      TURTLE_HOME_SWIM_SPRITE,
       () => {
         void runStudentAction({ action: "swim" }).then((data) => {
           setGame((current) => ({
@@ -2464,15 +2470,17 @@ export default function ReadingApp({
             ...(data.dailyPlan ? { dailyPlan: data.dailyPlan } : {}),
             cleanliness: 100,
           }));
-          setTurtleSprite("turtle_clean_sparkle.png");
+          setTurtleSprite(null);
+          setTurtleAmbientMode("swimming");
+          setTurtleAmbientSpeech("我还想再划一小圈～");
           const bonus = data.interactionBonus?.awarded
             ? data.interactionBonus.resource === "play_tickets" ? "还幸运获得 1 张游玩票！" : "还幸运获得 1 张旅行票！"
             : "";
           showToast(`游泳完成，龟壳亮晶晶！${bonus}`);
           void remember({ type: "activity", activity: "游泳", detail: "一起在池塘里游泳清洁" });
-          window.setTimeout(() => setTurtleSprite(null), 2000);
         }).catch((error) => {
           setTurtleSprite(null);
+          setTurtleAmbientMode("swimming");
           showToast(error instanceof Error ? error.message : "游泳记录暂时没有保存");
         });
       },
@@ -2485,17 +2493,18 @@ export default function ReadingApp({
     runTimedAction(
       "sleeping",
       5000,
-      "turtle_sleeping.png",
+      TURTLE_HOME_IDLE_SPRITE,
       () => {
         setGame((current) => ({
           ...current,
           boredom: clamp(current.boredom - 6),
           hunger: clamp(current.hunger + 3),
         }));
-        setTurtleSprite("turtle_waving.png");
+        setTurtleSprite(null);
+        setTurtleAmbientMode("waving");
+        setTurtleAmbientSpeech("睡醒啦，我又有精神了！");
         showToast(`${game.name}睡醒啦，精神满满`);
         void remember({ type: "activity", activity: "休息", detail: "陪龟龟在小屋里睡了一会儿" });
-        window.setTimeout(() => setTurtleSprite(null), 1800);
       },
       "嘘，做一个香香的梦吧",
     );
@@ -3465,7 +3474,11 @@ export default function ReadingApp({
     navigateTo("mistakes");
   };
 
-  const homeTurtleClass = busy === "swimming" ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
+  const turtleIsSwimming = busy === "swimming" || (homeSpot === "pond-edge" && turtleAmbientMode !== "walking");
+  const homeTurtleClass = turtleIsSwimming ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
+  const homeTurtleSprite = turtleIsSwimming
+    ? TURTLE_HOME_SWIM_SPRITE
+    : turtleSprite ?? ambientActionSprite;
   const turtleSpeech = busy === "swimming"
     ? "我在练习划水！"
     : busy === "sleeping"
@@ -3930,7 +3943,7 @@ export default function ReadingApp({
 
             {!hideTarget && !traveling && (
               <button
-                className={`turtle-wrap ${homeTurtleClass} ambient-${busy ? "busy" : turtleAmbientMode} facing-${turtleDirection} ${turtleSpeech ? "has-speech" : ""}`}
+                className={`turtle-wrap ${homeTurtleClass} ${turtleIsSwimming ? "is-swimming" : ""} ambient-${busy ? "busy" : turtleAmbientMode} facing-${turtleDirection} ${turtleSpeech ? "has-speech" : ""}`}
                 type="button"
                 onClick={respondToTurtleTouch}
                 aria-label={busy ? `${game.name}正在${busy === "swimming" ? "游泳" : busy === "sleeping" ? "睡觉" : "吃果子"}` : `摸摸${game.name}`}
@@ -3940,10 +3953,17 @@ export default function ReadingApp({
                 <span className="turtle-sprite-stage">
                   <span className="turtle-ground-shadow" aria-hidden="true" />
                   <span className="turtle-step-dust" aria-hidden="true"><i /><i /><i /></span>
+                  <span className="turtle-water-ripples" aria-hidden="true"><i /><i /><i /></span>
+                  {(busy === "feeding" || busy === "sleeping" || turtleAmbientMode === "petted" || turtleAmbientMode === "tickled") && (
+                    <span className={`turtle-emote emote-${busy ?? turtleAmbientMode}`} aria-hidden="true">
+                      {busy === "feeding" ? "🍎" : busy === "sleeping" ? "Zzz" : turtleAmbientMode === "petted" ? "♥" : "✦"}
+                    </span>
+                  )}
                   <img
                     className="turtle-sprite"
-                    src={`${ASSET}/characters/turtle/${turtleSprite ?? ambientActionSprite}`}
+                    src={`${ASSET}/characters/turtle/${homeTurtleSprite}`}
                     alt=""
+                    draggable={false}
                   />
                 </span>
               </button>

@@ -711,12 +711,15 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
   assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock", "tree-root", "flower-bank", "lily-pad", "cave-door", "cave-flowers", "blue-flowers", "hedge", "path-grass", "pond-cobbles", "boulder"\]/);
-  assert.match(page, /landHomeSpots: HomeSpot\[\] = \["center", "pond-edge", "tree-shade", "cave-door"\]/);
-  assert.match(page, /TurtleAmbientMode = "idle" \| "walking" \| "looking" \| "waving" \| "resting" \| "petted" \| "tickled"/);
-  assert.match(page, /TURTLE_WALK_DURATION_MS = 2_300/);
+  assert.match(page, /homeSpots: HomeSpot\[\] = \["center", "pond-edge", "tree-shade", "cave-door"\]/);
+  assert.match(page, /"pond-edge": \{ mode: "swimming", speech:/);
+  assert.match(page, /home\/turtle-home-idle-hd\.webp/);
+  assert.match(page, /home\/turtle-home-swimming-hd\.webp/);
+  assert.match(page, /TurtleAmbientMode = "idle" \| "walking" \| "swimming" \| "looking" \| "waving" \| "resting" \| "petted" \| "tickled"/);
+  assert.match(page, /TURTLE_WALK_DURATION_MS = 2_800/);
   assert.match(page, /respondToTurtleTouch/);
   assert.match(page, /`摸摸\$\{game\.name\}`/);
-  assert.match(styles, /\.turtle-wrap\.ambient-walking \{[\s\S]*?transition-duration: 2300ms/);
+  assert.match(styles, /\.turtle-wrap\.ambient-walking \{[\s\S]*?transition-duration: 2800ms/);
   assert.match(styles, /@keyframes turtleAliveBreath/);
   assert.match(styles, /@keyframes turtleWalkingBob/);
   assert.match(styles, /@keyframes turtlePetted/);
@@ -834,7 +837,9 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.hidden-turtle\.generated-hide \{ clip-path: inset\(15%\); \}/);
   assert.match(styles, /\.hidden-tree-root \{/);
   assert.match(styles, /\.hidden-boulder \{/);
-  assert.match(styles, /\.turtle-wrap\.in-pond \.turtle-sprite \{[\s\S]*?height: clamp\(112px, 18vh, 190px\)/);
+  assert.match(styles, /\.turtle-wrap\.in-pond \.turtle-sprite \{[\s\S]*?width: clamp\(220px, 25vw, 360px\)/);
+  assert.match(styles, /\.turtle-wrap\.is-swimming \.turtle-water-ripples/);
+  assert.match(styles, /@keyframes turtleRippleExpand/);
   assert.match(styles, /@keyframes turtlePeek/);
   assert.match(styles, /\.reading-font-medium \.original-book-text p \{ font-size: 18px; \}/);
   assert.match(styles, /\.reading-font-large \.original-book-text p \{ font-size: 20px; \}/);
