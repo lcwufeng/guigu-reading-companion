@@ -18,6 +18,7 @@ export const FIRST_SCREEN_IMAGE_SOURCES = [
   `${ASSET}/ui/supplied/brand/logo-20260715.png`,
   `${ASSET}/characters/turtle/home/turtle-home-idle-hd.webp`,
   `${ASSET}/characters/turtle/home/turtle-home-swimming-hd.webp`,
+  `${ASSET}/characters/turtle/home/turtle-home-sleeping-hd.webp`,
   `${ASSET}/characters/turtle/actions/turtle-companion-waving-hd.webp`,
   `${ASSET}/characters/turtle/actions/turtle-companion-reading-hd.webp`,
   `${ASSET}/characters/turtle/actions/turtle-companion-listening-hd.webp`,

@@ -710,13 +710,21 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   for (const threshold of [10, 15, 50, 70, 100, 150]) {
     assert.match(page, new RegExp(`requiredStars: ${threshold}`));
   }
-  assert.match(page, /hidePlaces = \["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock", "tree-root", "flower-bank", "lily-pad", "cave-door", "cave-flowers", "blue-flowers", "hedge", "path-grass", "pond-cobbles", "boulder"\]/);
+  assert.match(page, /const hidePlaceCatalog = \{/);
+  assert.match(page, /"cave-flowers": \{/);
+  assert.match(page, /"pond-cobbles": \{/);
+  assert.match(page, /generated: true/);
+  assert.doesNotMatch(page, /turtle-hide-cave-door-20260716\.png/);
   assert.match(page, /homeSpots: HomeSpot\[\] = \["center", "pond-edge", "tree-shade", "cave-door"\]/);
   assert.match(page, /"pond-edge": \{ mode: "swimming", speech:/);
   assert.match(page, /home\/turtle-home-idle-hd\.webp/);
   assert.match(page, /home\/turtle-home-swimming-hd\.webp/);
+  assert.match(page, /home\/turtle-home-sleeping-hd\.webp/);
+  assert.match(page, /hide-generated\/turtle-hide-tree-peek-clean-20260822\.webp/);
+  assert.doesNotMatch(page, /turtle_hide_tree_top\.png/);
   assert.match(page, /TurtleAmbientMode = "idle" \| "walking" \| "swimming" \| "looking" \| "waving" \| "resting" \| "petted" \| "tickled"/);
   assert.match(page, /TURTLE_WALK_DURATION_MS = 2_800/);
+  assert.match(page, /const turtleIsSwimming = busy === "swimming"[\s\S]*?\|\| \(!busy && homeSpot === "pond-edge"/);
   assert.match(page, /respondToTurtleTouch/);
   assert.match(page, /`摸摸\$\{game\.name\}`/);
   assert.match(styles, /\.turtle-wrap\.ambient-walking \{[\s\S]*?transition-duration: 2800ms/);
@@ -724,7 +732,10 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /@keyframes turtleWalkingBob/);
   assert.match(styles, /@keyframes turtlePetted/);
   assert.match(styles, /width: clamp\(106px, 10\.5vw, 165px\)/);
-  assert.match(styles, /height: clamp\(155px, 25vh, 270px\)/);
+  assert.match(styles, /\.home-scene \.turtle-sprite \{[\s\S]*?height: clamp\(125px, 20vh, 215px\)/);
+  assert.match(styles, /\.home-scene \.turtle-wrap\.in-cave \{[\s\S]*?bottom: 46%;[\s\S]*?left: 74%/);
+  assert.match(styles, /\.home-scene\.sleeping-scene \{[\s\S]*?background-position: 65% center/);
+  assert.match(styles, /@keyframes turtleSleepingBreath/);
   assert.match(styles, /\.turtle-wrap \{[\s\S]*?left: 50%;/);
   assert.match(styles, /\.turtle-wrap,\n\s+\.turtle-wrap\.spot-tree-shade \{[\s\S]*?left: 34%;/);
   assert.match(page, /ui\/home-refresh\/actions\/swim\.png/);
@@ -837,7 +848,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(styles, /\.hidden-turtle\.generated-hide \{ clip-path: inset\(15%\); \}/);
   assert.match(styles, /\.hidden-tree-root \{/);
   assert.match(styles, /\.hidden-boulder \{/);
-  assert.match(styles, /\.turtle-wrap\.in-pond \.turtle-sprite \{[\s\S]*?width: clamp\(220px, 25vw, 360px\)/);
+  assert.match(styles, /\.home-scene \.turtle-wrap\.in-pond \.turtle-sprite \{[\s\S]*?width: clamp\(185px, 21vw, 300px\)/);
   assert.match(styles, /\.turtle-wrap\.is-swimming \.turtle-water-ripples/);
   assert.match(styles, /@keyframes turtleRippleExpand/);
   assert.match(styles, /@keyframes companionTravelerStride/);
@@ -1085,6 +1096,8 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/characters/turtle/turtle_idle_front.png",
     "../public/assets/characters/turtle/home/turtle-home-idle-hd.webp",
     "../public/assets/characters/turtle/home/turtle-home-swimming-hd.webp",
+    "../public/assets/characters/turtle/home/turtle-home-sleeping-hd.webp",
+    "../public/assets/characters/turtle/hide-generated/turtle-hide-tree-peek-clean-20260822.webp",
     "../public/assets/characters/turtle/actions/turtle-companion-waving-hd.webp",
     "../public/assets/characters/turtle/actions/turtle-companion-reading-hd.webp",
     "../public/assets/characters/turtle/actions/turtle-companion-listening-hd.webp",

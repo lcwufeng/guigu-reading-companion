@@ -845,8 +845,136 @@ const destinations: Destination[] = [
   },
 ];
 
-const hidePlaces = ["water", "tree", "behind", "lotus", "cave", "bush", "flowers", "pond-rocks", "fruit", "path-rock", "tree-root", "flower-bank", "lily-pad", "cave-door", "cave-flowers", "blue-flowers", "hedge", "path-grass", "pond-cobbles", "boulder"] as const;
-type HidePlace = (typeof hidePlaces)[number];
+const hidePlaceCatalog = {
+  water: {
+    label: "水波里",
+    soft: "好像听见了轻轻的水声。",
+    strong: "池塘的水波忽然晃了一下！",
+    sprite: `${ASSET}/characters/turtle/turtle_hide_water.png`,
+    generated: false,
+  },
+  tree: {
+    label: "树梢上",
+    soft: "高高的地方有叶子在沙沙响。",
+    strong: "树梢上露出了一点绿色！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-tree-peek-clean-20260822.webp`,
+    generated: false,
+  },
+  behind: {
+    label: "树干后",
+    soft: "大树附近传来窸窸窣窣的声音。",
+    strong: "树干后面好像有小脚动了一下！",
+    sprite: `${ASSET}/characters/turtle/turtle_hide_tree_behind.png`,
+    generated: false,
+  },
+  lotus: {
+    label: "荷叶下",
+    soft: "池塘边有一片叶子轻轻抖了抖。",
+    strong: "荷叶下面冒出了一串小泡泡！",
+    sprite: `${ASSET}/characters/turtle/turtle_hide_lotus.png`,
+    generated: false,
+  },
+  bush: {
+    label: "小路边的矮树丛里",
+    soft: "小路边的矮树丛正在轻轻晃。",
+    strong: "矮树丛里的叶子突然分开了！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-bush-20260716.png`,
+    generated: true,
+  },
+  flowers: {
+    label: "右下角的高草花丛里",
+    soft: "右下角的花草间传来穿行的声音。",
+    strong: "高高的草叶后面闪过了龟龟的脸！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-flowers-20260716.png`,
+    generated: true,
+  },
+  "pond-rocks": {
+    label: "左边池塘石缝里",
+    soft: "池塘边的几块石头后面静悄悄的。",
+    strong: "左边水边的石缝里有小眼睛在眨！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-pond-rocks-20260716.png`,
+    generated: true,
+  },
+  fruit: {
+    label: "果树叶间",
+    soft: "红彤彤的果子旁，树叶好像变重了。",
+    strong: "果树顶上的叶子中间藏着一张笑脸！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-fruit-20260716.png`,
+    generated: true,
+  },
+  "path-rock": {
+    label: "小路石头旁",
+    soft: "中间的小路边，花朵和石头挨得很近。",
+    strong: "小路边的石头后露出了绿色的脑袋！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-path-rock-20260716.png`,
+    generated: true,
+  },
+  "tree-root": {
+    label: "大树根后",
+    soft: "大树下面好像传来轻轻的脚步声。",
+    strong: "粗粗的树根后面露出了绿色的小脸！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-tree-root-20260716.png`,
+    generated: true,
+  },
+  "flower-bank": {
+    label: "池边花丛",
+    soft: "池塘旁边有一片花朵在摇晃。",
+    strong: "左边水岸的花丛里有一双亮亮的眼睛！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-flower-bank-20260716.png`,
+    generated: true,
+  },
+  "lily-pad": {
+    label: "大荷叶后",
+    soft: "池塘里有一片大叶子动了一下。",
+    strong: "大荷叶后面悄悄探出了一颗绿色脑袋！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-lily-pad-20260716.png`,
+    generated: true,
+  },
+  "cave-flowers": {
+    label: "石屋门边的花丛里",
+    soft: "石屋门边的花草好像被碰到了。",
+    strong: "右边石屋旁的花丛后藏着龟龟！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-cave-flowers-20260716.png`,
+    generated: true,
+  },
+  "blue-flowers": {
+    label: "树下蓝花间",
+    soft: "树下的蓝色小花中间有一点绿色。",
+    strong: "蓝色花朵后面露出了龟龟的红领结！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-blue-flowers-20260716.png`,
+    generated: true,
+  },
+  hedge: {
+    label: "右边树篱里",
+    soft: "画面右边茂密的树叶轻轻晃了晃。",
+    strong: "右边树篱中间有一张圆圆的笑脸！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-hedge-20260716.png`,
+    generated: true,
+  },
+  "path-grass": {
+    label: "小路草丛里",
+    soft: "小路旁的草叶好像被谁拨开了。",
+    strong: "中间小路的草丛后面藏着一个小龟壳！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-path-grass-20260716.png`,
+    generated: true,
+  },
+  "pond-cobbles": {
+    label: "池边石墙后",
+    soft: "水边整齐的小石头后面有动静。",
+    strong: "左边池塘的石墙后露出两只小眼睛！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-pond-cobbles-20260716.png`,
+    generated: true,
+  },
+  boulder: {
+    label: "小路旁的大石头后",
+    soft: "小路旁的大石头附近传来窸窣声。",
+    strong: "大石头后面探出了龟龟的绿色脑袋！",
+    sprite: `${ASSET}/characters/turtle/hide-generated/turtle-hide-boulder-20260716.png`,
+    generated: true,
+  },
+} as const;
+type HidePlace = keyof typeof hidePlaceCatalog;
+const hidePlaces = Object.keys(hidePlaceCatalog) as HidePlace[];
 type HomeSpot = "center" | "pond-edge" | "tree-shade" | "cave-door";
 type TurtleAmbientMode = "idle" | "walking" | "swimming" | "looking" | "waving" | "resting" | "petted" | "tickled";
 type TurtleDirection = "left" | "right";
@@ -856,6 +984,7 @@ const DAILY_HIDE_AND_SEEK_LIMIT = 5;
 const TURTLE_WALK_DURATION_MS = 2_800;
 const TURTLE_HOME_IDLE_SPRITE = "home/turtle-home-idle-hd.webp";
 const TURTLE_HOME_SWIM_SPRITE = "home/turtle-home-swimming-hd.webp";
+const TURTLE_HOME_SLEEP_SPRITE = "home/turtle-home-sleeping-hd.webp";
 
 const homeSpots: HomeSpot[] = ["center", "pond-edge", "tree-shade", "cave-door"];
 const homeSpotHorizontalPosition: Record<HomeSpot, number> = {
@@ -870,75 +999,6 @@ const homeSpotArrival: Record<HomeSpot, { mode: TurtleAmbientMode; speech: strin
   "pond-edge": { mode: "swimming", speech: "扑通！我来和小鱼一起游啦～" },
   "tree-shade": { mode: "looking", speech: "果子闻起来香香的。" },
   "cave-door": { mode: "resting", speech: "在小屋门口歇一会儿。" },
-};
-
-const hideLabels: Record<HidePlace, string> = {
-  water: "水波里",
-  tree: "树梢上",
-  behind: "树干后",
-  lotus: "荷叶下",
-  cave: "石头边",
-  bush: "小草丛里",
-  flowers: "花丛里",
-  "pond-rocks": "池塘石缝里",
-  fruit: "果树叶间",
-  "path-rock": "小路石头旁",
-  "tree-root": "大树根后",
-  "flower-bank": "池边花丛",
-  "lily-pad": "大荷叶后",
-  "cave-door": "石洞门口",
-  "cave-flowers": "石洞花丛",
-  "blue-flowers": "树下蓝花间",
-  hedge: "右边树篱",
-  "path-grass": "小路草丛",
-  "pond-cobbles": "池边石墙后",
-  boulder: "大石头后",
-};
-
-const hideSceneClues: Record<HidePlace, { soft: string; strong: string }> = {
-  water: { soft: "好像听见了轻轻的水声。", strong: "池塘的水波忽然晃了一下！" },
-  tree: { soft: "高高的地方有叶子在沙沙响。", strong: "树梢上露出了一点绿色！" },
-  behind: { soft: "大树附近传来窸窸窣窣的声音。", strong: "树干后面好像有小脚动了一下！" },
-  lotus: { soft: "池塘边有一片叶子轻轻抖了抖。", strong: "荷叶下面冒出了一串小泡泡！" },
-  cave: { soft: "右边的紫色石头附近好像有动静。", strong: "山洞旁的石缝里露出了一点绿色！" },
-  bush: { soft: "画面中间的小草丛正在轻轻晃。", strong: "小草丛里的叶子突然分开了！" },
-  flowers: { soft: "右下角的花草间传来穿行的声音。", strong: "高高的草叶后面闪过了龟龟的脸！" },
-  "pond-rocks": { soft: "池塘边的几块石头后面静悄悄的。", strong: "左边水边的石缝里有小眼睛在眨！" },
-  fruit: { soft: "红彤彤的果子旁，树叶好像变重了。", strong: "果树顶上的叶子中间藏着一张笑脸！" },
-  "path-rock": { soft: "中间的小路边，花朵和石头挨得很近。", strong: "小路边的石头后露出了绿色的脑袋！" },
-  "tree-root": { soft: "大树下面好像传来轻轻的脚步声。", strong: "粗粗的树根后面露出了绿色的小脸！" },
-  "flower-bank": { soft: "池塘旁边有一片花朵在摇晃。", strong: "左边水岸的花丛里有一双亮亮的眼睛！" },
-  "lily-pad": { soft: "池塘里有一片大叶子动了一下。", strong: "大荷叶后面悄悄探出了一颗绿色脑袋！" },
-  "cave-door": { soft: "紫色石洞的门口传来沙沙声。", strong: "右边石洞门口有一只小手在挥呀挥！" },
-  "cave-flowers": { soft: "石洞附近的花草好像被碰到了。", strong: "右边石洞旁的花丛后藏着龟龟！" },
-  "blue-flowers": { soft: "树下的蓝色小花中间有一点绿色。", strong: "蓝色花朵后面露出了龟龟的红领结！" },
-  hedge: { soft: "画面右边茂密的树叶轻轻晃了晃。", strong: "右边树篱中间有一张圆圆的笑脸！" },
-  "path-grass": { soft: "小路旁的草叶好像被谁拨开了。", strong: "中间小路的草丛后面藏着一个小龟壳！" },
-  "pond-cobbles": { soft: "水边整齐的小石头后面有动静。", strong: "左边池塘的石墙后露出两只小眼睛！" },
-  boulder: { soft: "地上的大石头旁边传来窸窣声。", strong: "大石头后面探出了龟龟的绿色脑袋！" },
-};
-
-const hideSprites: Record<HidePlace, string> = {
-  water: `${ASSET}/characters/turtle/turtle_hide_water.png`,
-  tree: `${ASSET}/characters/turtle/turtle_hide_tree_top.png`,
-  behind: `${ASSET}/characters/turtle/turtle_hide_tree_behind.png`,
-  lotus: `${ASSET}/characters/turtle/turtle_hide_lotus.png`,
-  cave: `${ASSET}/characters/turtle/hide-generated/turtle-hide-cave-20260716.png`,
-  bush: `${ASSET}/characters/turtle/hide-generated/turtle-hide-bush-20260716.png`,
-  flowers: `${ASSET}/characters/turtle/hide-generated/turtle-hide-flowers-20260716.png`,
-  "pond-rocks": `${ASSET}/characters/turtle/hide-generated/turtle-hide-pond-rocks-20260716.png`,
-  fruit: `${ASSET}/characters/turtle/hide-generated/turtle-hide-fruit-20260716.png`,
-  "path-rock": `${ASSET}/characters/turtle/hide-generated/turtle-hide-path-rock-20260716.png`,
-  "tree-root": `${ASSET}/characters/turtle/hide-generated/turtle-hide-tree-root-20260716.png`,
-  "flower-bank": `${ASSET}/characters/turtle/hide-generated/turtle-hide-flower-bank-20260716.png`,
-  "lily-pad": `${ASSET}/characters/turtle/hide-generated/turtle-hide-lily-pad-20260716.png`,
-  "cave-door": `${ASSET}/characters/turtle/hide-generated/turtle-hide-cave-door-20260716.png`,
-  "cave-flowers": `${ASSET}/characters/turtle/hide-generated/turtle-hide-cave-flowers-20260716.png`,
-  "blue-flowers": `${ASSET}/characters/turtle/hide-generated/turtle-hide-blue-flowers-20260716.png`,
-  hedge: `${ASSET}/characters/turtle/hide-generated/turtle-hide-hedge-20260716.png`,
-  "path-grass": `${ASSET}/characters/turtle/hide-generated/turtle-hide-path-grass-20260716.png`,
-  "pond-cobbles": `${ASSET}/characters/turtle/hide-generated/turtle-hide-pond-cobbles-20260716.png`,
-  boulder: `${ASSET}/characters/turtle/hide-generated/turtle-hide-boulder-20260716.png`,
 };
 
 function randomHidePlace(previous?: HidePlace) {
@@ -2493,7 +2553,7 @@ export default function ReadingApp({
     runTimedAction(
       "sleeping",
       5000,
-      TURTLE_HOME_IDLE_SPRITE,
+      TURTLE_HOME_SLEEP_SPRITE,
       () => {
         setGame((current) => ({
           ...current,
@@ -2560,7 +2620,7 @@ export default function ReadingApp({
     const completedRound = hideRound;
     setHideFastRounds(nextFastRounds);
     setHideFound(hideTarget);
-    showToast(`第 ${completedRound} 轮找到啦！龟龟藏在${hideLabels[hideTarget]}`);
+    showToast(`第 ${completedRound} 轮找到啦！龟龟藏在${hidePlaceCatalog[hideTarget].label}`);
     hideAdvanceTimerRef.current = window.setTimeout(() => {
       if (completedRound < HIDE_TOTAL_ROUNDS) {
         setHideTarget(randomHidePlace(hideTarget));
@@ -2626,9 +2686,9 @@ export default function ReadingApp({
     : selectedBook.knowledge;
   const activeHideHint = hideTarget
     ? hideSeconds <= 8
-      ? hideSceneClues[hideTarget].strong
+      ? hidePlaceCatalog[hideTarget].strong
       : hideSeconds <= HIDE_ROUND_SECONDS - 5
-        ? hideSceneClues[hideTarget].soft
+        ? hidePlaceCatalog[hideTarget].soft
         : ""
     : "";
   const activeBookAudioKey = activeChapter ? `${selectedBook.id}:${selectedChapter}` : "";
@@ -3474,7 +3534,8 @@ export default function ReadingApp({
     navigateTo("mistakes");
   };
 
-  const turtleIsSwimming = busy === "swimming" || (homeSpot === "pond-edge" && turtleAmbientMode !== "walking");
+  const turtleIsSwimming = busy === "swimming"
+    || (!busy && homeSpot === "pond-edge" && turtleAmbientMode !== "walking");
   const homeTurtleClass = turtleIsSwimming ? "in-pond" : busy === "sleeping" ? "in-cave" : `spot-${homeSpot}`;
   const homeTurtleSprite = turtleIsSwimming
     ? TURTLE_HOME_SWIM_SPRITE
@@ -3929,13 +3990,13 @@ export default function ReadingApp({
 
             {hideTarget && (
               <button
-                className={`hidden-turtle hidden-${hideTarget} ${hidePlaces.indexOf(hideTarget) >= 4 ? "generated-hide" : ""} ${hideFound ? "is-found" : hideSeconds <= 8 ? "is-peeking" : ""}`}
+                className={`hidden-turtle hidden-${hideTarget} ${hidePlaceCatalog[hideTarget].generated ? "generated-hide" : ""} ${hideFound ? "is-found" : hideSeconds <= 8 ? "is-peeking" : ""}`}
                 type="button"
                 onClick={findHiddenTurtle}
                 aria-label="找到藏起来的龟龟"
                 disabled={!!hideFound}
               >
-                <img className="hidden-turtle-art" src={hideSprites[hideTarget]} alt="" />
+                <img className="hidden-turtle-art" src={hidePlaceCatalog[hideTarget].sprite} alt="" />
               </button>
             )}
 
@@ -3943,7 +4004,7 @@ export default function ReadingApp({
 
             {!hideTarget && !traveling && (
               <button
-                className={`turtle-wrap ${homeTurtleClass} ${turtleIsSwimming ? "is-swimming" : ""} ambient-${busy ? "busy" : turtleAmbientMode} facing-${turtleDirection} ${turtleSpeech ? "has-speech" : ""}`}
+                className={`turtle-wrap ${homeTurtleClass} ${turtleIsSwimming ? "is-swimming" : ""} ambient-${busy ? "busy" : turtleAmbientMode} facing-${busy === "sleeping" ? "right" : turtleDirection} ${turtleSpeech ? "has-speech" : ""}`}
                 type="button"
                 onClick={respondToTurtleTouch}
                 aria-label={busy ? `${game.name}正在${busy === "swimming" ? "游泳" : busy === "sleeping" ? "睡觉" : "吃果子"}` : `摸摸${game.name}`}
