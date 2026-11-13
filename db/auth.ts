@@ -10,6 +10,8 @@ type AuthUser = {
 type LocalSession = { userId: string; expiresAt: number; createdAt: number };
 type LocalAuthStore = { users: Record<string, AuthUser>; sessions: Record<string, LocalSession> };
 
+// 演示账号：仅用于本地开发与首次部署引导，登录后强制改密。
+// 生产环境请通过管理后台创建真实账号，不要沿用这里的示例账号。
 export const initialStudentAccounts = [
   { id: "student-demo-1", username: "同学一" },
   { id: "student-demo-2", username: "同学二" },
@@ -20,7 +22,6 @@ export const initialStudentAccounts = [
   { id: "student-demo-7", username: "同学七" },
 ] as const;
 const initialPassword = "123456";
-const sitesDemoBootstrapMigrationId = "sites-demo-account-20260729";
 const sessionLifetime = 14 * 24 * 60 * 60 * 1000;
 const passwordIterations = 210_000;
 let databaseReadyPromise: Promise<RuntimeDatabase | null> | null = null;
@@ -87,54 +88,12 @@ export async function ensureInitialStudentAccounts(database: RuntimeDatabase) {
   }
 }
 
-export async function ensureSitesDemoAccount(database: RuntimeDatabase) {
-  if (process.env.SITES_BOOTSTRAP_DEMO_ACCOUNT !== "1") return;
-  const completed = await database.first(
-    "SELECT migration_id FROM app_data_migrations WHERE migration_id = ?",
-    [sitesDemoBootstrapMigrationId],
-  );
-  if (completed) return;
-
-  const account = await database.first<{ id: string }>(
-    "SELECT id FROM app_users WHERE username = ? OR id = ? ORDER BY CASE WHEN username = ? THEN 0 ELSE 1 END LIMIT 1",
-    ["同学二", "student-demo-2", "同学二"],
-  );
-  const userId = account?.id || "student-demo-2";
-  const now = Date.now();
-  const hash = await passwordHash(initialPassword);
-  const accountStatement = account
-    ? {
-        sql: "UPDATE app_users SET username = ?, password_hash = ?, must_reset_password = 1, updated_at = ? WHERE id = ?",
-        params: ["同学二", hash, now, userId],
-      }
-    : {
-        sql: `INSERT INTO app_users (id, username, password_hash, must_reset_password, created_at, updated_at)
-          VALUES (?, ?, ?, 1, ?, ?)`,
-        params: [userId, "同学二", hash, now, now],
-      };
-  await database.batch([
-    accountStatement,
-    { sql: "DELETE FROM app_sessions WHERE user_id = ?", params: [userId] },
-    {
-      sql: `INSERT INTO app_data_migrations (migration_id, completed_at, source_backup_dir, details_json)
-        VALUES (?, ?, ?, ?) ON CONFLICT(migration_id) DO NOTHING`,
-      params: [
-        sitesDemoBootstrapMigrationId,
-        now,
-        "sites-runtime",
-        JSON.stringify({ username: "同学二", userId, mustResetPassword: true }),
-      ],
-    },
-  ]);
-}
-
 async function readyDatabase() {
   if (databaseReadyPromise) return databaseReadyPromise;
   databaseReadyPromise = (async () => {
     const database = await readyRuntimeDatabase();
     if (!database) return null;
     await ensureInitialStudentAccounts(database);
-    await ensureSitesDemoAccount(database);
     return database;
   })();
   return databaseReadyPromise;

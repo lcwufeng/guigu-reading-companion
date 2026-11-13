@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import tempfile
 import xml.etree.ElementTree as ET
@@ -15,10 +16,11 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 
-SOURCE = Path("./龟龟伴读_产品需求文档_PRD.md")
-OUTPUT = Path("./龟龟伴读_产品需求文档_PRD.docx")
-LOGO = Path("./public/assets/legacy/brand/guigu_logo.png")
-TURTLE = Path("./public/assets/characters/turtle/turtle_reading.png")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SOURCE = Path(os.environ.get("GUIGU_PRD_SOURCE", REPO_ROOT / "docs" / "龟龟伴读_产品需求文档_PRD.md"))
+OUTPUT = Path(os.environ.get("GUIGU_PRD_OUTPUT", REPO_ROOT / "docs" / "龟龟伴读_产品需求文档_PRD.docx"))
+LOGO = REPO_ROOT / "public" / "assets" / "legacy" / "brand" / "guigu_logo.png"
+TURTLE = REPO_ROOT / "public" / "assets" / "characters" / "turtle" / "turtle_reading.png"
 
 INK = "17352D"
 LEAF = "18764C"

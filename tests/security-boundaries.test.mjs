@@ -112,8 +112,8 @@ test("rewards, minigame tickets, rate limits, and production seed accounts stay 
   }
 });
 
-test("Sites initializes Bubu once without resetting a later student password", async () => {
-  const bootstrapDatabasePath = join(root, "sites-demo.sqlite");
+test("demo accounts are seeded only when explicitly enabled and re-seeding keeps a changed password", async () => {
+  const seedDatabasePath = join(root, "demo-seed.sqlite");
   await mkdir(root, { recursive: true });
   try {
     const firstOutput = await runScript(`
@@ -122,17 +122,16 @@ test("Sites initializes Bubu once without resetting a later student password", a
         const { readyRuntimeDatabase } = await import("./db/runtime-database.ts");
         const firstLogin = await authenticateUser("同学二", "123456");
         const database = await readyRuntimeDatabase();
-        const marker = await database.first("SELECT COUNT(*) AS count FROM app_data_migrations WHERE migration_id = ?", ["sites-demo-account-20260729"]);
         const accounts = await database.first("SELECT COUNT(*) AS count FROM app_users");
         await database.run("UPDATE app_users SET password_hash = ?, must_reset_password = 0 WHERE username = ?", [await passwordHash("changed-after-first-login"), "同学二"]);
-        process.stdout.write(JSON.stringify({ firstLogin: Boolean(firstLogin), mustReset: firstLogin?.mustResetPassword, marker: marker.count, accounts: accounts.count }));
+        process.stdout.write(JSON.stringify({ firstLogin: Boolean(firstLogin), mustReset: firstLogin?.mustResetPassword, accounts: accounts.count }));
       })();
     `, {
-      APP_DATABASE_FILE: bootstrapDatabasePath,
-      SITES_BOOTSTRAP_DEMO_ACCOUNT: "1",
+      APP_DATABASE_FILE: seedDatabasePath,
+      SEED_INITIAL_STUDENT_ACCOUNTS: "1",
     });
     const first = JSON.parse(firstOutput);
-    assert.deepEqual(first, { firstLogin: true, mustReset: true, marker: 1, accounts: 1 });
+    assert.deepEqual(first, { firstLogin: true, mustReset: true, accounts: 7 });
 
     const secondOutput = await runScript(`
       (async () => {
@@ -142,8 +141,8 @@ test("Sites initializes Bubu once without resetting a later student password", a
         process.stdout.write(JSON.stringify({ oldPassword: Boolean(oldPassword), changedPassword: Boolean(changedPassword) }));
       })();
     `, {
-      APP_DATABASE_FILE: bootstrapDatabasePath,
-      SITES_BOOTSTRAP_DEMO_ACCOUNT: "1",
+      APP_DATABASE_FILE: seedDatabasePath,
+      SEED_INITIAL_STUDENT_ACCOUNTS: "1",
     });
     assert.deepEqual(JSON.parse(secondOutput), { oldPassword: false, changedPassword: true });
   } finally {

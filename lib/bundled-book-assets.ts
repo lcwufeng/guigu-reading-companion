@@ -3,14 +3,9 @@ import classicBookManifest from "../app/classic-books-manifest.json";
 type AssetFetcher = { fetch(request: Request): Promise<Response> };
 
 const classicSlugs = new Set(classicBookManifest.map((book) => book.slug));
-const fixedBooks: Record<string, string> = {
-  "scarecrow-zh": "scarecrow-zh.md",
-  "grimm-zh": "grimms-fairy-tales-zh.md",
-  "andersen-zh": "andersens-fairy-tales-zh.md",
-};
 
+// 内置读物为空:书籍通过后台「图书导入」写入数据库,这里只保留 manifest 驱动的内置扩展位。
 function bookAssetPath(bookId: string) {
-  if (fixedBooks[bookId]) return `/books/${fixedBooks[bookId]}`;
   if (classicSlugs.has(bookId)) return `/books/classics/${bookId}.json`;
   return "";
 }

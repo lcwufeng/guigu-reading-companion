@@ -524,66 +524,24 @@ const classicBooks: Book[] = classicBookManifest.map((book) => ({
   },
 }));
 
-const books: Book[] = [
-  {
-    id: "scarecrow-zh",
-    title: "稻草人",
-    author: "叶圣陶",
-    grade: 3,
-    category: "中文电子版全文",
-    coverMark: "稻",
-    coverClass: "cover-scarecrow",
-    pages: [],
-    summary: "收录《稻草人》《小白船》《一粒种子》等 13 篇童话，按篇章完整阅读。",
-    knowledge: "叶圣陶是中国现代童话创作的重要作家。《稻草人》通过童话人物的所见所感，引导读者观察生活并体会他人的处境。",
-    memoryCategory: "中国儿童文学·童话",
-    source: {
-      url: `${BASE_PATH}/api/library/bundled-book?id=scarecrow-zh`,
-      format: "markdown",
-      label: "用户提供《稻草人》中文电子版",
-      language: "中文原文",
-    },
-  },
-  {
-    id: "grimm-zh",
-    title: "格林童话",
-    author: "格林兄弟",
-    grade: 3,
-    category: "中文电子版全文",
-    coverMark: "格",
-    coverClass: "cover-grimm",
-    pages: [],
-    summary: "收录《青蛙王子》《小红帽》《白雪公主》等 22 篇童话，按篇章完整阅读。",
-    knowledge: "格林兄弟整理的童话常以森林、城堡、考验与魔法展开。阅读时可以留意人物如何在选择中展现勇气、智慧与责任。",
-    memoryCategory: "欧洲民间童话",
-    source: {
-      url: `${BASE_PATH}/api/library/bundled-book?id=grimm-zh`,
-      format: "markdown",
-      label: "用户提供三年级《格林童话》中文电子版（扫描版 OCR 整理）",
-      language: "中文原文",
-    },
-  },
-  {
-    id: "andersen-zh",
-    title: "安徒生童话",
-    author: "安徒生",
-    grade: 3,
-    category: "中文电子版全文",
-    coverMark: "安",
-    coverClass: "cover-andersen",
-    pages: [],
-    summary: "收录《丑小鸭》《拇指姑娘》《野天鹅》等 10 篇童话，按篇章完整阅读。",
-    knowledge: "安徒生童话常把温柔、幻想和现实感受放在一起。阅读时可以从人物的选择、愿望和变化中理解勇气、诚实与自我认同。",
-    memoryCategory: "丹麦文学·童话",
-    source: {
-      url: `${BASE_PATH}/api/library/bundled-book?id=andersen-zh`,
-      format: "markdown",
-      label: "用户提供《安徒生童话》中文电子版",
-      language: "中文原文",
-    },
-  },
-  ...classicBooks,
-];
+// 仓库不内置受版权保护的书籍文本,书籍一律通过管理后台「图书导入」上架。
+// 书架为空时按年级各放一张占位卡,既避免首屏空引用,也提示使用者去哪里导入。
+const emptyShelfBooks: Book[] = gradeLevels.map((grade) => ({
+  id: `library-empty-${grade.value}`,
+  title: "书架还空着",
+  author: "待导入",
+  grade: grade.value,
+  category: "导入提示",
+  coverMark: "书",
+  coverClass: "cover-classic",
+  pages: [],
+  summary: "仓库不内置受版权保护的书籍文本。登录管理后台,在「图书导入」中上传自己的书稿即可上架。",
+  knowledge: "",
+  memoryCategory: "",
+  unavailableReason: "尚未导入书籍:请在管理后台「图书导入」上传书稿并发布,再回到书架选择对应年级阅读。",
+}));
+
+const books: Book[] = classicBooks.length > 0 ? classicBooks : emptyShelfBooks;
 
 function importedCatalogBook(book: ImportedBookCatalogItem): Book {
   return {
@@ -982,9 +940,11 @@ const HIDE_TOTAL_ROUNDS = 5;
 const HIDE_ROUND_SECONDS = 25;
 const DAILY_HIDE_AND_SEEK_LIMIT = 5;
 const TURTLE_WALK_DURATION_MS = 2_800;
-const TURTLE_HOME_IDLE_SPRITE = "home/turtle-home-idle-hd.webp";
-const TURTLE_HOME_SWIM_SPRITE = "home/turtle-home-swimming-hd.webp";
-const TURTLE_HOME_SLEEP_SPRITE = "home/turtle-home-sleeping-hd.webp";
+// These are animated WebP files, so the character's breathing, blinking and
+// swimming motion happens inside the artwork instead of being faked by CSS.
+const TURTLE_HOME_IDLE_SPRITE = "home/turtle-home-idle-animated-v1.webp";
+const TURTLE_HOME_SWIM_SPRITE = "home/turtle-home-swimming-animated-v1.webp";
+const TURTLE_HOME_SLEEP_SPRITE = "home/turtle-home-sleeping-animated-v1.webp";
 
 const homeSpots: HomeSpot[] = ["center", "pond-edge", "tree-shade", "cave-door"];
 const homeSpotHorizontalPosition: Record<HomeSpot, number> = {
@@ -4656,7 +4616,7 @@ export default function ReadingApp({
                       <span>{selectedGrade}</span>
                       <div><h2 id="selected-grade-heading">{gradeLevels[selectedGrade - 1].label}书架</h2><p>选择书本后，书架会收起来，进入安静的阅读界面。</p></div>
                     </div>
-                    <strong>{selectedGradeBooks.length} 本可读</strong>
+                    <strong>{selectedGradeBooks.filter((book) => !book.id.startsWith("library-empty-")).length} 本可读</strong>
                   </div>
 
                   {selectedGradeBooks.length ? (

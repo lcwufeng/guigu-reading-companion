@@ -1,9 +1,11 @@
+import os
 from pathlib import Path
 
 from PIL import Image
 
 
-SOURCE = Path("./补充素材")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SOURCE = Path(os.environ.get("GUIGU_ASSET_SOURCE", REPO_ROOT / "assets-source"))
 OUTPUT = Path(__file__).resolve().parents[1] / "public/assets/ui/home-refresh"
 
 

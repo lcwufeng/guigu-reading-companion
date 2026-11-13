@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "imageCount": 173,
-  "totalBytes": 48681374,
+  "imageCount": 176,
+  "totalBytes": 49728728,
   "images": [
     "characters/turtle/actions/turtle-companion-celebrating-hd.webp",
     "characters/turtle/actions/turtle-companion-listening-hd.webp",
@@ -25,8 +25,11 @@
     "characters/turtle/hide-generated/turtle-hide-pond-rocks-20260716.png",
     "characters/turtle/hide-generated/turtle-hide-tree-peek-clean-20260822.webp",
     "characters/turtle/hide-generated/turtle-hide-tree-root-20260716.png",
+    "characters/turtle/home/turtle-home-idle-animated-v1.webp",
     "characters/turtle/home/turtle-home-idle-hd.webp",
+    "characters/turtle/home/turtle-home-sleeping-animated-v1.webp",
     "characters/turtle/home/turtle-home-sleeping-hd.webp",
+    "characters/turtle/home/turtle-home-swimming-animated-v1.webp",
     "characters/turtle/home/turtle-home-swimming-hd.webp",
     "characters/turtle/turtle_bathing.png",
     "characters/turtle/turtle_bored_sitting.png",

@@ -1,7 +1,9 @@
 {
   "name": "guigu-reading-companion",
-  "version": "0.1.0",
+  "version": "2.1.0",
   "private": true,
+  "license": "MIT",
+  "description": "面向小学生的电子宠物学习陪伴应用：像素风家园、错题复习、读书问答与成长记录",
   "engines": {
     "node": ">=22.13.0"
   },

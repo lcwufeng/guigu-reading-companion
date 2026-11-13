@@ -604,7 +604,7 @@ def import_book(config: BookConfig, source_root: Path, ocr_root: Path, output_ro
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source-root", type=Path, default=Path("./1-6年级经典读物"))
+    parser.add_argument("--source-root", type=Path, default=Path("books-source"))
     parser.add_argument("--ocr-root", type=Path, default=Path("tmp/pdfs/full-ocr"))
     parser.add_argument("--output-root", type=Path, default=Path("public/books/classics"))
     parser.add_argument("--asset-root", type=Path, default=Path("public/assets/books/classics"))

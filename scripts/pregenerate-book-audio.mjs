@@ -9,16 +9,21 @@ const VOICE_LABEL = "温柔女声（温柔淑女）";
 const SPEECH_RATE = 0.92;
 const PAGE_MAX_CHARS = 1450;
 
-const books = [
-  { id: "scarecrow-zh", file: "public/books/scarecrow-zh.md" },
-  { id: "grimm-zh", file: "public/books/grimms-fairy-tales-zh.md" },
-  { id: "andersen-zh", file: "public/books/andersens-fairy-tales-zh.md" },
-];
-
 const args = process.argv.slice(2);
 function argument(name) {
   const index = args.indexOf(name);
   return index >= 0 ? args[index + 1] : undefined;
+}
+
+// 书籍正文不再随仓库分发。需要预生成朗读音频时,在 scripts/book-audio-books.json 中登记书稿:
+//   [{ "id": "<bookId>", "file": "<相对仓库根目录的 .md 路径>" }]
+const booksConfigPath = resolve(argument("--books") || "scripts/book-audio-books.json");
+const books = await readFile(booksConfigPath, "utf8")
+  .then((raw) => JSON.parse(raw))
+  .catch(() => []);
+
+if (!books.length) {
+  throw new Error(`未找到待生成朗读的书稿配置:${booksConfigPath}\n请在该 JSON 中登记 [{ "id": "<bookId>", "file": "<相对仓库根目录的 .md 路径>" }]。`);
 }
 
 const outputRoot = resolve(argument("--output") || process.env.BOOK_AUDIO_DIR || "public/generated/book-audio");

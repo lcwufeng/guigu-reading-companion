@@ -8512,8 +8512,15 @@ button:disabled {
 }
 
 .home-scene .turtle-wrap.ambient-busy.in-cave .turtle-sprite-stage {
-  animation: turtleSleepingBreath 3.4s ease-in-out infinite;
+  /* Sleep, idle and swimming now use multi-frame WebP artwork.  Let those
+     frames supply the character motion so CSS does not add a second rhythm. */
+  animation: none;
   transform-origin: 48% 82%;
+}
+
+.home-scene .turtle-wrap.ambient-idle .turtle-sprite-stage,
+.home-scene .turtle-wrap.is-swimming .turtle-sprite-stage {
+  animation: none;
 }
 
 /* Each generated composite is aligned to the matching object in main_home. */

@@ -3,6 +3,7 @@ import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { after } from "node:test";
+import sharp from "sharp";
 
 const testRoot = join(tmpdir(), `guigu-account-tests-${process.pid}-${Date.now()}`);
 process.env.AUTH_STORE_FILE = join(testRoot, "auth.json");
@@ -116,47 +117,20 @@ test("provides a protected administration center with account operations", async
   assert.equal(protectedLibrary.status, 401);
 });
 
-test("imports the complete graded ebook shelf with chapters, paragraphs, illustrations, and journal art", async () => {
-  const manifestUrl = new URL("../public/books/classics/manifest.json", import.meta.url);
-  const manifest = JSON.parse(await readFile(manifestUrl, "utf8"));
-  assert.equal(manifest.length, 26);
-  assert.equal(new Set(manifest.map((book) => book.slug)).size, 26);
-  assert.equal(manifest.reduce((total, book) => total + book.chapterCount, 0), 740);
-  assert.equal(manifest.reduce((total, book) => total + book.pageCount, 0), 2488);
-  assert.equal(manifest.reduce((total, book) => total + book.imageCount, 0), 565);
+test("ships no bundled book text and keeps the administrator import path", async () => {
+  const manifest = JSON.parse(await readFile(new URL("../app/classic-books-manifest.json", import.meta.url), "utf8"));
+  assert.deepEqual(manifest, [], "内置读物清单必须为空:书籍一律通过后台导入,仓库不分发受版权保护的文本");
+  await assert.rejects(access(new URL("../public/books", import.meta.url)), "仓库不得内置受版权保护的书籍正文");
+  await assert.rejects(access(new URL("../public/assets/books", import.meta.url)), "仓库不得内置书籍扫描页图");
 
-  const expectedChapterCounts = new Map([
-    ["chinese-idioms", 122],
-    ["andersen-complete", 164],
-    ["little-prince", 27],
-    ["little-house-prairie", 26],
-    ["spring-autumn-stories", 24],
-    ["palm-fairy-tales", 31],
-  ]);
-
-  for (const book of manifest) {
-    const payloadUrl = new URL(`../public/books/classics/${book.slug}.json`, import.meta.url);
-    const payload = JSON.parse(await readFile(payloadUrl, "utf8"));
-    assert.equal(payload.chapters.length, book.chapterCount, `${book.title} chapter count`);
-    assert.equal(payload.chapters.reduce((total, chapter) => total + chapter.pages.length, 0), book.pageCount, `${book.title} page count`);
-    if (expectedChapterCounts.has(book.slug)) assert.equal(payload.chapters.length, expectedChapterCounts.get(book.slug));
-    assert.doesNotMatch(payload.chapters.map((chapter) => chapter.title).join("\n"), /目录|目次|前言|译序|序言|后记|索引/);
-
-    for (const chapter of payload.chapters) {
-      assert.ok(chapter.title.trim(), `${book.title} has a chapter title`);
-      for (const page of chapter.pages) {
-        assert.ok(page.body.length >= 20, `${book.title} · ${chapter.title} has readable text`);
-        assert.doesNotMatch(page.body, /(?<!\n)\n(?!\n)/, `${book.title} · ${chapter.title} has no broken physical lines`);
-        assert.doesNotMatch(page.body, /本章正文识别后暂时没有可显示的文字/);
-        for (const illustration of page.images || []) {
-          assert.match(illustration.src, /^\/assets\/books\/classics\//);
-          await access(new URL(`../public${illustration.src}`, import.meta.url));
-        }
-      }
-    }
-
-    await access(new URL(`../public/assets/optimized/ui/journal/books/classics/${book.slug}.webp`, import.meta.url));
-  }
+  const importScript = await readFile(new URL("../scripts/import_classic_books.py", import.meta.url), "utf8");
+  assert.match(importScript, /--output-root/);
+  assert.match(importScript, /--asset-root/);
+  assert.match(importScript, /--app-manifest/);
+  const adminBooksRoute = await readFile(new URL("../app/api/admin/books/route.ts", import.meta.url), "utf8");
+  assert.match(adminBooksRoute, /createImportedBook/);
+  const adminBooksPanel = await readFile(new URL("../app/admin/BookImportPanel.tsx", import.meta.url), "utf8");
+  assert.match(adminBooksPanel, /ImportedBook/);
 
   const readingApp = await readFile(new URL("../app/ReadingApp.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -717,9 +691,9 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.doesNotMatch(page, /turtle-hide-cave-door-20260716\.png/);
   assert.match(page, /homeSpots: HomeSpot\[\] = \["center", "pond-edge", "tree-shade", "cave-door"\]/);
   assert.match(page, /"pond-edge": \{ mode: "swimming", speech:/);
-  assert.match(page, /home\/turtle-home-idle-hd\.webp/);
-  assert.match(page, /home\/turtle-home-swimming-hd\.webp/);
-  assert.match(page, /home\/turtle-home-sleeping-hd\.webp/);
+  assert.match(page, /home\/turtle-home-idle-animated-v1\.webp/);
+  assert.match(page, /home\/turtle-home-swimming-animated-v1\.webp/);
+  assert.match(page, /home\/turtle-home-sleeping-animated-v1\.webp/);
   assert.match(page, /hide-generated\/turtle-hide-tree-peek-clean-20260822\.webp/);
   assert.doesNotMatch(page, /turtle_hide_tree_top\.png/);
   assert.match(page, /TurtleAmbientMode = "idle" \| "walking" \| "swimming" \| "looking" \| "waving" \| "resting" \| "petted" \| "tickled"/);
@@ -1061,33 +1035,43 @@ test("keeps the product loops, account safeguards, and required art assets", asy
   assert.match(packageJson, /"ws"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
 
-  const formattedBooks = await Promise.all([
-    readFile(new URL("../public/books/scarecrow-zh.md", import.meta.url), "utf8"),
-    readFile(new URL("../public/books/grimms-fairy-tales-zh.md", import.meta.url), "utf8"),
-    readFile(new URL("../public/books/andersens-fairy-tales-zh.md", import.meta.url), "utf8"),
-  ]);
-  const paragraphEnding = /[。！？!?…：；”’」』）】〞"']$/;
+  // 书籍正文不再随仓库分发,改为校验伴读问题与知识卡本身成对且结构完整。
+  const extractChapterMap = (source) => {
+    const books = {};
+    const bookPattern = /^ {2}"([^"]+)":\s*\{$/gm;
+    let bookMatch;
+    while ((bookMatch = bookPattern.exec(source))) {
+      const rest = source.slice(bookPattern.lastIndex);
+      const nextBook = rest.search(/^ {2}"[^"]+":\s*\{$/m);
+      const body = nextBook >= 0 ? rest.slice(0, nextBook) : rest;
+      const chapters = {};
+      const chapterPattern = /^ {4}"([^"]+)":\s*(?:\{|")/gm;
+      let chapterMatch;
+      while ((chapterMatch = chapterPattern.exec(body))) {
+        const chapterRest = body.slice(chapterPattern.lastIndex);
+        const nextChapter = chapterRest.search(/^ {4}"[^"]+":\s*(?:\{|")/m);
+        chapters[chapterMatch[1]] = nextChapter >= 0 ? chapterRest.slice(0, nextChapter) : chapterRest;
+      }
+      books[bookMatch[1]] = chapters;
+    }
+    return books;
+  };
+  const promptBooks = extractChapterMap(bookPrompts);
+  const knowledgeBooks = extractChapterMap(bookKnowledge);
+  assert.ok(Object.keys(promptBooks).length > 0, "应保留伴读问题库");
+  assert.deepEqual(Object.keys(promptBooks).sort(), Object.keys(knowledgeBooks).sort(), "伴读问题与知识卡必须覆盖同一批书籍");
   let promptChapterCount = 0;
-  for (const book of formattedBooks) {
-    const divider = book.search(/^---\s*$/m);
-    const body = book.slice(divider).replace(/^---\s*$/m, "");
-    const chapters = [...body.matchAll(/^#\s+(.+)\s*$/gm)];
-    promptChapterCount += chapters.length;
-    for (let chapter = 0; chapter < chapters.length; chapter += 1) {
-      const escapedTitle = chapters[chapter][1].trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      assert.match(bookKnowledge, new RegExp(`"${escapedTitle}"\\s*:`));
-      assert.match(bookPrompts, new RegExp(`"${escapedTitle}"\\s*:`));
-      const start = chapters[chapter].index + chapters[chapter][0].length;
-      const end = chapters[chapter + 1]?.index ?? body.length;
-      const paragraphs = body.slice(start, end)
-        .split(/\n\s*\n/)
-        .map((paragraph) => paragraph.replace(/^---\s*$/gm, "").trim())
-        .filter(Boolean);
-      paragraphs.slice(0, -1).forEach((paragraph) => assert.match(paragraph, paragraphEnding));
+  for (const [bookId, chapters] of Object.entries(promptBooks)) {
+    assert.deepEqual(Object.keys(chapters).sort(), Object.keys(knowledgeBooks[bookId] || {}).sort(), `${bookId} 的章节标题必须一一对应`);
+    for (const [chapterTitle, body] of Object.entries(chapters)) {
+      promptChapterCount += 1;
+      for (const field of ["question", "guide", "referenceAnswer"]) {
+        const value = (body.match(new RegExp(`${field}:\\s*"((?:[^"\\\\]|\\\\.)*)"`)) || [])[1] || "";
+        assert.ok(value.trim().length > 0, `${bookId} · ${chapterTitle} 缺少 ${field}`);
+      }
     }
   }
-  assert.equal(promptChapterCount, 45, "每个真实故事章节都应有一条专属伴读问题");
-  assert.doesNotMatch(formattedBooks[1], /^(?:L0怎|40wv|≤H］)$/m);
+  assert.ok(promptChapterCount >= 45, "每个章节都应有一条专属伴读问题");
 
   for (const path of [
     "../public/assets/optimized/backgrounds/main_home.webp",
@@ -1097,6 +1081,9 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/characters/turtle/home/turtle-home-idle-hd.webp",
     "../public/assets/characters/turtle/home/turtle-home-swimming-hd.webp",
     "../public/assets/characters/turtle/home/turtle-home-sleeping-hd.webp",
+    "../public/assets/characters/turtle/home/turtle-home-idle-animated-v1.webp",
+    "../public/assets/characters/turtle/home/turtle-home-swimming-animated-v1.webp",
+    "../public/assets/characters/turtle/home/turtle-home-sleeping-animated-v1.webp",
     "../public/assets/characters/turtle/hide-generated/turtle-hide-tree-peek-clean-20260822.webp",
     "../public/assets/characters/turtle/actions/turtle-companion-waving-hd.webp",
     "../public/assets/characters/turtle/actions/turtle-companion-reading-hd.webp",
@@ -1208,10 +1195,20 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     "../public/assets/travel/knowledge-cards-20260716/pyramids.jpg",
     "../public/assets/travel/knowledge-cards-20260716/future-science.jpg",
     "../public/assets/travel/knowledge-cards-20260716/clean-energy.jpg",
-    "../public/books/scarecrow-zh.md",
-    "../public/books/grimms-fairy-tales-zh.md",
-    "../public/books/andersens-fairy-tales-zh.md",
   ]) {
     await access(new URL(path, import.meta.url));
+  }
+});
+
+test("uses native multi-frame WebP animation for the home turtle", async () => {
+  for (const asset of [
+    "turtle-home-idle-animated-v1.webp",
+    "turtle-home-swimming-animated-v1.webp",
+    "turtle-home-sleeping-animated-v1.webp",
+  ]) {
+    const metadata = await sharp(join(process.cwd(), "public/assets/characters/turtle/home", asset), { animated: true }).metadata();
+    assert.equal(metadata.format, "webp");
+    assert.ok((metadata.pages || 1) > 1, `${asset} should contain more than one frame`);
+    assert.ok((metadata.delay || []).every((delay) => delay > 0), `${asset} should have frame timing`);
   }
 });

@@ -52,3 +52,20 @@ __pycache__/
 /android-tablet/signing.properties
 /android-tablet/signing/
 /artifacts/android/*.apk
+
+# 私有部署标识（OpenAI 托管项目、Cloudflare 资源绑定）
+/.openai/
+
+# 本地构建产物与素材源（不随仓库分发）
+/output/
+/books-source/
+/assets-source/
+/scripts/book-audio-books.json
+
+# 导入脚本生成的书籍正文与扫描页图（含受版权保护内容，禁止提交）
+public/books/classics/
+public/assets/books/classics/
+
+# 个人材料，不进入开源仓库
+/scripts/build_5min_speech_docx.py
+/龟龟伴读_5分钟页面演示发言稿_二年级版.docx

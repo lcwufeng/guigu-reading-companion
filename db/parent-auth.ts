@@ -27,6 +27,7 @@ type LocalParentStore = {
   links: Array<{ parentId: string; studentId: string; relationship: string }>;
 };
 
+// 演示家长账号：与 db/auth.ts 的示例学生账号一一对应，仅供本地开发使用。
 export const initialParentAccounts: readonly ParentAccountSeed[] = [
   { id: "parent-demo-1", username: "同学一家长", studentId: "student-demo-1" },
   { id: "parent-demo-2", username: "同学二家长", studentId: "student-demo-2" },
