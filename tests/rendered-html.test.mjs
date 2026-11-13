@@ -580,7 +580,7 @@ test("keeps the product loops, account safeguards, and required art assets", asy
     readFile(new URL("../app/api/user-state/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/user-state.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema-statements.js", import.meta.url), "utf8"),
-    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../.openai/hosting.example.json", import.meta.url), "utf8"),
     readFile(new URL("../app/api/student-actions/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/student-actions.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/reward-wallet.ts", import.meta.url), "utf8"),

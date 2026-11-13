@@ -46,6 +46,16 @@ cp .env.example .env.local
 
 所有密钥只在服务端读取，不会进入浏览器。
 
+### 部署配置（`.openai/`）
+
+`.openai/hosting.json` 存放 Cloudflare D1 / R2 的绑定名，是**部署相关且不纳入版本控制**的文件。仓库里提供了模板：
+
+```bash
+cp .openai/hosting.example.json .openai/hosting.json
+```
+
+构建时若该文件不存在，会自动回退到 `.openai/hosting.example.json`，因此**新克隆的仓库无需任何额外配置即可 `npm run build`**。需要绑定真实资源时再自行创建并修改。
+
 ### 演示账号
 
 本地开发预置 7 组学生/家长账号：`同学一` ~ `同学七` / `同学一家长` ~ `同学七家长`，初始密码 `123456`，**首次登录强制改密**。

@@ -54,7 +54,10 @@ __pycache__/
 /artifacts/android/*.apk
 
 # 私有部署标识（OpenAI 托管项目、Cloudflare 资源绑定）
-/.openai/
+# 用 /* 而非 / ：目录被整体排除时 git 不会进入，反向规则才会生效
+/.openai/*
+# 但保留示例配置，保证新克隆的仓库可以直接构建
+!/.openai/hosting.example.json
 
 # 本地构建产物与素材源（不随仓库分发）
 /output/

@@ -1,12 +1,45 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import vinext from "vinext";
 import { defineConfig } from "vite";
-import hostingConfig from "./.openai/hosting.json";
 import { sites } from "./build/sites-vite-plugin";
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
 
-const { d1, r2 } = hostingConfig;
+type HostingConfig = {
+  project_id?: string;
+  d1?: string;
+  r2?: string;
+};
+
+// `.openai/hosting.json` carries deployment-specific binding names and is
+// git-ignored, so a fresh clone has no such file. Read it when present and
+// otherwise fall back to the committed example, which keeps `npm run build`
+// working for anyone who clones the repository.
+function loadHostingConfig(): HostingConfig {
+  const roots = [process.cwd()];
+  if (import.meta.dirname) {
+    roots.push(import.meta.dirname);
+  }
+
+  for (const root of roots) {
+    for (const name of ["hosting.json", "hosting.example.json"]) {
+      try {
+        const raw = readFileSync(resolve(root, ".openai", name), "utf8");
+        return JSON.parse(raw) as HostingConfig;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+          throw error;
+        }
+      }
+    }
+  }
+
+  return {};
+}
+
+const { d1, r2 } = loadHostingConfig();
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
